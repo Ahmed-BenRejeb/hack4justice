@@ -417,6 +417,21 @@ On the web side: an organisation picker and the uploader's e-mail feed `POST /do
 
 **Result:** Backend tests added for every extension. `docs/architecture.md` sections 4 and 5, `api/CLAUDE.md`, `web/CLAUDE.md`, `docs/design.md` section 4 and `README.md` updated.
 
+## D-025 - Configurable host port for the compose database
+
+**Date:** 2026-09-13
+
+**Decision:** `docker-compose.yml` publishes the database on `${CHAHED_DB_PORT:-5432}`. A developer whose machine already runs Postgres on 5432 sets `CHAHED_DB_PORT` in a git-ignored root `.env` and uses the same port in `api/.env`'s `DATABASE_URL`.
+
+**Options considered:**
+- A configurable host port with the current default.
+- Move the tracked mapping to a non-standard port for everyone.
+- No repo change: stop the local Postgres before working on Chahed.
+
+**Why:** Chosen by the user. Teammates without a clash see no change, and the personal port stays out of tracked files. The host port is a local convenience, not process configuration: inside compose, `api` reaches `db:5432` regardless.
+
+**Result:** `docker compose up` starts on a machine with a local Postgres on 5432. `api/CLAUDE.md` local setup updated.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -431,3 +446,4 @@ On the web side: an organisation picker and the uploader's e-mail feed `POST /do
 | 2026-09-12 | team | Added D-022: web UI data flow, tokens and typography, assumed response shapes |
 | 2026-09-12 | team | Added D-023: answer-first file review with a side rail |
 | 2026-09-12 | team | Added D-024: web and api integration, minimal backend extensions |
+| 2026-09-13 | team | Added D-025: configurable host port for the compose database |

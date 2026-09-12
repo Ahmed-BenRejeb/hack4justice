@@ -9,7 +9,7 @@ FastAPI, SQLAlchemy 2.0, Alembic, PostgreSQL with pgvector. Dependencies and the
 ## Local setup
 
 0. System OCR dependencies (not managed by `uv`, since they are not Python packages): `tesseract` with the `fra` and `ara` language packs, and `poppler-utils` (`pdftoppm`/`pdfinfo`, used by `pdf2image`). On Arch: `sudo pacman -S tesseract tesseract-data-fra tesseract-data-ara poppler`. Verify with `tesseract --list-langs`; `fra` and `ara` must both be listed.
-1. `docker compose up -d db` (repo root) starts PostgreSQL with pgvector.
+1. `docker compose up -d db` (repo root) starts PostgreSQL with pgvector on host port 5432. If a local Postgres already holds that port, set `CHAHED_DB_PORT` (for example `55432`) in a git-ignored root `.env` and use the same port in `DATABASE_URL` (D-025).
 2. `cp api/.env.example api/.env`, fill `DATABASE_URL` (matches the compose service: `postgresql+psycopg://chahed:chahed_dev_only@localhost:5432/chahed`), `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID`. All three are required; the process (and the test suite) will not start without them.
 3. `uv run alembic upgrade head` applies migrations.
 4. `uv run uvicorn app.main:app --reload` runs the dev server.
@@ -61,3 +61,4 @@ The build context is the repo root, not `api/` (`docker-compose.yml`'s `api.buil
 | 2026-09-12 | team | Sourced real legal text into corpus/sources/, added load_corpus.py loader, fixed a real chunking bug; re-checked RNE (account-gated, not network-gated) |
 | 2026-09-12 | team | Added first real assisted rule logic (Article 52 withholding mention), tested live; citation staged for human sign-off, not yet registered |
 | 2026-09-12 | team | Web integration: organisations endpoints, document filename, richer document detail and queue rows, operation codes from the XSD, portable test font path (D-024) |
+| 2026-09-13 | team | Documented CHAHED_DB_PORT for a host port clash with a local Postgres (D-025) |
