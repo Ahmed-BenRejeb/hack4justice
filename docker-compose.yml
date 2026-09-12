@@ -1,0 +1,14 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: chahed
+      POSTGRES_PASSWORD: chahed_dev_only
+      POSTGRES_DB: chahed
+    ports:
+      - "5432:5432"
+    volumes:
+      - chahed_db:/var/lib/postgresql/data
+
+volumes:
+  chahed_db:

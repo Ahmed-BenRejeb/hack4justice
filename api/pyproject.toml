@@ -1,0 +1,32 @@
+[project]
+name = "chahed-api"
+version = "0.1.0"
+description = "Chahed backend: extraction, corpus retrieval, rules, counterparty checks, TEJ export"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.141.1",
+    "pgvector>=0.5.0",
+    "psycopg[binary]>=3.3.5",
+    "python-dotenv>=1.2.3",
+    "python-multipart>=0.0.32",
+    "sqlalchemy>=2.0.52",
+    "uvicorn[standard]>=0.52.4",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.7",
+]
+
+[tool.ruff]
+extend-exclude = ["migrations/versions", "migrations/env.py"]
+
+[tool.ruff.lint]
+# B008: FastAPI's dependency injection relies on Depends(...) as a default argument.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
