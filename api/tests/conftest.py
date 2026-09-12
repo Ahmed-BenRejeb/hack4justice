@@ -1,6 +1,7 @@
 """Shared test fixtures. Requires the docker-compose Postgres instance running."""
 
 import io
+from pathlib import Path
 
 import pytest
 from fpdf import FPDF
@@ -11,7 +12,15 @@ from sqlalchemy.orm import Session
 from app.db.base import Base
 from app.db.session import engine
 
-LIBERATION_SANS = "/usr/share/fonts/liberation/LiberationSans-Regular.ttf"
+# The font path is distribution-specific: Arch first, then Debian/Ubuntu.
+LIBERATION_SANS_PATHS = (
+    "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+)
+LIBERATION_SANS = next(
+    (path for path in LIBERATION_SANS_PATHS if Path(path).exists()),
+    LIBERATION_SANS_PATHS[0],
+)
 
 
 @pytest.fixture(autouse=True)
