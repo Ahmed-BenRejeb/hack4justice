@@ -36,3 +36,15 @@ def test_chunk_by_article_returns_empty_for_text_without_headings() -> None:
 def test_chunk_by_article_drops_empty_trailing_section() -> None:
     chunks = chunk_by_article("Article 1\ntext\n\nArticle 2\n   \n")
     assert [c.article_ref for c in chunks] == ["Article 1"]
+
+
+def test_chunk_by_article_handles_real_tunisian_code_heading_style() -> None:
+    """The Code de l'IRPP et de l'IS uses "Article N.-" as its heading style,
+    not the bare "Article N" used elsewhere; both must split correctly."""
+    text = "Article 52.-  \nI. Premiere disposition.\n\nArticle 53.-   \nI. Deuxieme disposition.\n"
+
+    chunks = chunk_by_article(text)
+
+    assert [c.article_ref for c in chunks] == ["Article 52", "Article 53"]
+    assert "Premiere disposition" in chunks[0].text
+    assert "Deuxieme disposition" in chunks[1].text

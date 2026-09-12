@@ -333,6 +333,24 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 **Result:** `app/counterparty/` stays unbuilt. `docs/facts.md`'s RNE row is updated with the concrete endpoint, parameters, and the specific 401/OAuth finding, replacing the vaguer "contract-gated" note. If the team obtains real RNE credentials, `front-office/entites?idUnique=<...>` is the endpoint to integrate against, using the parameter names found here (not yet `verified`: a person should confirm `idUnique` is the same identifier as the DGI matricule fiscal before relying on it).
 
+---
+
+## D-021 - Real legal text sourced into corpus/sources/, found a real chunking bug
+
+**Date:** 2026-09-12
+
+**Decision:** `legislation.tn` still 503s, but other official/reference Tunisian legal sources are reachable now (`iort.gov.tn`, `jurisitetunisie.com`, and PDF mirrors of the Code de l'IRPP et de l'IS). Downloaded the current Code de l'IRPP et de l'IS (watermarked "Imprimerie Officielle de la Republique Tunisienne"), extracted Articles 52 through 55 ("2. Retenues a la source") with `pypdf`, and added them as the first real content in `corpus/sources/` (previously empty). Built `app/corpus/load_corpus.py`, a CLI loader mirroring `app/rules/load_rules.py`'s pattern (a `manifest.json` naming each source file and its URL), and ran it against the real database: 4 real chunks, real embeddings, real pgvector retrieval, verified live with French tax queries returning the correct articles.
+
+Running it surfaced a real bug: `app/corpus/chunking.py`'s heading regex only matched a bare "Article N" heading and returned zero chunks for the real text, which uses "Article N.-" (period-hyphen suffix), the standard heading style for Tunisian codified law. Widened the regex; added a regression test using the real heading style; existing synthetic-fixture tests still pass unchanged.
+
+**Options considered:**
+- Keep `corpus/sources/` empty until a full corpus-sourcing pass is scoped, since one section is a small fraction of the real corpus.
+- Add one real, verifiable section now to prove the pipeline end to end against real content, same as D-019 did for the TEJ schema.
+
+**Why:** The pipeline (`chunking.py`, `service.py`, `retrieval.py`) had only ever been tested against synthetic fixture text. A small amount of real content was enough to find a real bug that synthetic fixtures could not have caught (the heading format difference), matching this session's standing instruction to test everything end to end against real material, not just unit fixtures.
+
+**Result:** `corpus/sources/cirppis-retenues-a-la-source.txt`, `CODE-IRPP-IS-2024.pdf`, `manifest.json`, and `SOURCE.md` (provenance) are in the repository. `app/corpus/load_corpus.py` is a new CLI entry point; `app/config.py` gained `corpus_sources_dir` (algorithm parameter, default `../corpus/sources`, `/corpus-sources` in Docker). No compliance rule was written against this text: Article 52's rates and exceptions are legally complex and have been amended repeatedly; writing a rule against them accurately is a legal-content decision for the team, not something to guess at while sourcing the text.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -343,3 +361,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
 | 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
 | 2026-09-12 | team | Added D-020: RNE re-checked, reachable now but account-gated, not network-gated |
+| 2026-09-12 | team | Added D-021: sourced real legal text into corpus/sources/, fixed a real chunking bug |
