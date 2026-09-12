@@ -28,6 +28,8 @@ class Settings:
     database_url: str
     document_storage_dir: str
     embedding_dimensions: int
+    openrouter_api_key: str
+    openrouter_model_id: str
 
 
 def load_settings() -> Settings:
@@ -40,6 +42,8 @@ def load_settings() -> Settings:
         embedding_dimensions=int(
             os.environ.get("EMBEDDING_DIMENSIONS", EMBEDDING_DIMENSIONS_DEFAULT)
         ),
+        openrouter_api_key=_require("OPENROUTER_API_KEY"),
+        openrouter_model_id=_require("OPENROUTER_MODEL_ID"),
     )
 
 

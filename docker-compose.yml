@@ -17,6 +17,7 @@ services:
 
   api:
     build: ./api
+    env_file: ./api/.env
     environment:
       DATABASE_URL: postgresql+psycopg://chahed:chahed_dev_only@db:5432/chahed
     ports:
