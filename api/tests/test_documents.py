@@ -3,11 +3,18 @@ import io
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import Organisation
+from app.db.models import Organisation, Rule
 from app.main import app
 from tests.conftest import make_born_digital_pdf
 
 client = TestClient(app)
+
+FIXTURE_RULE = {
+    "citation_source": "Fixture Code, not a real legal text",
+    "article_ref": "Art. 0",
+    "verbatim_text": "Ceci est un texte de test.",
+    "url": "https://example.test/fixture-article-0",
+}
 
 
 def _make_organisation(db: Session) -> Organisation:
@@ -87,3 +94,74 @@ def test_upload_document_unknown_organisation_returns_404() -> None:
 def test_get_document_unknown_id_returns_404() -> None:
     response = client.get("/api/v1/documents/00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
+
+
+def test_findings_unknown_document_returns_404() -> None:
+    response = client.get(
+        "/api/v1/documents/00000000-0000-0000-0000-000000000000/findings"
+    )
+    assert response.status_code == 404
+
+
+def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
+    db: Session,
+) -> None:
+    organisation = _make_organisation(db)
+    db.add(
+        Rule(
+            **FIXTURE_RULE,
+            code="TEST-ABSTAIN",
+            logic_ref="tests.fixtures.rule_logic.decide_by_status",
+        )
+    )
+    db.commit()
+    pdf_bytes = make_born_digital_pdf("Une facture quelconque, sans rapport.")
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    document_id = upload.json()["id"]
+
+    findings = client.get(f"/api/v1/documents/{document_id}/findings").json()
+
+    assert len(findings) == 1
+    assert findings[0]["status"] == "abstained"
+    assert findings[0]["missing_fact"] == "status"
+    assert findings[0]["citation"]["article_ref"] == "Art. 0"
+
+
+def test_upload_evaluates_registered_rules_and_decides_when_fact_present(
+    db: Session,
+) -> None:
+    organisation = _make_organisation(db)
+    db.add(
+        Rule(
+            **FIXTURE_RULE,
+            code="TEST-DECIDE",
+            logic_ref="tests.fixtures.rule_logic.decide_if_mentions_article_62",
+        )
+    )
+    db.commit()
+    pdf_bytes = make_born_digital_pdf("Certificat de retenue a la source: article 62.")
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("certificat.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    document_id = upload.json()["id"]
+
+    findings = client.get(f"/api/v1/documents/{document_id}/findings").json()
+
+    assert len(findings) == 1
+    assert findings[0]["status"] == "decided"
+    assert findings[0]["decided_code"] == "TEST-B"
+    assert findings[0]["citation"]["verbatim_text"] == "Ceci est un texte de test."

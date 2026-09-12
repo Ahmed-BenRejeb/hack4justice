@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, Extraction, Organisation
+from app.db.models import Citation, Document, Extraction, Finding, Organisation, Rule
 from app.db.session import get_db
 from app.extraction.service import run_extraction
+from app.rules.service import evaluate_all_rules
 from app.storage import save_upload
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -65,6 +66,8 @@ async def upload_document(
     db.flush()
 
     run_extraction(db, document, content, file.content_type or "")
+    if document.status == "extracted":
+        evaluate_all_rules(db, document.id)
 
     db.commit()
     db.refresh(document)
@@ -89,3 +92,52 @@ def get_document(
         **DocumentOut.model_validate(document).model_dump(),
         extractions=[ExtractionOut.model_validate(e) for e in extractions],
     )
+
+
+class CitationOut(BaseModel):
+    citation_source: str
+    article_ref: str
+    verbatim_text: str
+    url: str
+
+    model_config = {"from_attributes": True}
+
+
+class FindingOut(BaseModel):
+    id: uuid.UUID
+    status: str
+    decided_code: str | None
+    missing_fact: str | None
+    created_at: datetime
+    citation: CitationOut
+
+    model_config = {"from_attributes": True}
+
+
+@router.get("/{document_id}/findings", response_model=list[FindingOut])
+def get_document_findings(
+    document_id: uuid.UUID, db: Session = Depends(get_db)
+) -> list[FindingOut]:
+    """Findings for a document, each with its rule's citation resolved."""
+    if db.get(Document, document_id) is None:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    rows = (
+        db.query(Finding, Rule)
+        .join(Citation, Citation.finding_id == Finding.id)
+        .join(Rule, Rule.id == Citation.rule_id)
+        .filter(Finding.document_id == document_id)
+        .order_by(Finding.created_at)
+        .all()
+    )
+    return [
+        FindingOut(
+            id=finding.id,
+            status=finding.status,
+            decided_code=finding.decided_code,
+            missing_fact=finding.missing_fact,
+            created_at=finding.created_at,
+            citation=CitationOut.model_validate(rule),
+        )
+        for finding, rule in rows
+    ]

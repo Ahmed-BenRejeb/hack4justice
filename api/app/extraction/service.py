@@ -26,3 +26,4 @@ def run_extraction(
         )
     )
     document.status = "extracted"
+    db.flush()
