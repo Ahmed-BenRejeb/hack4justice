@@ -1,5 +1,12 @@
 FROM python:3.12-slim
 
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    tesseract-ocr \
+    tesseract-ocr-fra \
+    tesseract-ocr-ara \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir uv==0.11.23
 
 WORKDIR /app

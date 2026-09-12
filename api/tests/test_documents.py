@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Organisation
 from app.main import app
+from tests.conftest import make_born_digital_pdf
 
 client = TestClient(app)
 
@@ -25,7 +26,34 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_upload_document_persists_and_returns_it(db: Session) -> None:
+def test_upload_document_persists_and_extracts_it(db: Session) -> None:
+    organisation = _make_organisation(db)
+    pdf_bytes = make_born_digital_pdf("Certificat de retenue a la source: article 62.")
+
+    response = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("certificat.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["organisation_id"] == str(organisation.id)
+    assert body["status"] == "extracted"
+    assert body["storage_ref"].endswith(".pdf")
+
+    detail = client.get(f"/api/v1/documents/{body['id']}")
+    assert detail.status_code == 200
+    extractions = detail.json()["extractions"]
+    assert len(extractions) == 1
+    assert extractions[0]["field_name"] == "full_text"
+    assert "article 62" in extractions[0]["value"]
+
+
+def test_upload_document_unsupported_type_marks_extraction_failed(db: Session) -> None:
     organisation = _make_organisation(db)
 
     response = client.post(
@@ -34,16 +62,11 @@ def test_upload_document_persists_and_returns_it(db: Session) -> None:
             "organisation_id": str(organisation.id),
             "uploaded_by": "accountant@example.tn",
         },
-        files={
-            "file": ("certificat.pdf", io.BytesIO(b"%PDF-1.4 test"), "application/pdf")
-        },
+        files={"file": ("notes.txt", io.BytesIO(b"plain text notes"), "text/plain")},
     )
 
     assert response.status_code == 201
-    body = response.json()
-    assert body["organisation_id"] == str(organisation.id)
-    assert body["status"] == "uploaded"
-    assert body["storage_ref"].endswith(".pdf")
+    assert response.json()["status"] == "extraction_failed"
 
 
 def test_upload_document_unknown_organisation_returns_404() -> None:
@@ -58,4 +81,9 @@ def test_upload_document_unknown_organisation_returns_404() -> None:
         },
     )
 
+    assert response.status_code == 404
+
+
+def test_get_document_unknown_id_returns_404() -> None:
+    response = client.get("/api/v1/documents/00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
