@@ -351,6 +351,42 @@ Running it surfaced a real bug: `app/corpus/chunking.py`'s heading regex only ma
 
 **Result:** `corpus/sources/cirppis-retenues-a-la-source.txt`, `CODE-IRPP-IS-2024.pdf`, `manifest.json`, and `SOURCE.md` (provenance) are in the repository. `app/corpus/load_corpus.py` is a new CLI entry point; `app/config.py` gained `corpus_sources_dir` (algorithm parameter, default `../corpus/sources`, `/corpus-sources` in Docker). No compliance rule was written against this text: Article 52's rates and exceptions are legally complex and have been amended repeatedly; writing a rule against them accurately is a legal-content decision for the team, not something to guess at while sourcing the text.
 
+---
+
+## D-022 - Article 62 does not match the anchor case; real candidates found
+
+**Date:** 2026-09-13
+
+**Decision:** `docs/facts.md` already flagged D-002's anchor citation ("Article 62 ... exact text pending") as unverified. Now that the Code de l'IRPP et de l'IS is fully available (D-021), checked it directly: **the real Article 62 in this code governs bookkeeping/accounting record obligations (who must keep formal accounts), not withholding certificates or code selection.** It does not match the anchor case ("a prestataire unpaid because the wrong withholding code was selected on the certificate").
+
+Two real articles in the same code do match the narrative:
+- **Article 52(I)(a)** sets the rates and payment categories (honoraires, commissions, courtages, loyers) that determine which withholding code applies. This is what `app/rules/cirppis_art52_honoraires.py` and `app/rules/withholding_code_proposal.py` are grounded in.
+- **Article 55(I)** requires the debtor to deliver a "certificat de retenue" to the beneficiary at each payment, naming its required fields (identity, gross amount, withholding amount, net amount), and states it is issued "a travers une plateforme electronique mise en place par le ministere des finances" (added by decret-loi n. 2021-21, 2021-12-28) - this is almost certainly a direct reference to the TEJ platform itself.
+
+**Options considered:**
+- Leave "Article 62" in `docs/plan.md` unquestioned, since it was already marked `to verify` and not yet used on any real citation.
+- Check it directly now that the source is available, since building further on an unverified anchor risks the whole pitch narrative citing the wrong article on stage.
+
+**Why:** `docs/facts.md`'s own rule: "no fact on a slide or on screen that is not in docs/facts.md with status verified. Article numbers are checked by a person against the official source, never recalled from memory." "62" was never checked against the official source by anyone; it appears to have been a placeholder. Finding this now, before it reaches a slide, is exactly what the facts register is for.
+
+**Result:** No file citing "Article 62" as a real rule exists yet (the fixture fixtures/test data using "article 62" is fixture-only, not a real citation, and is unaffected). `docs/facts.md`'s Article 62 row is updated with this finding. `docs/plan.md` section 2's anchor case still names "Article 62"; changing the pitch narrative's anchor citation is the team's call, not something to rewrite unilaterally. Candidate replacement: Article 55(I) for the certificate-delivery obligation, Article 52(I)(a) for the code-selection mechanism, both `to verify` pending a person confirming the verbatim text and the platform reference.
+
+---
+
+## D-023 - Withholding-code proposal engine (RS2 family)
+
+**Date:** 2026-09-13
+
+**Decision:** Built `app/rules/withholding_code_proposal.py`, docs/plan.md section 2's stated "technical core": given a document's text, propose which of the real 36 TEJ withholding codes (D-019) applies. Scoped narrowly to the honoraires/commissions/courtages family (RS2_000001 vs RS2_000002, distinguished by the beneficiary's fiscal regime, forfait d'assiette vs regime reel), the same family Article 52(I)(a) and the Article 62 investigation (D-022) both point to. Any other category (loyers, capitaux mobiliers, cessions, and so on) abstains by name; none of those are modeled yet.
+
+**Options considered:**
+- Attempt to cover all 36 codes now, for a more complete demo.
+- Cover one real, narrow, well-understood family first, abstaining explicitly outside it.
+
+**Why:** The other code families involve legally distinct, more complex conditions (residency, establishment, capital gains treatment) that were not part of this session's sourced text and would risk exactly the kind of guessed legal content the root CLAUDE.md rule forbids. A correct narrow proposal with honest abstentions elsewhere demonstrates the mechanism (demo moment 2: "the proposed withholding code appears with its citation") without overclaiming coverage.
+
+**Result:** `app/rules/withholding_code_proposal.py` and its tests (tested live against the real model). Not yet a registered rule, same as D-022's other candidates: needs a human-verified citation before entering `rules/`.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -362,3 +398,5 @@ Running it surfaced a real bug: `app/corpus/chunking.py`'s heading regex only ma
 | 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
 | 2026-09-12 | team | Added D-020: RNE re-checked, reachable now but account-gated, not network-gated |
 | 2026-09-12 | team | Added D-021: sourced real legal text into corpus/sources/, fixed a real chunking bug |
+| 2026-09-13 | team | Added D-022: Article 62 does not match the anchor case; found real candidates |
+| 2026-09-13 | team | Added D-023: withholding-code proposal engine (RS2 family) |

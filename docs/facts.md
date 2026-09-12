@@ -10,11 +10,11 @@ Status values: `verified`, `to verify`, `banned` (a claim we explicitly do not m
 
 | Claim | Source | Status | Notes |
 |---|---|---|---|
-| Withholding certificates must be issued via the DGI platform, code selected from a list | DGI platform documentation / instruction, exact reference pending | to verify | Foundational claim for the whole pitch; must be checked first |
+| Withholding certificates must be issued via the DGI platform, code selected from a list | Code de l'IRPP et de l'IS, Article 55(I), and `schemas/tej/TEJRSCodesOperations_v1.0.xsd` | to verify | Candidate found 2026-09-13 (D-022): Article 55(I) requires the debtor to deliver a "certificat de retenue" at each payment and states (added by decret-loi n. 2021-21, 2021-12-28) that it is issued "a travers une plateforme electronique mise en place par le ministere des finances", almost certainly the TEJ platform itself. The code list (36 codes) is the real schema found in D-019. Still `to verify`: a person must confirm the platform reference is TEJ specifically, not a different DGI system |
 | The obligation has been in force since January (approx. eight months before the hackathon) | DGI instruction / official gazette, exact date pending | to verify | Exact entry-into-force date is explicitly flagged in the v2 description as unverified |
 | The DGI doctrine was updated in the days before the hackathon | DGI communication, date and content pending | to verify | If a DGI officer attends, this is the first thing tested; content of the update must be known precisely, not just its existence |
 | Number of withholding codes ("plus de 40") | `schemas/tej/TEJRSCodesOperations_v1.0.xsd` (see `schemas/tej/SOURCE.md`), downloaded 2026-09-12 from jibaya.tn | to verify | Candidate answer found: exactly 36 distinct codes enumerated in the real DGI TEJ schema, RS1_000001 through RS11_000001, with two numbering gaps (RS3_000002, RS6_000004 absent) and no RS10 category. Still `to verify`: a person must confirm this is the current schema version and that the gaps are not a download/parsing error before this count goes on a slide |
-| Article 62 (the anchor case: a prestataire unpaid due to a certificate error) | Code de l'IRPP/IS or relevant fiscal code, article 62, exact text pending | to verify | Verbatim article text required before it appears in the pitch narrative or on any rule citation |
+| Article 62 (the anchor case: a prestataire unpaid due to a certificate error) | Code de l'IRPP/IS, Article 62, checked 2026-09-13 (D-022) | to verify | **Checked directly: the real Article 62 governs bookkeeping/accounting record obligations, not withholding certificates or code selection. It does not match the anchor case.** Real candidates in the same code: Article 52(I)(a) for the rate/category basis, Article 55(I) for the certificate-delivery obligation (see the row above). The anchor case's article number needs correcting before it reaches a slide or a rule citation |
 
 ## Administration systems
 
@@ -62,3 +62,4 @@ Any number in the impact calculation that does not have a `verified` source by p
 | 2026-09-12 | team | Found real DGI TEJ schema (jibaya.tn); added as candidate source for code count and schema facts, per D-019 |
 | 2026-09-12 | team | Checked RNE reachability: domain returns 503, API appears contract-gated; counterparty/ stays unbuilt |
 | 2026-09-12 | team | Re-checked RNE from a different network: portal now loads, real search API found in its own JS but returns 401 unauthenticated; confirmed account-gated, not network-gated, per D-020 |
+| 2026-09-13 | team | Checked Article 62 directly: does not match the anchor case (it governs bookkeeping, not certificates); found real candidates (Article 52, Article 55), per D-022 |
