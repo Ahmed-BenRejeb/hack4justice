@@ -432,6 +432,21 @@ On the web side: an organisation picker and the uploader's e-mail feed `POST /do
 
 **Result:** `docker compose up` starts on a machine with a local Postgres on 5432. `api/CLAUDE.md` local setup updated.
 
+## D-026 - First registered rule: Article 52(I)(a), cited from the DGI's 2026 edition
+
+**Date:** 2026-09-13
+
+**Decision:** Register `rules/cirppis-art52-i-a.json` (code `CIRPPIS-ART52-I-A`, logic `app.rules.cirppis_art52_honoraires.decide_article_52_withholding_mention`), citing Article 52, paragraphe I, a) of the Code de l'IRPP et de l'IS, 2026 edition, from the DGI's own portal (`https://jibaya.tn/wp-content/uploads/2026/03/11.pdf`, PDF page 84). The citation was promoted to `verified` in `docs/facts.md` after a person on the team checked the verbatim text against that page. `corpus/sources/` now holds the same 2026 edition in place of the 2024 copy from `alliance-tunisie.com`, so the indexed text and the citation come from one document. The chunker accepts the 2026 edition's `ARTICLE N :` heading style. In Docker, `rules/` is copied into the api image and `load_rules` runs on every start.
+
+**Options considered:**
+- Sign-off: a person reviews the evidence and the verification is recorded; stage the rule unregistered; hand over the evidence only.
+- Source: the DGI 2026 edition for rule and corpus; for the rule only; keep the 2024 private-host copy.
+- Loading: automatic in the compose command; manual CLI.
+
+**Why:** Chosen by the user. The DGI portal is the tax authority's own publication and the most recent edition; the 2024 copy was a private re-host, two editions behind. The verbatim text was extracted from the 2026 PDF and compared with the DGI 2025 edition (identical) and the 2024 copy (same words, different footnote marker, one missing "du"), but the `verified` status rests on the person's check, not on those extractions. `load_rules` upserts by code, so running it on every start is safe.
+
+**Result:** The registry holds one rule. Verified in the compose stack through the web proxy: an honoraires note without any withholding mention yields `ART52_WITHHOLDING_MISSING`, one mentioning a retenue yields `ART52_WITHHOLDING_PRESENT`, and a delivery note yields an abstention on `article_52_category`, each with the Article 52(I)(a) citation. Every upload now makes one live OpenRouter call. The 10% rate in the cited text (footnote (1): applies to amounts paid from 1 January 2021) is not asserted by the rule and not verified for a slide. `api/CLAUDE.md`, `corpus/sources/SOURCE.md` and `docs/facts.md` updated; api suite 74 passed.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -447,3 +462,4 @@ On the web side: an organisation picker and the uploader's e-mail feed `POST /do
 | 2026-09-12 | team | Added D-023: answer-first file review with a side rail |
 | 2026-09-12 | team | Added D-024: web and api integration, minimal backend extensions |
 | 2026-09-13 | team | Added D-025: configurable host port for the compose database |
+| 2026-09-13 | team | Added D-026: first registered rule, Article 52(I)(a) cited from the DGI 2026 edition |
