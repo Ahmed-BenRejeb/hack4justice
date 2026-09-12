@@ -286,6 +286,23 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-018 - Answer-first file review with a side rail
+
+**Date:** 2026-09-12
+
+**Decision:** Both file review screens (MSME and officer) lead with a result banner: proposed code, number of missing facts, extracted fields, and RNE status. The main column holds the cited findings, then the extracted fields. A side rail holds the officer's decision and export (officer), progress as a vertical step list, and the RNE check. The separate "already checked" card is replaced by the banner. The extraction table marks only assisted facts, with a visible legend instead of a tooltip.
+
+**Options considered:**
+- Answer first with a side rail.
+- A result banner followed by tabs (Constats, Informations, Fournisseur, Suite).
+- A single column, reordered, with extracted fields collapsed by default.
+
+**Why:** The first version put the answer below a long extraction table and repeated the same fact in several places. Tabs would hide content the presenter must show during the demo. A rail keeps every element visible while cutting the scroll length, and it puts the officer's one action next to the evidence.
+
+**Result:** `components/shared/result-banner.tsx`, `review-layout.tsx` and `file-header.tsx` added; `prequalification-summary.tsx` removed; unused shadcn primitives (dialog, sheet, progress, separator, tooltip) removed. `docs/design.md` section 4 updated.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -295,3 +312,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
 | 2026-09-12 | team | Added D-017: web UI data flow, tokens and typography, assumed response shapes |
+| 2026-09-12 | team | Added D-018: answer-first file review with a side rail |
