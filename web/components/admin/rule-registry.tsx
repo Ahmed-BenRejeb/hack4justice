@@ -89,7 +89,7 @@ export function RuleRegistry(): JSX.Element {
                       <dd className="font-mono text-xs break-words">{rule.logic_ref}</dd>
                     </div>
                   </dl>
-                  <Citation rule={rule} />
+                  <Citation citation={rule} />
                 </li>
               ))}
             </ul>

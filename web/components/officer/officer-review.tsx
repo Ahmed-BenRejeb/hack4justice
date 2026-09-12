@@ -1,29 +1,30 @@
 "use client";
 
 /**
- * Officer review of one pre-qualified file, answer first: the result banner states what is
- * already checked, the cited findings and extracted fields follow; the decision leads the rail,
- * then the export once validated, progress and the RNE check.
+ * Officer review of one file, answer first. Once the file is validated, the TEJ export form
+ * leads the main column; the decision, the export result and progress sit in the rail.
  */
 import type { JSX } from "react";
 import { ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
-import { CounterpartyPanel } from "@/components/shared/counterparty-panel";
 import { DecisionSummary } from "@/components/shared/decision-summary";
 import { ExportResult } from "@/components/shared/export-result";
-import { ExtractionTable } from "@/components/shared/extraction-table";
 import { FileHeader } from "@/components/shared/file-header";
-import { FindingList } from "@/components/shared/finding-list";
 import { PipelineProgress } from "@/components/shared/pipeline-progress";
-import { ResultBanner } from "@/components/shared/result-banner";
 import { ReviewLayout } from "@/components/shared/review-layout";
-import { Section } from "@/components/shared/section";
+import { ReviewMain } from "@/components/shared/review-main";
 import { pipelineProgress } from "@/lib/pipeline";
 import { useDocumentFile } from "@/lib/use-document-file";
 import { DecisionPanel } from "./decision-panel";
-import { ExportPanel } from "./export-panel";
+import { ExportForm } from "./export-form";
+
+interface OfficerReviewProps {
+  documentId: string;
+  /** Recorded on the decision; comes from server configuration until officer sign-in exists. */
+  officerId: string;
+}
 
 /** Loads the file by id; the decision panel gives way to the recorded decision once one exists. */
-export function OfficerReview({ documentId }: { documentId: string }): JSX.Element {
+export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JSX.Element {
   const { data, error, isLoading, reload } = useDocumentFile(documentId);
 
   if (isLoading) return <LoadingBlock label="Chargement du dossier" rows={4} />;
@@ -31,6 +32,7 @@ export function OfficerReview({ documentId }: { documentId: string }): JSX.Eleme
 
   const { document: detail, findings } = data;
   const decision = detail.officer_decision;
+  const awaitingExport = decision?.action === "validated" && detail.export === null;
 
   return (
     <ReviewLayout
@@ -42,13 +44,8 @@ export function OfficerReview({ documentId }: { documentId: string }): JSX.Eleme
       }
       main={
         <>
-          <ResultBanner findings={findings} extractions={detail.extractions} check={detail.counterparty_check} />
-          <Section id="constats" title="Constats" description="Ouvrez une citation pour lire l’article qui fonde le constat.">
-            <FindingList findings={findings} />
-          </Section>
-          <Section id="extraction" title="Informations extraites">
-            <ExtractionTable extractions={detail.extractions} inProgress={findings.length === 0} />
-          </Section>
+          {awaitingExport && <ExportForm document={detail} onExported={reload} />}
+          <ReviewMain document={detail} findings={findings} />
         </>
       }
       rail={
@@ -56,16 +53,10 @@ export function OfficerReview({ documentId }: { documentId: string }): JSX.Eleme
           {decision ? (
             <DecisionSummary decision={decision} />
           ) : (
-            <DecisionPanel documentId={detail.id} onDecided={reload} />
+            <DecisionPanel documentId={detail.id} officerId={officerId} onDecided={reload} />
           )}
-          {decision?.action === "validated" &&
-            (detail.export ? (
-              <ExportResult result={detail.export} />
-            ) : (
-              <ExportPanel documentId={detail.id} onExported={reload} />
-            ))}
-          <PipelineProgress stages={pipelineProgress(detail, findings.length)} />
-          <CounterpartyPanel documentId={detail.id} check={detail.counterparty_check} />
+          {detail.export && <ExportResult result={detail.export} />}
+          <PipelineProgress stages={pipelineProgress(detail)} />
         </>
       }
     />

@@ -8,20 +8,20 @@
 import type { JSX } from "react";
 import { ChevronDownIcon, ExternalLinkIcon, ScaleIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { Rule } from "@/lib/api-types";
+import type { Citation as CitationData } from "@/lib/api-types";
 import { httpUrl } from "@/lib/format";
 
 /** Collapsible citation: article reference and source, expanding to verbatim text and link. */
-export function Citation({ rule }: { rule: Rule }): JSX.Element {
-  const href = httpUrl(rule.url);
+export function Citation({ citation }: { citation: CitationData }): JSX.Element {
+  const href = httpUrl(citation.url);
 
   return (
     <Collapsible className="rounded-lg border bg-muted/40">
       <CollapsibleTrigger className="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/70">
         <ScaleIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">{rule.article_ref}</span>
-          <span className="block truncate text-xs text-muted-foreground">{rule.citation_source}</span>
+          <span className="block text-sm font-medium">{citation.article_ref}</span>
+          <span className="block truncate text-xs text-muted-foreground">{citation.citation_source}</span>
         </span>
         <span className="text-xs font-medium text-primary group-data-[state=open]:hidden">
           Lire l’article
@@ -41,7 +41,7 @@ export function Citation({ rule }: { rule: Rule }): JSX.Element {
             lang="fr"
             className="border-l-2 border-foreground/20 pl-4 text-sm leading-relaxed whitespace-pre-line"
           >
-            {rule.verbatim_text}
+            {citation.verbatim_text}
           </blockquote>
           {href ? (
             <a

@@ -4,32 +4,23 @@
  */
 
 const FIELD_LABELS = new Map<string, string>([
+  ["full_text", "Texte intégral du document"],
   ["supplier_name", "Fournisseur"],
   ["supplier_tax_id", "Matricule fiscal du fournisseur"],
-  ["supplier_regime", "Régime fiscal du fournisseur"],
-  ["supplier_status", "Statut du fournisseur"],
   ["client_name", "Client"],
   ["client_tax_id", "Matricule fiscal du client"],
   ["service_description", "Objet de la prestation"],
-  ["service_nature", "Nature de la prestation"],
-  ["invoice_number", "Numéro de facture"],
   ["invoice_date", "Date de facture"],
-  ["payment_date", "Date de paiement"],
   ["amount_excl_tax", "Montant hors taxes"],
-  ["amount_incl_tax", "Montant toutes taxes comprises"],
-  ["vat_amount", "Montant de TVA"],
-  ["fiscal_mentions", "Mentions fiscales"],
 ]);
 
+// The statuses api/ writes: upload and extraction (documents.py), then the officer's action (officer.py).
 const DOCUMENT_STATUS_LABELS = new Map<string, string>([
   ["uploaded", "Déposé"],
-  ["extracting", "Extraction en cours"],
-  ["evaluating", "Analyse en cours"],
-  ["prequalified", "Pré-qualifié"],
+  ["extracted", "Lu, en attente d’examen"],
+  ["extraction_failed", "Lecture impossible"],
   ["validated", "Validé"],
   ["flagged", "Signalé"],
-  ["exported", "Exporté"],
-  ["failed", "Échec du traitement"],
 ]);
 
 /** Turns `some_identifier` into "Some identifier". */

@@ -4,11 +4,11 @@ import type { JSX } from "react";
 const STEPS = [
   {
     title: "Lecture",
-    text: "Extraction des parties, identifiants fiscaux, objet de la prestation, montants et mentions fiscales.",
+    text: "Le texte du document est lu : directement pour un PDF numérique, par reconnaissance de caractères pour un scan.",
   },
   {
-    title: "Décision du code",
-    text: "Le système interroge la liste des codes et les articles qui les gouvernent, puis propose le code applicable.",
+    title: "Application des règles",
+    text: "Chaque règle du registre est appliquée au texte lu, et propose un code ou s’abstient.",
   },
   {
     title: "Preuve",
@@ -48,8 +48,8 @@ export function HowItWorks(): JSX.Element {
         ))}
       </ol>
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        La lecture du document est effectuée localement. Les identifiants personnels sont masqués
-        avant tout appel à un service externe.
+        La lecture du document et l’application des règles sont effectuées sur le serveur de
+        l’application, sans appel à un service externe.
       </p>
     </section>
   );

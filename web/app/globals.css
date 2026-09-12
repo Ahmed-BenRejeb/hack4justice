@@ -49,8 +49,6 @@
 @theme {
   /* The one orchestrated moment: a file arriving in the officer queue (docs/design.md section 5). */
   --animate-queue-arrive: queue-arrive 1.8s ease-out;
-  /* Answers the upload: extracted fields appearing as the backend produces them. */
-  --animate-field-in: field-in 0.25s ease-out;
 
   @keyframes queue-arrive {
     0% {
@@ -65,15 +63,6 @@
     }
     100% {
       background-color: transparent;
-    }
-  }
-
-  @keyframes field-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
     }
   }
 }

@@ -21,6 +21,10 @@ export function describeError(error: unknown): { title: string; detail: string |
       };
     case 404:
       return { title: "Ressource introuvable", detail: error.message };
+    case 409:
+      return { title: "Action refusée", detail: error.message };
+    case 422:
+      return { title: "Données refusées", detail: error.message };
     default:
       return { title: `Erreur du serveur (${error.status})`, detail: error.message };
   }
@@ -29,12 +33,22 @@ export function describeError(error: unknown): { title: string; detail: string |
 /** Blocking error for a screen that has no data to show, with an optional retry. */
 export function ErrorNotice({ error, onRetry }: { error: unknown; onRetry?: () => void }): JSX.Element {
   const { title, detail } = describeError(error);
+  // A refused export returns one message per schema error; each deserves its own line.
+  const details = error instanceof ApiError && error.details.length > 1 ? error.details : null;
   return (
     <Alert variant="destructive">
       <TriangleAlertIcon aria-hidden />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>
-        {detail && <p className="font-mono text-xs break-words">{detail}</p>}
+        {details ? (
+          <ul className="list-disc space-y-1 pl-4 font-mono text-xs break-words">
+            {details.map((message, index) => (
+              <li key={index}>{message}</li>
+            ))}
+          </ul>
+        ) : (
+          detail && <p className="font-mono text-xs break-words">{detail}</p>
+        )}
         {onRetry && (
           <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
             Réessayer

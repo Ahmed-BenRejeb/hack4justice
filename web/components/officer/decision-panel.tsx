@@ -18,11 +18,12 @@ import type { OfficerAction } from "@/lib/api-types";
 
 interface DecisionPanelProps {
   documentId: string;
+  officerId: string;
   onDecided: () => void;
 }
 
 /** Observation field plus the validate and flag buttons. */
-export function DecisionPanel({ documentId, onDecided }: DecisionPanelProps): JSX.Element {
+export function DecisionPanel({ documentId, officerId, onDecided }: DecisionPanelProps): JSX.Element {
   const noteId = useId();
   const hintId = useId();
   const noteRef = useRef<HTMLTextAreaElement>(null);
@@ -39,7 +40,12 @@ export function DecisionPanel({ documentId, onDecided }: DecisionPanelProps): JS
     }
     setPending(action);
     try {
-      await api.submitOfficerDecision({ document_id: documentId, action, note: trimmed || null });
+      await api.submitOfficerDecision({
+        document_id: documentId,
+        officer_id: officerId,
+        action,
+        note: trimmed || null,
+      });
       toast.success(action === "validated" ? "Dossier validé" : "Dossier signalé");
       // Buttons stay disabled until the refreshed file replaces this panel, preventing a double submit.
       onDecided();

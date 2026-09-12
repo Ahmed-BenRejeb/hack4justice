@@ -24,3 +24,8 @@ export function getApiBaseUrl(): string {
   }
   return raw.replace(/\/+$/, "");
 }
+
+/** Identifier recorded as `officer_id` on every decision, until officer sign-in exists. */
+export function getOfficerId(): string {
+  return requireEnv("OFFICER_ID");
+}

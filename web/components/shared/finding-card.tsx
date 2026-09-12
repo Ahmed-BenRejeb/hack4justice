@@ -21,7 +21,7 @@ export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FindingStatusBadge status={finding.status} />
         <span className="text-xs text-muted-foreground">
-          Règle <span className="font-mono">{finding.rule.code}</span>
+          Règle <span className="font-mono">{finding.rule_code}</span>
         </span>
       </div>
 
@@ -47,7 +47,7 @@ export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
       )}
 
       <div className="mt-4">
-        <Citation rule={finding.rule} />
+        <Citation citation={finding.citation} />
       </div>
     </article>
   );

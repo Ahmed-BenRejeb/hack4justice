@@ -4,25 +4,22 @@ import { test } from "node:test";
 import type { Finding, FindingStatus } from "../lib/api-types.ts";
 import { summarizeFindings } from "../lib/findings.ts";
 
-const rule = {
-  id: "r1",
-  code: "R1",
+const citation = {
   citation_source: "Source",
   article_ref: "Article",
   verbatim_text: "Texte",
   url: "https://example.org",
-  logic_ref: "rules.example",
 };
 
 function finding(id: string, status: FindingStatus, code: string | null): Finding {
   return {
     id,
-    rule_id: rule.id,
+    rule_code: "R1",
     status,
     decided_code: code,
     missing_fact: status === "abstained" ? "Fait manquant" : null,
     created_at: "2026-09-12T10:00:00Z",
-    rule,
+    citation,
   };
 }
 

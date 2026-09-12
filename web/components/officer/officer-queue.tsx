@@ -29,7 +29,7 @@ export function OfficerQueue(): JSX.Element {
     "officer-queue",
     async (signal) => {
       const items = await api.getOfficerQueue(signal);
-      const ids = items.map((item) => item.document_id);
+      const ids = items.map((item) => item.id);
       // Arrivals are computed per poll, so each new file animates exactly once.
       const arrived = newArrivals(seenIds.current, ids);
       seenIds.current = new Set(ids);
@@ -43,7 +43,7 @@ export function OfficerQueue(): JSX.Element {
       <PageHeader
         eyebrow="Espace agent"
         title="Dossiers pré-qualifiés"
-        description="Chaque dossier arrive déjà analysé : constats cités, abstentions nommées, vérification RNE."
+        description="Chaque dossier arrive déjà lu et analysé : constats cités et abstentions nommées."
         actions={
           <>
             {updatedAt && (
