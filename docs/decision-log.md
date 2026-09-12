@@ -263,6 +263,25 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-017 - api/ scaffold: Python 3.12 pin, embedding dimension default
+
+**Date:** 2026-09-12
+
+**Decision:** Two implementation calls made while scaffolding `api/` (Phase 0), each a deviation from or a gap in an existing decision, recorded rather than made silently:
+
+1. Python is pinned to 3.12 via `uv`, not the "latest stable release" language in D-010 (which is 3.14 as of this date). Core dependencies (psycopg, pgvector, SQLAlchemy) either lacked 3.14 wheels or were unverified against it at scaffold time.
+2. `corpus_chunk.embedding` needs a fixed vector dimension to create the column. D-012 leaves the embedding model (and so its dimension) an open, unconfirmed assumption. A default of 384 (`EMBEDDING_DIMENSIONS` in `api/app/config.py`, documented default per the algorithm-parameter policy) is used so the migration can exist at all; it is a placeholder, not a model choice, and the column will need a new migration once D-012 is actually resolved.
+
+**Options considered:**
+- Block the entire database schema and first migration on resolving D-012 first.
+- Add a documented, overridable default dimension now, revisit when the embedding model is chosen.
+
+**Why:** Phase 0's gate is "first migration applies cleanly" (`docs/plan.md` section 8); the whole schema, not just the embedding column, was waiting on it. A configurable default with the assumption stated in the same place (`api/app/config.py`, `api/CLAUDE.md`) is cheaper to unwind later than blocking Phase 0 on a decision that belongs to Phase 1's corpus work.
+
+**Result:** `api/.python-version` pins 3.12. `api/app/config.py` documents `EMBEDDING_DIMENSIONS_DEFAULT = 384`. Both are flagged in `api/CLAUDE.md` for whoever picks up the embeddings provider next.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -271,3 +290,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 |---|---|---|
 | 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
+| 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |

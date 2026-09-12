@@ -37,7 +37,7 @@ api/          Python backend (FastAPI): extraction, corpus retrieval, rules, cou
 
 ## Getting started
 
-Scaffolding for `web/` and `api/` has not been created yet; this is a documentation-first checkpoint. Once scaffolded, each side will carry its own setup instructions in a local `CLAUDE.md`, and `.env.example` (repeated per process, per `docs/architecture.md` section 7) will list every required variable.
+`api/` is scaffolded: config, database models and first migration, and a FastAPI app with a health check and document upload. See `api/CLAUDE.md` for setup. `web/` has not been created yet.
 
 ## Design law
 
