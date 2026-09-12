@@ -314,7 +314,46 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
-## D-020 - Web UI: client-side data through a thin proxy, fixed tokens, assumed response shapes
+**Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
+
+---
+
+## D-020 - RNE re-checked: reachable, but account-gated, not network-gated
+
+**Date:** 2026-09-12
+
+**Decision:** Re-checked RNE reachability from a different network (the user removed a firewall). `home.registre-entreprises.tn` still returns 503, but `www.registre-entreprises.tn/rne-public` now loads as a real Angular portal. Read its own served JS bundle (public, same as any browser downloads) to find its real API surface rather than guess one: four API bases (`rne-api`, `rne-auth-api`, `rne-bor-api`, `rne-subscription-api`) and a real search endpoint, `GET /api/rne-api/front-office/entites`, with real parameter names (`idUnique`, `denomination`, `nomCommercialFr`, `cnssNumPM`, and others) taken directly from the generated API client code. Called it live, unauthenticated: `401 Access is denied`. Traced the auth flow: `/api/rne-auth-api/oauth/token` needs a real user account; the embedded Basic credential is the SPA's own OAuth client id, not a bypass. No unauthenticated search path exists in the served client code.
+
+**Options considered:**
+- Assume the earlier network-level 503 was the only blocker and build the integration now that the site loads.
+- Verify what actually gates the real search endpoint before writing any integration code.
+- Try further to find or work around the auth requirement (guess a public/guest flow, hunt for a bypass).
+
+**Why:** The root CLAUDE.md rule against fabricating an external contract cuts both ways: it is also wrong to assume a blocker is resolved without checking. The previous "unreachable" finding and the current "requires a real account" finding are both genuine, evidence-based facts, not assumptions, arrived at the same way as D-019. Going further than reading the site's own public client code (trying to obtain or guess credentials, hunting for an undocumented bypass) is a step the team should decide on explicitly, not something to do unilaterally against a live government system.
+
+**Result:** `app/counterparty/` stays unbuilt. `docs/facts.md`'s RNE row is updated with the concrete endpoint, parameters, and the specific 401/OAuth finding, replacing the vaguer "contract-gated" note. If the team obtains real RNE credentials, `front-office/entites?idUnique=<...>` is the endpoint to integrate against, using the parameter names found here (not yet `verified`: a person should confirm `idUnique` is the same identifier as the DGI matricule fiscal before relying on it).
+
+---
+
+## D-021 - Real legal text sourced into corpus/sources/, found a real chunking bug
+
+**Date:** 2026-09-12
+
+**Decision:** `legislation.tn` still 503s, but other official/reference Tunisian legal sources are reachable now (`iort.gov.tn`, `jurisitetunisie.com`, and PDF mirrors of the Code de l'IRPP et de l'IS). Downloaded the current Code de l'IRPP et de l'IS (watermarked "Imprimerie Officielle de la Republique Tunisienne"), extracted Articles 52 through 55 ("2. Retenues a la source") with `pypdf`, and added them as the first real content in `corpus/sources/` (previously empty). Built `app/corpus/load_corpus.py`, a CLI loader mirroring `app/rules/load_rules.py`'s pattern (a `manifest.json` naming each source file and its URL), and ran it against the real database: 4 real chunks, real embeddings, real pgvector retrieval, verified live with French tax queries returning the correct articles.
+
+Running it surfaced a real bug: `app/corpus/chunking.py`'s heading regex only matched a bare "Article N" heading and returned zero chunks for the real text, which uses "Article N.-" (period-hyphen suffix), the standard heading style for Tunisian codified law. Widened the regex; added a regression test using the real heading style; existing synthetic-fixture tests still pass unchanged.
+
+**Options considered:**
+- Keep `corpus/sources/` empty until a full corpus-sourcing pass is scoped, since one section is a small fraction of the real corpus.
+- Add one real, verifiable section now to prove the pipeline end to end against real content, same as D-019 did for the TEJ schema.
+
+**Why:** The pipeline (`chunking.py`, `service.py`, `retrieval.py`) had only ever been tested against synthetic fixture text. A small amount of real content was enough to find a real bug that synthetic fixtures could not have caught (the heading format difference), matching this session's standing instruction to test everything end to end against real material, not just unit fixtures.
+
+**Result:** `corpus/sources/cirppis-retenues-a-la-source.txt`, `CODE-IRPP-IS-2024.pdf`, `manifest.json`, and `SOURCE.md` (provenance) are in the repository. `app/corpus/load_corpus.py` is a new CLI entry point; `app/config.py` gained `corpus_sources_dir` (algorithm parameter, default `../corpus/sources`, `/corpus-sources` in Docker). No compliance rule was written against this text: Article 52's rates and exceptions are legally complex and have been amended repeatedly; writing a rule against them accurately is a legal-content decision for the team, not something to guess at while sourcing the text.
+
+---
+
+## D-022 - Web UI: client-side data through a thin proxy, fixed tokens, assumed response shapes
 
 **Date:** 2026-09-12
 
@@ -337,7 +376,7 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
-## D-021 - Answer-first file review with a side rail
+## D-023 - Answer-first file review with a side rail
 
 **Date:** 2026-09-12
 
@@ -354,18 +393,18 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
-## D-022 - Web and api integration: backend is the contract, minimal extensions
+## D-024 - Web and api integration: backend is the contract, minimal extensions
 
 **Date:** 2026-09-12
 
-**Decision:** Merge `feat/web-ui` into `docs/v2-scope-and-architecture` and make the UI work against the real backend. The backend's Pydantic models are the contract; `web/lib/api-types.ts` mirrors them and replaces the shapes D-020 assumed. The backend gains only what the screens need:
+**Decision:** Merge `feat/web-ui` into `docs/v2-scope-and-architecture` and make the UI work against the real backend. The backend's Pydantic models are the contract; `web/lib/api-types.ts` mirrors them and replaces the shapes D-022 assumed. The backend gains only what the screens need:
 - `document.filename` (migration `a3f9c2d17b64`, backfilled from `storage_ref` for older rows).
 - `GET /documents/{id}` returns the organisation, the officer decision and the latest export; findings carry their `rule_code`.
 - `GET /officer/queue` rows carry filename, organisation name, and decided and abstained counts.
 - `GET` and `POST /organisations`, so the upload screen can pick or create the organisation a file is filed for.
 - `GET /export/operation-codes`, read from the real TEJ schema, so the export form offers exactly the codes the XSD accepts.
 
-On the web side: an organisation picker and the uploader's e-mail feed `POST /documents`; `officer_id` comes from `OFFICER_ID` in `web/.env` until officer sign-in exists; after validation the officer fills the TEJ declaration in a form (amounts typed in dinars, sent in millimes as the schema requires) and refused exports list every XSD error; the RNE check is removed from the screens because no counterparty endpoint exists; the extracted text is shown as a text block because extraction records a single `full_text` field. `docker compose up` now also builds and runs `web`.
+On the web side: an organisation picker and the uploader's e-mail feed `POST /documents`; `officer_id` comes from `OFFICER_ID` in `web/.env` until officer sign-in exists; after validation the officer fills the TEJ declaration in a form (amounts typed in dinars, sent in millimes as the schema requires) and refused exports list every XSD error; the RNE check is removed from the screens because no counterparty endpoint exists (D-020); the extracted text is shown as a text block because extraction records a single `full_text` field. `docker compose up` now also builds and runs `web`.
 
 **Options considered:**
 - Adapt the UI to the backend as it stood, with no backend change, losing filenames, decision history and queue counts.
@@ -378,10 +417,6 @@ On the web side: an organisation picker and the uploader's e-mail feed `POST /do
 
 **Result:** Backend tests added for every extension. `docs/architecture.md` sections 4 and 5, `api/CLAUDE.md`, `web/CLAUDE.md`, `docs/design.md` section 4 and `README.md` updated.
 
----
-
-**Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
-
 ## Change log
 
 | Date | Author | What changed |
@@ -391,6 +426,8 @@ On the web side: an organisation picker and the uploader's e-mail feed `POST /do
 | 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |
 | 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
 | 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
-| 2026-09-12 | team | Added D-020: web UI data flow, tokens and typography, assumed response shapes |
-| 2026-09-12 | team | Added D-021: answer-first file review with a side rail |
-| 2026-09-12 | team | Added D-022: web and api integration, minimal backend extensions |
+| 2026-09-12 | team | Added D-020: RNE re-checked, reachable now but account-gated, not network-gated |
+| 2026-09-12 | team | Added D-021: sourced real legal text into corpus/sources/, fixed a real chunking bug |
+| 2026-09-12 | team | Added D-022: web UI data flow, tokens and typography, assumed response shapes |
+| 2026-09-12 | team | Added D-023: answer-first file review with a side rail |
+| 2026-09-12 | team | Added D-024: web and api integration, minimal backend extensions |

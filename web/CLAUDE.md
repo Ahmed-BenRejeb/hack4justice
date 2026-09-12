@@ -19,7 +19,7 @@ Local rules for the Next.js app. Repo-wide rules live in the root CLAUDE.md and 
 ## Local rules
 
 - The browser never calls the backend directly. `lib/api-client.ts` calls `/api/v1/*`; `app/api/v1/[...path]/route.ts` forwards it to `API_BASE_URL` and holds no logic.
-- Wire types live only in `lib/api-types.ts` and mirror the Pydantic models in `api/app/api/v1/` (D-022). A contract change touches both sides in the same commit.
+- Wire types live only in `lib/api-types.ts` and mirror the Pydantic models in `api/app/api/v1/` (D-024). A contract change touches both sides in the same commit.
 - `OFFICER_ID` is read by the officer review page on the server (`lib/env.ts`) and passed down as a prop; client components never read configuration.
 - Tokens live only in `app/globals.css`. Status colours are applied through `STATUS_TONE` (`components/shared/status-badge.tsx`) or the `status-*` utilities, and only to report that status.
 - One keyframe animation exists: `animate-queue-arrive`, the orchestrated moment. Everything else is a transition answering a user action. No looping animation anywhere, so no pulsing skeletons and no spinners.
@@ -32,4 +32,4 @@ Local rules for the Next.js app. Repo-wide rules live in the root CLAUDE.md and 
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Initial web guide: commands, proxy boundary, tokens, motion, test constraints |
-| 2026-09-12 | team | Integrated with api/: contract mirrors Pydantic models, OFFICER_ID via server page, Docker image (D-022) |
+| 2026-09-12 | team | Integrated with api/: contract mirrors Pydantic models, OFFICER_ID via server page, Docker image (D-024) |

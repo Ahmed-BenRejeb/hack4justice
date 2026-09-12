@@ -3,7 +3,7 @@
  *
  * They mirror the Pydantic request and response models in api/app/api/v1/ and carry only
  * what the UI reads. A change on one side is made on the other in the same commit
- * (docs/decision-log.md D-022).
+ * (docs/decision-log.md D-024).
  */
 
 /** Whether a field was read from the document, or supplied by the model with a confidence for an assisted rule. */

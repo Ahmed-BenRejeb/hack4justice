@@ -26,7 +26,7 @@ IBM Plex Sans (Latin and Latin Extended subsets) for all interface text in both 
 
 Officer queue: list-first, dense, scannable - an officer works many files; the whole row opens the file. MSME upload/review: single-file focus, one document's findings at a time, generous spacing - an MSME owner sees one file, not a queue. Both share the same component primitives from `web/components/ui/`.
 
-File review (both roles) is answer first (D-021, D-022): a result banner states the proposed code, the missing facts and the number of rules applied before any detail. The main column holds the cited findings, then the extracted text; once a file is validated, the TEJ declaration form leads the officer's main column. A side rail holds the officer's decision, the export result and progress as a vertical step list. Below the `lg` breakpoint the rail follows the main column.
+File review (both roles) is answer first (D-023, D-024): a result banner states the proposed code, the missing facts and the number of rules applied before any detail. The main column holds the cited findings, then the extracted text; once a file is validated, the TEJ declaration form leads the officer's main column. A side rail holds the officer's decision, the export result and progress as a vertical step list. Below the `lg` breakpoint the rail follows the main column.
 
 ## 5. Motion
 
@@ -72,6 +72,6 @@ Every screen above must be legible and usable with the reduced-motion preference
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Regenerated design doc from description-projet-v2.md scope; typography/token specifics deferred to phase 5 |
-| 2026-09-12 | team | Fixed token file location, status hues, IBM Plex typography; static loading states; screen-to-route table (D-020) |
-| 2026-09-12 | team | Section 4: answer-first file review with a side rail, clickable queue rows (D-021) |
-| 2026-09-12 | team | Section 4: review adapted to the real backend, RNE removed, TEJ form placement (D-022) |
+| 2026-09-12 | team | Fixed token file location, status hues, IBM Plex typography; static loading states; screen-to-route table (D-022) |
+| 2026-09-12 | team | Section 4: answer-first file review with a side rail, clickable queue rows (D-023) |
+| 2026-09-12 | team | Section 4: review adapted to the real backend, RNE removed, TEJ form placement (D-024) |

@@ -8,7 +8,7 @@ what any specific article says.
 import re
 from dataclasses import dataclass
 
-ARTICLE_HEADING = re.compile(r"(?m)^\s*(Article\s+\d+\w*)\.?\s*$")
+ARTICLE_HEADING = re.compile(r"(?m)^\s*(Article\s+\d+\w*)\s*\.?\s*-?\s*$")
 
 
 @dataclass(frozen=True)
