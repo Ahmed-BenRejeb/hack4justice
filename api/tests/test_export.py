@@ -46,6 +46,7 @@ def _make_validated_document(db: Session) -> Document:
     document = Document(
         organisation_id=organisation.id,
         uploaded_by="accountant@example.tn",
+        filename="certificat.pdf",
         storage_ref="fixture.pdf",
         status="validated",
     )
@@ -82,6 +83,7 @@ def test_export_rejects_a_document_without_validated_decision(db: Session) -> No
     document = Document(
         organisation_id=organisation.id,
         uploaded_by="accountant@example.tn",
+        filename="certificat.pdf",
         storage_ref="fixture.pdf",
         status="extracted",
     )
@@ -124,3 +126,16 @@ def test_export_unknown_document_returns_404() -> None:
         json=VALID_PAYLOAD,
     )
     assert response.status_code == 404
+
+
+def test_operation_codes_come_from_the_real_schema() -> None:
+    response = client.get("/api/v1/export/operation-codes")
+
+    assert response.status_code == 200
+    codes = response.json()
+    values = [item["code"] for item in codes]
+    assert values[0] == "RS1_000001"
+    assert codes[0]["description"].startswith("Loyers d’hôtels")
+    assert "RS7_000001" in values
+    assert len(values) == len(set(values))
+    assert all(item["description"] for item in codes)

@@ -2,12 +2,25 @@
 
 import uuid
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.db.models import Citation, Document, Extraction, Finding, Organisation, Rule
+from app.api.v1.export import ExportOut
+from app.api.v1.officer import DecisionOut
+from app.api.v1.organisations import OrganisationOut
+from app.db.models import (
+    Citation,
+    Document,
+    Export,
+    Extraction,
+    Finding,
+    OfficerDecision,
+    Organisation,
+    Rule,
+)
 from app.db.session import get_db
 from app.extraction.service import run_extraction
 from app.rules.service import evaluate_all_rules
@@ -20,6 +33,7 @@ class DocumentOut(BaseModel):
     id: uuid.UUID
     organisation_id: uuid.UUID
     uploaded_by: str
+    filename: str
     storage_ref: str
     status: str
     created_at: datetime
@@ -38,7 +52,12 @@ class ExtractionOut(BaseModel):
 
 
 class DocumentDetailOut(DocumentOut):
+    """A document with everything the pipeline has produced for it so far."""
+
+    organisation: OrganisationOut
     extractions: list[ExtractionOut]
+    officer_decision: DecisionOut | None
+    export: ExportOut | None
 
 
 @router.post("", response_model=DocumentOut, status_code=201)
@@ -54,11 +73,14 @@ async def upload_document(
         raise HTTPException(status_code=404, detail="organisation not found")
 
     content = await file.read()
-    storage_ref = save_upload(file.filename or "document", content)
+    # Keep the base name only: some clients send a path, and the name is shown to people.
+    filename = Path(file.filename or "document").name
+    storage_ref = save_upload(filename, content)
 
     document = Document(
         organisation_id=organisation_id,
         uploaded_by=uploaded_by,
+        filename=filename,
         storage_ref=storage_ref,
         status="uploaded",
     )
@@ -78,7 +100,7 @@ async def upload_document(
 def get_document(
     document_id: uuid.UUID, db: Session = Depends(get_db)
 ) -> DocumentDetailOut:
-    """A document with its extraction results."""
+    """A document with its organisation, extraction results, officer decision and export."""
     document = db.get(Document, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
@@ -88,9 +110,22 @@ def get_document(
         .order_by(Extraction.extracted_at)
         .all()
     )
+    decision = (
+        db.query(OfficerDecision).filter_by(document_id=document_id).one_or_none()
+    )
+    # Nothing prevents a second export; the most recent one is the one that counts.
+    export = (
+        db.query(Export)
+        .filter_by(document_id=document_id)
+        .order_by(Export.validated_at.desc())
+        .first()
+    )
     return DocumentDetailOut(
         **DocumentOut.model_validate(document).model_dump(),
+        organisation=OrganisationOut.model_validate(document.organisation),
         extractions=[ExtractionOut.model_validate(e) for e in extractions],
+        officer_decision=DecisionOut.model_validate(decision) if decision else None,
+        export=ExportOut.model_validate(export) if export else None,
     )
 
 
@@ -105,6 +140,7 @@ class CitationOut(BaseModel):
 
 class FindingOut(BaseModel):
     id: uuid.UUID
+    rule_code: str
     status: str
     decided_code: str | None
     missing_fact: str | None
@@ -118,7 +154,7 @@ class FindingOut(BaseModel):
 def get_document_findings(
     document_id: uuid.UUID, db: Session = Depends(get_db)
 ) -> list[FindingOut]:
-    """Findings for a document, each with its rule's citation resolved."""
+    """Findings for a document, each with its rule's code and citation resolved."""
     if db.get(Document, document_id) is None:
         raise HTTPException(status_code=404, detail="document not found")
 
@@ -133,6 +169,7 @@ def get_document_findings(
     return [
         FindingOut(
             id=finding.id,
+            rule_code=rule.code,
             status=finding.status,
             decided_code=finding.decided_code,
             missing_fact=finding.missing_fact,

@@ -20,6 +20,7 @@ def _make_document(db: Session) -> Document:
     document = Document(
         organisation_id=organisation.id,
         uploaded_by="accountant@example.tn",
+        filename="certificat.pdf",
         storage_ref="fixture.pdf",
         status="extracted",
     )
