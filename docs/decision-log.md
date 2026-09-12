@@ -1,157 +1,255 @@
 # Decision log
 
-Append only. Superseding a decision means a new row that references the old one, never an edit to the old one.
-
-Format: date, decision, options considered, why, result.
+Every significant decision, dated. Append, never rewrite history: if a decision changes, add a new entry that supersedes the old one and say so.
 
 ---
 
-## D-001 - Product name
+## D-001 - Product name and thesis
 
 **Date:** 2026-09-12
-**Decision:** Working name Chahed (شاهد, witness or attestation).
-**Options:** Chahed; Wathiq (واثق, confident, close to وثيقة, document); a French descriptive name.
-**Why:** An Arabic word gives the jury something to repeat in deliberation, and Chahed carries the attestation meaning that sits at the centre of the product. A French descriptive name is forgettable.
-**Result:** Adopted, pending final team confirmation before slides are made. Change it now if it is going to change.
+
+**Decision:** Keep the product name `Chahed`. The one-sentence thesis: every error a business makes costs the administration more than it costs the business.
+
+**Options considered:**
+- Keep `Chahed` (carried over from the prior scaffold).
+- Rename to match the narrower v2 scope.
+
+**Why:** No renaming rationale was given with the v2 description; changing a name without a reason adds churn for no benefit. The thesis sentence is the one line the whole product answers to, so it is recorded as a decision, not left implicit in prose.
+
+**Result:** Name unchanged. Thesis sentence appears in `docs/plan.md` section 1 and in `README.md`.
 
 ---
 
-## D-002 - Anchor the product on article 62 rather than on generic document compliance
+## D-002 - Anchor on article 62 and a named prestataire
 
 **Date:** 2026-09-12
-**Decision:** The hero workflow is the public procurement payment file under article 62 LF2014.
-**Options:** (a) Generic contract compliance checking. (b) The article 62 payment file. (c) Monthly declaration preparation.
-**Why:** Option (a) has no legal role for a public officer, so the mandatory institutional module would be fictional and the agency benefit would not be computable. Option (b) gives a named, thresholded, recurring legal obligation, a real officer role, and a measurable benefit. Option (c) collides with the expert-comptable monopoly more directly.
-**Result:** Article 62 is the spine. The service contract survives as one document inside the payment file.
+
+**Decision:** The pitch narrative is carried by a real supplier who cannot be paid because the withholding certificate is wrong, grounded in article 62. Code selection is the technical core; the article 62 story is the human entry point.
+
+**Options considered:**
+- Lead with the abstract mechanism ("we select the correct withholding code").
+- Lead with the article 62 story, back it with the mechanism.
+- Two separate pitches for technical and non-technical audiences.
+
+**Why:** "We select the correct code" means nothing to a non-technical judge. A named prestataire who did real work and cannot be paid over a form error gives the same content a person, a harm, and a resolution. One structure serves both audiences without doubling the pitch.
+
+**Result:** `docs/plan.md` section 2 opens with the article 62 case before describing the pipeline.
 
 ---
 
-## D-003 - Compliance judgement is deterministic, the model does not judge
+## D-003 - Scope boundary: erroné and confus only
 
 **Date:** 2026-09-12
-**Decision:** A registry of coded rules, each carrying a verbatim legal citation, decides compliance. The model extracts, explains, and drafts.
-**Options:** (a) Ask the model to assess compliance per document. (b) Deterministic rule registry. (c) Hybrid with the model as tiebreaker.
-**Why:** Option (a) gives non-reproducible, non-auditable results that an administration cannot accept. Option (c) has the same problem with extra complexity. Option (b) gives the same output every run and an article behind every finding.
-**Result:** Adopted. This is the design law in the root CLAUDE.md.
+
+**Decision:** The product addresses two of the four problem families: declarations produced with errors (erroné), and taxpayers who want to comply and cannot manage it (confus). It explicitly refuses the other two: missing declarations (manquant, requires DGI's internal database) and deliberate fraud (frauduleux, requires investigation and enforcement powers we do not have and should not build).
+
+**Options considered:**
+- Cover all four families as a long-term roadmap claim.
+- Cover only erroné and confus, state the refusal of the other two as a design choice.
+
+**Why:** A fraud-detection tool is fiscal policing, a different product with a different trust relationship to the taxpayer. Building it would also require enforcement data access we do not have. Naming the refusal turns a limitation into a stated position: we protect honest but confused taxpayers, we do not police them.
+
+**Result:** The four-families table appears in `docs/plan.md` section 1, worded as a choice, not an excuse.
 
 ---
 
-## D-004 - Split the registry into deterministic and assisted rules
+## D-004 - Compliance judgement is deterministic code
 
 **Date:** 2026-09-12
-**Decision:** Most rules are pure code. Three assisted rules let the model establish a fact the documents do not state, with a confidence, which the deterministic rule then judges from.
-**Options:** (a) Keep every rule deterministic. (b) Introduce assisted rules with an escalation path.
-**Why:** Option (a) leaves the project exposed to "so this is OCR plus a rules engine, where is the AI", and more importantly it cannot handle the withholding determination at all, because the correct operation code depends on the supplier's legal form, regime, and residency, none of which appear on the invoice. Option (b) restores the difficulty without breaking D-003: the model supplies a premise, the rule still judges.
-**Why it matters beyond the answer:** the withholding rule is the proof that compliance checking and counterparty verification cannot run as separate passes.
-**Result:** Adopted. The withholding rule is the showcase and is the last assisted rule to be cut.
+
+**Decision:** The model extracts facts, explains findings, and drafts text. It never decides whether a compliance finding exists. Every finding is produced by a deterministic rule evaluating facts, one of which may itself be a model-supplied assisted fact carrying a confidence score.
+
+**Options considered:**
+- Let the model reason directly to a code recommendation.
+- Deterministic rules over extracted facts, with the model confined to extraction, retrieval, and explanation.
+
+**Why:** A public administration will not accept "the model said so" as the basis for a certificate that affects payment and tax liability. A deterministic rule can be read, tested, and defended in a legal and procurement review; a model's internal reasoning cannot. This is the same principle already fixed in the inherited `CLAUDE.md` code rules and it is restated here as the reason those rules exist for this product.
+
+**Result:** `lib/rules` (now `api/app/rules`) holds the rule registry; the provider module never returns a compliance verdict, only facts and text.
 
 ---
 
-## D-005 - Escalation is part of an assisted rule, not an error state
+## D-005 - Abstention is a first-class outcome
 
 **Date:** 2026-09-12
-**Decision:** When an assisted rule cannot establish its fact above threshold, it does not fire and does not guess. It emits one specific question for a human.
-**Options:** (a) Fall back to the most likely value. (b) Fail the rule. (c) Escalate a specific question.
-**Why:** Option (a) is exactly the failure mode we are claiming to avoid. Option (b) loses information the human could supply in five seconds. Option (c) makes "the model never judges" demonstrable rather than aspirational, and it becomes a scripted demo beat.
-**Result:** Adopted. An assisted rule without a written escalation question is incomplete.
+
+**Decision:** When available information does not allow a rule to decide, the system says so and states exactly what is missing, then escalates a specific question to a human. It does not guess, and it does not silently fall back to a default code.
+
+**Options considered:**
+- Force a best-guess code with a low-confidence flag.
+- Abstain explicitly and escalate a named question.
+
+**Why:** A wrong code that looks confident is worse than an honest "cannot determine, missing X" because it is the wrong-code failure mode this product exists to prevent. Escalating a specific question (not a generic "review this") is what makes the officer's review fast instead of a restart from zero.
+
+**Result:** Abstention is modeled as a finding status, not an error path, in `docs/architecture.md` section 4 (data model).
 
 ---
 
-## D-006 - No adverse media or reputation screening
+## D-006 - No finding without a citation
 
 **Date:** 2026-09-12
-**Decision:** Counterparty verification uses registry-grounded findings only. The planned web reputation search via a search API is dropped from scope and moved to a roadmap slide.
-**Options:** (a) Build the reputational signal search with defamation guardrails. (b) Drop it and rely on registry findings.
-**Why:** Three reasons, escalating. It would demo as zero results, because Tunisian MSMEs have almost no press coverage. It adds a paid external vendor outside the rest of the stack. And it is the one feature in the product that cannot cite a legal text, which directly contradicts the credibility argument the whole thing rests on. The volume of guardrails the design needed was itself the signal that it did not fit.
-**What replaced it:** loi 2018-52 art. 52 (register suspended after a 15-day notice, referral to the public prosecutor) and art. 11 (twelve consecutive months of unfiled tax declarations recorded in the RNE). Both are stronger counterparty signals than press coverage, and both carry an article number.
-**Result:** Dropped. If asked: we only surface findings we can attach to a legal text.
+
+**Decision:** Every finding carries the source, the article number, the verbatim legal text, and a URL to the official text. The citation is one click away from the finding on screen.
+
+**Options considered:**
+- Cite by article number only, verbatim text available on request.
+- Cite article number, verbatim text, and source URL inline, one click from the finding.
+
+**Why:** The click to the citation is the demo's central proof point: it is what separates this from a model that asserts things. A citation that requires digging defeats the purpose.
+
+**Result:** Carried over as the binding rule already stated in the root `CLAUDE.md` ("No finding without a citation"); `docs/architecture.md` specifies the citation as a first-class entity tied one-to-many from a finding.
 
 ---
 
-## D-007 - The officer cannot edit a file
+## D-007 - No supplier scoring or reputation screening
 
 **Date:** 2026-09-12
-**Decision:** The officer role can annotate, flag, validate, assign, and return for correction. It cannot confirm extracted fields, answer escalations, or re-run analysis.
-**Options:** (a) Let the officer fix and re-run. (b) Restrict the officer to review actions.
-**Why:** In administrative process the agent returns the file, they do not repair the citizen's submission. Letting an officer silently edit and re-run muddies who is responsible for the conclusion, and it competes with our own return-for-correction flow, which is a time saving we want to claim.
-**Result:** Adopted. Enforced server-side, noted in app/CLAUDE.md.
+
+**Decision:** The product does not score suppliers or screen them for reputation or adverse media. RNE verification is limited to confirming registration facts (existence, identifiers, status), not producing a risk score.
+
+**Options considered:**
+- Build a supplier risk score from RNE and public signals.
+- Verify registration facts only, no scoring.
+
+**Why:** Practitioners interviewed during scoping attached no value to a reputation score; it was built and then withdrawn. Scoring also creates a different kind of liability (a wrong score damaging a real business) that is out of scope for a compliance-support tool.
+
+**Result:** `api/app/counterparty` exposes fact lookups (registered, identifiers match, status) and no score field anywhere in the data model.
 
 ---
 
-## D-008 - The expert-comptable is a role in the product
+## D-008 - The officer decides, the system pre-qualifies
 
 **Date:** 2026-09-12
-**Decision:** An external accountant can be invited to a file, can correct and annotate, and cannot submit.
-**Options:** (a) Ignore the profession. (b) Position against it. (c) Build it in as an invited reviewer without submission rights.
-**Why:** Loi 88-108 reserves habitual bookkeeping, verification and certification to registered experts-comptables. Option (b) is a losing fight and an easy attack line in Q&A. Option (c) turns the profession into a distribution channel and keeps the business as the submitter, so the platform never acts in place of the taxpayer.
-**Result:** Adopted.
+
+**Decision:** The officer role reviews a pre-qualified file and validates or flags it. The system never submits a certificate or a declaration on its own authority, and liability for the final decision stays with the officer.
+
+**Options considered:**
+- Auto-approve files above a confidence threshold.
+- Officer validates every file, system pre-qualifies and highlights what is already checked.
+
+**Why:** This is the answer to "who is responsible in case of error," one of the two questions flagged as certain to come up. An administration will not accept a tool that removes the human from a decision with legal consequences.
+
+**Result:** `docs/plan.md` section on roles states the officer's validate/flag actions as the only two terminal actions on a file; `docs/architecture.md` marks the officer decision as a required, auditable step before any export leaves the system.
 
 ---
 
-## D-009 - Ship a TEJ export validated against the DGI schema
+## D-009 - Impact measured as errors prevented, not time saved
 
 **Date:** 2026-09-12
-**Decision:** Generate a withholding certificate file and validate it against the published XSD schemas, offline, on stage.
-**Options:** (a) Ship only our own report and structured hand-off. (b) Add the TEJ export with live schema validation.
-**Why:** Every other artifact in the demo is self-defined. Nothing outside the system confirms we got anything right. The XSD validation is the only moment where an external authority agrees with us, and the schemas were reissued on 8 September 2026, four days before the event.
-**Risk accepted:** it adds scope. Mitigated by validating offline against schema files committed to `schemas/`.
-**Result:** Adopted. Phase 3 gate.
+
+**Decision:** The pilot metric is the first-submission compliance rate before and after, the count of errors intercepted per file (each with its citation), and the downstream interventions removed (corrected declaration, cross-check investigation, support call). The national projection multiplies annual certificate volume by observed error rate by interventions per error, shown as an open calculation with every input sourced.
+
+**Options considered:**
+- Lead with hours or cost saved for the business.
+- Lead with errors prevented and downstream interventions removed, projected nationally with a sourced calculation.
+
+**Why:** Time saved is the metric every hackathon project claims; it does not speak to what a tax administration actually optimizes for. A visible, modest, sourced calculation is more credible in front of an audience that knows the real numbers than a large unexplained one.
+
+**Result:** `docs/plan.md` section 8 (impact) and `docs/facts.md` carry the formula and mark every input's verification status.
 
 ---
 
-## D-010 - e-sit-fisc goes in the opening, not the Q&A
+## D-010 - Stack: Next.js/shadcn front end, Python backend, PostgreSQL
 
 **Date:** 2026-09-12
-**Decision:** Name the DGI's existing systems in the first twenty seconds of the pitch, framed as a convergence we build on.
-**Options:** (a) Wait for the question and answer it defensively. (b) State it up front as an endorsement.
-**Why:** The specific hard question is "we built e-sit-fisc for article 62, what are you adding", and it is much harder than the generic "the DGI already has online services". Said first, it reads as confidence and homework. Said in response, it reads as defence. The 8 September communiqué connecting e-sit-fisc to TEJ makes the framing available.
-**Result:** Adopted.
+
+**Decision:** The web application is Next.js (App Router) with TypeScript and shadcn/ui components. The backend is a Python service (latest stable release) exposing a REST API. The database is PostgreSQL with the pgvector extension for corpus chunk embeddings. The repository splits into `web/` and `api/`, with shared, non-code assets (`docs/`, `corpus/`, `rules/`, `schemas/`, `fixtures/`, `seed/`) at the repository root.
+
+**Options considered:**
+- Single Next.js application with API routes and TypeScript throughout.
+- Next.js front end, Python backend, split repo (chosen).
+- Separate `apps/`/`services/`/`packages/` monorepo with a shared-package layer.
+
+**Why:** OCR, document extraction, and retrieval tooling are stronger and better supported in the Python ecosystem for a hackathon timeline; a REST boundary between a TypeScript UI and a Python service is a well-understood pattern that does not require a shared package layer. The three-tier `apps/services/packages` layout was rejected as more ceremony than an eight-week hackathon build needs.
+
+**Result:** `docs/architecture.md` section 1 specifies the full tree. The root `CLAUDE.md` repo map, which still describes a single TypeScript tree, is out of date as a result of this decision; a follow-up edit is proposed separately rather than made silently (see the note at the end of this log's latest entries).
 
 ---
 
-## D-011 - Drop the World Bank tax compliance hours figure
+## D-011 - OpenRouter as the single LLM gateway
 
 **Date:** 2026-09-12
-**Decision:** The 144 hours per year figure is banned from all materials.
-**Options:** (a) Use it with a caveat. (b) Drop it.
-**Why:** Doing Business was discontinued after an investigation into data manipulation. A well-read judge knows why the series stopped, and it contaminates the problem statement it opens. The INS enterprise figures are Tunisian, current, and make the same point more strongly.
-**Result:** Banned, recorded in docs/facts.md so nobody reintroduces it.
+
+**Decision:** All model calls go through OpenRouter. Exactly one module per process talks to it (`api/app/providers/openrouter.py` on the backend; the front end never calls a model directly). The model id is read from the environment with no default and no fallback, per the existing configuration rules.
+
+**Options considered:**
+- Call a single vendor's SDK directly.
+- Route every call through OpenRouter so the underlying model stays swappable without an application code change.
+
+**Why:** The root `CLAUDE.md` already requires the model provider to be swappable and forbids naming a vendor model outside one file. OpenRouter's own value proposition is exactly that swappability, so it is a natural fit for a rule that already existed independent of this choice.
+
+**Result:** `api/app/providers/openrouter.py` is the only file permitted to import an OpenRouter client or reference a model id string; `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID` are the two environment variables it requires, both with no default.
 
 ---
 
-## D-012 - A facts register gates every public claim
+## D-012 - Embeddings are a separate concern from OpenRouter
 
 **Date:** 2026-09-12
-**Decision:** docs/facts.md holds every fact we may state publicly, with a verification status set by a person who opened the official source.
-**Options:** (a) Check facts as they come up. (b) Maintain a single register with an explicit gate.
-**Why:** We already shipped a wrong article number in a draft. Professional commentary gets article numbers wrong routinely. The audience includes people who work at these agencies, and one wrong citation costs the competition.
-**Result:** Adopted. Nothing goes on a slide unless it is in the register as verified.
+
+**Decision (flagged assumption, confirm before implementation):** OpenRouter is a chat-completion gateway; it does not expose a dedicated embeddings endpoint for every model. Retrieval embeddings (for the corpus chunks and for query-time matching) are produced by a separate embedding source, reached through the same one-module provider boundary. Default: a local embedding model, so no document text has to leave the machine to be indexed. A hosted embedding endpoint stays swappable behind the same boundary if local quality is insufficient.
+
+**Options considered:**
+- Assume OpenRouter also serves embeddings and design around that.
+- Treat embeddings as a distinct capability with its own provider seam, default to local.
+
+**Why:** Asserting OpenRouter serves embeddings without checking would violate the SDK-verification rule already in the root `CLAUDE.md`. A local default also answers the "where do the documents go" question directly for the corpus path.
+
+**Result:** `api/app/providers/embeddings.py` is a second, separate provider module. This decision is marked as an assumption pending a five-minute check of OpenRouter's actual API surface before implementation starts; do not build against it unverified.
 
 ---
 
-## D-013 - Cache model responses from phase 4, not at the end
+## D-013 - Document privacy: local OCR, masking before any external call
 
 **Date:** 2026-09-12
-**Decision:** Responses are cached by content hash starting in phase 4. The demo must run with the network disconnected.
-**Options:** (a) Add caching during hardening. (b) Build it into the pipeline early.
-**Why:** The free model tier has per-minute and per-day limits and the demo fires several calls in sequence, which makes quota exhaustion the single most likely live failure. Caching added late tends to be bolted on and untested. In safe demo mode a cache miss is a loud error, never a silent live call.
-**Result:** Adopted. Phase 4 gate includes the cache.
+
+**Decision:** Uploaded documents are OCR'd and have their structured fields extracted locally. Only masked text (personal identifiers removed or replaced with placeholders) is sent to OpenRouter for the retrieval-assisted reasoning and drafting steps that need a model.
+
+**Options considered:**
+- Send full document text to the hosted model for extraction and reasoning.
+- OCR and structured extraction fully local; mask before any hosted call.
+
+**Why:** This is the prepared answer to the first of the two questions flagged in the v2 description ("where do the documents go"). A masking step before any external call is a concrete, demonstrable answer rather than a promise.
+
+**Result:** `docs/architecture.md` section 3 places OCR and extraction before the provider boundary in the pipeline diagram, with a masking step in between.
 
 ---
 
-## D-014 - Retire the Sanad plan from the shared repository
+## D-014 - Two configuration modules, one per process
 
 **Date:** 2026-09-12
-**Decision:** Remove the earlier Sanad build plan (PLAN.md, docs/PLAN.md) from the tree and publish Chahed on top of the existing remote history.
-**Options:** (a) Keep the Sanad plan alongside docs/plan.md. (b) Move it to an archive folder. (c) Remove it and rely on git history. (d) Overwrite the remote history.
-**Why:** Two plans in the tree contradict the single source of truth. docs/PLAN.md and docs/plan.md collide on case-insensitive filesystems, which breaks checkout on macOS and Windows. Option (d) would destroy a teammate's commits.
-**Result:** Adopted. The Sanad plan stays recoverable at commit 2475584.
+
+**Decision:** With the repository split into `web/` and `api/`, the root `CLAUDE.md` rule "configuration enters the process in exactly one module" is read as one module per process: `web/lib/env.ts` for the Next.js process, `api/app/config.py` for the Python process. Each still applies the identity-vs-parameter distinction (no default for anything naming a system, account, or vendor; documented defaults allowed for algorithm parameters) and the all-or-nothing rule for a related settings group.
+
+**Options considered:**
+- Read the existing rule literally as a single module for the whole repository, which is impossible once there are two runtimes.
+- Read it as one module per process, preserving its intent.
+
+**Why:** The rule's purpose is to prevent configuration from leaking into arbitrary files, not to force a single process. Splitting by process is the natural unit once there are two independently deployed runtimes.
+
+**Result:** Recorded here as the authoritative reading; `docs/architecture.md` states both module paths explicitly. The root `CLAUDE.md` repo map and this rule's wording should be updated to reflect the split (see note below); until then, this entry governs.
 
 ---
+
+## D-015 - A facts register gates every public claim
+
+**Date:** 2026-09-12
+
+**Decision:** No number, date, or article reference reaches a slide or a screen unless it has a row in `docs/facts.md` with status `verified`. Every claim starts at `to verify` and is promoted only after a person checks it against the official source; a model's recollection never promotes a fact.
+
+**Options considered:**
+- Trust figures and dates as drafted from the project description.
+- Gate every stated fact through a register with an explicit verification status.
+
+**Why:** Two of the flagged risk items in the v2 description are exactly this class of error (an unverified compliance figure, an unverified code count) presented to an audience that includes people who will check. A register makes the unverified state visible instead of silent.
+
+**Result:** `docs/facts.md` created with every v2-sourced claim entered at status `to verify`.
+
+---
+
+**Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
 
 | Date | Author | What changed |
 |---|---|---|
-| 2026-09-12 | team | Seeded with decisions D-001 to D-013 |
-| 2026-09-12 | team | Added D-014 |
+| 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
