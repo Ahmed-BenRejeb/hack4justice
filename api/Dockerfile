@@ -17,6 +17,8 @@ RUN uv sync --frozen --no-install-project --no-dev
 COPY . .
 RUN uv sync --frozen --no-dev
 
+RUN uv run --no-dev python -c "from app.providers.embeddings import _model; _model()"
+
 EXPOSE 8000
 
 CMD ["uv", "run", "--no-dev", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

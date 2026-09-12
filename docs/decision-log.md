@@ -282,6 +282,22 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-018 - D-012 resolved: OpenRouter embeddings verified, local model chosen
+
+**Date:** 2026-09-12
+
+**Decision:** Supersedes D-012's flagged assumption with an actual verification, using a real OpenRouter key: `POST /api/v1/embeddings` on OpenRouter works, returning real vectors (tested live against `openai/text-embedding-3-small`, 1536 dimensions, real cost incurred: $0.00000002). D-012's premise ("OpenRouter does not expose a dedicated embeddings endpoint") was wrong. The default stays local anyway: `sentence-transformers`, model `paraphrase-multilingual-MiniLM-L12-v2`, verified to produce 384-dimension vectors, matching the schema default already committed in D-017 (coincidence, not planning; confirmed after the fact). `torch` pulls ~2GB of CUDA/nvidia packages from the default PyPI index even with no GPU present; pinned to the CPU-only wheel index (`https://download.pytorch.org/whl/cpu`) instead, via `[tool.uv.sources]`.
+
+**Options considered:**
+- Switch the default to OpenRouter's hosted embeddings, now that they are confirmed to work.
+- Keep the local default: offline, free, no dependency on a paid external call for indexing legal text.
+
+**Why:** Offered as a real choice, not decided unilaterally: OpenRouter's own embeddings would remove the torch/sentence-transformers dependency entirely, but cost money per call, need internet at index time, and return a different dimension (1536, requiring a schema migration to change). The team chose to keep local.
+
+**Result:** `api/app/providers/embeddings.py` implements the local model. `api/Dockerfile` pre-downloads the model weights at build time so the running container needs no Hugging Face access. `OPENROUTER_MODEL_ID` was set to `google/gemini-2.5-flash` (verified against OpenRouter's live model list) so the OpenRouter key is usable once `api/app/providers/openrouter.py` is actually built; that provider module itself is not built yet.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -291,3 +307,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
 | 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |
+| 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
