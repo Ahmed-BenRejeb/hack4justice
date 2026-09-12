@@ -21,9 +21,15 @@ FastAPI, SQLAlchemy 2.0, Alembic, PostgreSQL with pgvector. Dependencies and the
 - `migrations/versions/` and `migrations/env.py`'s Alembic-generated boilerplate are excluded from ruff (see `pyproject.toml`); do not hand-format them to match the rest of the codebase.
 - `app/db/models.py` mirrors `docs/architecture.md` section 4 table for table. A change to one without the other is a bug.
 - New feature packages (`extraction/`, `corpus/`, `rules/`, `counterparty/`, `export/`) land only when there is real, tested logic to put in them, per the root rule against placeholder modules.
+- `app/rules/registry.py` loads rule definitions (JSON files, one per rule) from the root `rules/` directory into the `rule` table, rejecting any with an incomplete citation. There is no `POST /rules` HTTP endpoint: rule management is a seed/migration-time operation until admin auth exists, per the cut list in `docs/plan.md` section 9. Rule definition files themselves are not authored by a model: a citation only goes in `rules/` once a person has verified it against the official text and promoted it to `verified` in `docs/facts.md`.
+
+## Docker
+
+`docker compose build api` builds the image (`api/Dockerfile`, plain `pip install uv` on `python-slim`; the `ghcr.io/astral-sh/uv` base image is unreachable from this network, denied on pull). `docker compose up` runs `db` and `api` together: the `api` container runs `alembic upgrade head` before starting uvicorn, so a fresh volume self-migrates. `api`'s `DATABASE_URL` inside compose points at the `db` service hostname, not `localhost`.
 
 ## Change Log
 
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Initial api/ scaffold: config, db models and migration, FastAPI app, POST /documents |
+| 2026-09-12 | team | Added rule registry loader, GET /rules, Dockerfile and compose api service |
