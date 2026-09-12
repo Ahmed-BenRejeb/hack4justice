@@ -13,7 +13,7 @@ Status values: `verified`, `to verify`, `banned` (a claim we explicitly do not m
 | Withholding certificates must be issued via the DGI platform, code selected from a list | DGI platform documentation / instruction, exact reference pending | to verify | Foundational claim for the whole pitch; must be checked first |
 | The obligation has been in force since January (approx. eight months before the hackathon) | DGI instruction / official gazette, exact date pending | to verify | Exact entry-into-force date is explicitly flagged in the v2 description as unverified |
 | The DGI doctrine was updated in the days before the hackathon | DGI communication, date and content pending | to verify | If a DGI officer attends, this is the first thing tested; content of the update must be known precisely, not just its existence |
-| Number of withholding codes ("plus de 40") | Official DGI code list | to verify | v2 description explicitly says: do not state "more than 40" until the codes are counted |
+| Number of withholding codes ("plus de 40") | `schemas/tej/TEJRSCodesOperations_v1.0.xsd` (see `schemas/tej/SOURCE.md`), downloaded 2026-09-12 from jibaya.tn | to verify | Candidate answer found: exactly 36 distinct codes enumerated in the real DGI TEJ schema, RS1_000001 through RS11_000001, with two numbering gaps (RS3_000002, RS6_000004 absent) and no RS10 category. Still `to verify`: a person must confirm this is the current schema version and that the gaps are not a download/parsing error before this count goes on a slide |
 | Article 62 (the anchor case: a prestataire unpaid due to a certificate error) | Code de l'IRPP/IS or relevant fiscal code, article 62, exact text pending | to verify | Verbatim article text required before it appears in the pitch narrative or on any rule citation |
 
 ## Administration systems
@@ -21,8 +21,8 @@ Status values: `verified`, `to verify`, `banned` (a claim we explicitly do not m
 | Claim | Source | Status | Notes |
 |---|---|---|---|
 | E-Sit-Fisc is the DGI's existing filing channel; this product feeds it clean data, does not replace it | DGI public documentation | to verify | Positioning claim, must be accurate about what E-Sit-Fisc does and does not do |
-| RNE (Registre National des Entreprises) is queryable for counterparty registration facts | RNE public access documentation | to verify | Confirms the counterparty-verification feature is buildable as scoped, not just assumed |
-| DGI TEJ export has a published XSD schema | DGI schema publication | to verify | Underlies the export feature; the schema file itself must be the one actually validated against, not a paraphrase |
+| RNE (Registre National des Entreprises) is queryable for counterparty registration facts | `home.registre-entreprises.tn` and `registre-entreprises.tn` | to verify | Checked 2026-09-12: the whole `home.registre-entreprises.tn` domain returned HTTP 503 (server up, content unavailable). Search results describe a data-exchange API but gated behind "service contract forms", i.e. a formal subscription, not self-serve like OpenRouter's. `counterparty/` stays unbuilt until the site is reachable and the actual access process (cost, approval time) is known |
+| DGI TEJ export has a published XSD schema | `schemas/tej/*.xsd` (see `schemas/tej/SOURCE.md`), downloaded 2026-09-12 from jibaya.tn | to verify | The real schema is now in the repo and `api/app/export/tej.py` generates and validates against it directly (not a paraphrase). Still `to verify`: a person must confirm jibaya.tn's file is the current, non-draft version before relying on it for a real filing |
 
 ## Economy / market
 
@@ -59,3 +59,5 @@ Any number in the impact calculation that does not have a `verified` source by p
 |---|---|---|
 | 2026-09-12 | team | Facts register regenerated from description-projet-v2.md; all entries seeded at `to verify` |
 | 2026-09-12 | team | Added officer-time-per-intervention input and narrowed the hours-saved ban, per D-016 |
+| 2026-09-12 | team | Found real DGI TEJ schema (jibaya.tn); added as candidate source for code count and schema facts, per D-019 |
+| 2026-09-12 | team | Checked RNE reachability: domain returns 503, API appears contract-gated; counterparty/ stays unbuilt |

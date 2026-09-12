@@ -298,6 +298,22 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-019 - Real DGI TEJ XSD schema found and added to schemas/
+
+**Date:** 2026-09-12
+
+**Decision:** Located and downloaded the actual, current DGI TEJ withholding-declaration XSD schema from `jibaya.tn` (the DGI's own tax portal, linked from public press coverage of the September 2026 TEJ platform update), rather than continuing to treat `docs/facts.md`'s "DGI TEJ export has a published XSD schema" as unreachable. Added it to `schemas/tej/` with a `SOURCE.md` recording provenance. Built `api/app/export/tej.py` to generate and validate a real `DeclarationsRS` XML against this real schema (previously, only a synthetic fixture schema existed for `api/app/export/xsd.py`, since no real schema was known to be available).
+
+**Options considered:**
+- Keep treating TEJ export as blocked, since no one had supplied the schema.
+- Search for and verify a real public source before assuming it is unreachable.
+
+**Why:** The root CLAUDE.md rule against fabricating an external contract applies to *guessing* a schema's structure, not to using the schema once it is genuinely found. A five-minute search turned up a live, official download; there was no reason to keep building against a synthetic placeholder once the real one was one request away.
+
+**Result:** `schemas/tej/*.xsd` are in the repository. `docs/facts.md` gained candidate answers (not `verified` - that promotion is still a human step) for the withholding-code count (36, not "more than 40", with two numbering gaps and no RS10 category flagged for someone to check) and the schema's existence. `api/app/export/tej.py` and its tests validate real generated XML against the real schema, not a fixture.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -308,3 +324,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
 | 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |
 | 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
+| 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
