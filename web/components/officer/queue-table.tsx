@@ -65,12 +65,13 @@ export function QueueTable({ items, arrived }: QueueTableProps): JSX.Element {
             <TableRow
               key={item.document_id}
               data-arrived={arrived.has(item.document_id) ? "" : undefined}
-              className="data-arrived:animate-queue-arrive"
+              className="relative data-arrived:animate-queue-arrive"
             >
               <TableCell className="px-4 py-2.5">
+                {/* The link's ::after covers the row, so the whole row is clickable with one keyboard stop. */}
                 <Link
                   href={`/agent/dossiers/${encodeURIComponent(item.document_id)}`}
-                  className="rounded-sm font-medium underline-offset-4 hover:underline"
+                  className="rounded-sm font-medium underline-offset-4 after:absolute after:inset-0 hover:underline"
                 >
                   {item.filename}
                 </Link>

@@ -43,7 +43,7 @@ export function OfficerQueue(): JSX.Element {
       <PageHeader
         eyebrow="Espace agent"
         title="Dossiers pré-qualifiés"
-        description="Chaque dossier arrive avec ses constats cités, ses abstentions nommées et sa vérification RNE. Vous validez ou signalez sans repartir de zéro."
+        description="Chaque dossier arrive déjà analysé : constats cités, abstentions nommées, vérification RNE."
         actions={
           <>
             {updatedAt && (
