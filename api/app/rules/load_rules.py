@@ -7,10 +7,11 @@ Defaults to the repository's root `rules/` directory.
 import sys
 from pathlib import Path
 
+from app.config import settings
 from app.db.session import SessionLocal
 from app.rules.registry import InvalidRuleDefinition, load_rule_file, upsert_rule
 
-DEFAULT_RULES_DIR = Path(__file__).resolve().parents[3] / "rules"
+DEFAULT_RULES_DIR = Path(settings.rules_dir)
 
 
 def main(rules_dir: Path = DEFAULT_RULES_DIR) -> int:

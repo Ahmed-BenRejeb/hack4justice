@@ -9,6 +9,8 @@ load_dotenv()
 
 DOCUMENT_STORAGE_DIR_DEFAULT = "./data/documents"
 EMBEDDING_DIMENSIONS_DEFAULT = 384
+SCHEMAS_DIR_DEFAULT = "../schemas"
+RULES_DIR_DEFAULT = "../rules"
 
 
 def _require(name: str) -> str:
@@ -28,6 +30,8 @@ class Settings:
     database_url: str
     document_storage_dir: str
     embedding_dimensions: int
+    schemas_dir: str
+    rules_dir: str
     openrouter_api_key: str
     openrouter_model_id: str
 
@@ -42,6 +46,8 @@ def load_settings() -> Settings:
         embedding_dimensions=int(
             os.environ.get("EMBEDDING_DIMENSIONS", EMBEDDING_DIMENSIONS_DEFAULT)
         ),
+        schemas_dir=os.environ.get("SCHEMAS_DIR", SCHEMAS_DIR_DEFAULT),
+        rules_dir=os.environ.get("RULES_DIR", RULES_DIR_DEFAULT),
         openrouter_api_key=_require("OPENROUTER_API_KEY"),
         openrouter_model_id=_require("OPENROUTER_MODEL_ID"),
     )

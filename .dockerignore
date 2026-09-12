@@ -1,0 +1,13 @@
+.git
+api/.venv/
+api/data/
+api/.env
+api/tests/
+api/__pycache__/
+api/.pytest_cache/
+api/.ruff_cache/
+**/__pycache__/
+**/*.pyc
+node_modules/
+.next/
+schemas/tej/original/

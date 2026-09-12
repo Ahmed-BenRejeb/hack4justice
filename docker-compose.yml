@@ -16,7 +16,9 @@ services:
       retries: 10
 
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     env_file: ./api/.env
     environment:
       DATABASE_URL: postgresql+psycopg://chahed:chahed_dev_only@db:5432/chahed

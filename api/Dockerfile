@@ -11,10 +11,14 @@ RUN pip install --no-cache-dir uv==0.11.23
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
+COPY api/pyproject.toml api/uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-COPY . .
+COPY api/ .
+COPY schemas/ /schemas/
+
+ENV SCHEMAS_DIR=/schemas
+
 RUN uv sync --frozen --no-dev
 
 RUN uv run --no-dev python -c "from app.providers.embeddings import _model; _model()"

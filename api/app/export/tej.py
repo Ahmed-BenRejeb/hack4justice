@@ -12,14 +12,10 @@ from pathlib import Path
 
 from lxml import etree
 
+from app.config import settings
 from app.export.xsd import validate
 
-SCHEMA_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "schemas"
-    / "tej"
-    / "TEJDeclarationRS_v1.0.xsd"
-)
+SCHEMA_PATH = Path(settings.schemas_dir) / "tej" / "TEJDeclarationRS_v1.0.xsd"
 
 
 @dataclass(frozen=True)
