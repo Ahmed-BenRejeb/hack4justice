@@ -139,8 +139,19 @@ Format: date, decision, options considered, why, result.
 
 ---
 
+## D-014 - Retire the Sanad plan from the shared repository
+
+**Date:** 2026-09-12
+**Decision:** Remove the earlier Sanad build plan (PLAN.md, docs/PLAN.md) from the tree and publish Chahed on top of the existing remote history.
+**Options:** (a) Keep the Sanad plan alongside docs/plan.md. (b) Move it to an archive folder. (c) Remove it and rely on git history. (d) Overwrite the remote history.
+**Why:** Two plans in the tree contradict the single source of truth. docs/PLAN.md and docs/plan.md collide on case-insensitive filesystems, which breaks checkout on macOS and Windows. Option (d) would destroy a teammate's commits.
+**Result:** Adopted. The Sanad plan stays recoverable at commit 2475584.
+
+---
+
 ## Change log
 
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Seeded with decisions D-001 to D-013 |
+| 2026-09-12 | team | Added D-014 |
