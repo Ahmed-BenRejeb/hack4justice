@@ -48,3 +48,17 @@ def test_chunk_by_article_handles_real_tunisian_code_heading_style() -> None:
     assert [c.article_ref for c in chunks] == ["Article 52", "Article 53"]
     assert "Premiere disposition" in chunks[0].text
     assert "Deuxieme disposition" in chunks[1].text
+
+
+def test_chunk_by_article_handles_dgi_2026_heading_style() -> None:
+    """The DGI's 2026 edition of the same code uses "ARTICLE N :" headings;
+    a cross-reference that happens to end a line is not a heading."""
+    text = (
+        "ARTICLE 52 :  \nI. Premiere disposition, voir l'article 55. (Ajoute)\n\n"
+        "ARTICLE 53 : \nI. Deuxieme disposition.\n"
+    )
+
+    chunks = chunk_by_article(text)
+
+    assert [c.article_ref for c in chunks] == ["Article 52", "Article 53"]
+    assert "Premiere disposition" in chunks[0].text
