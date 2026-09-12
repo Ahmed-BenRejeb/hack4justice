@@ -33,7 +33,7 @@ export function ExportPanel({ documentId, onExported }: ExportPanelProps): JSX.E
   }
 
   return (
-    <Card>
+    <Card size="sm">
       <CardHeader>
         <CardTitle>Export TEJ</CardTitle>
         <CardDescription>

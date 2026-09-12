@@ -8,7 +8,7 @@ import { formatDateTime } from "@/lib/format";
 /** Validation outcome first, then the file reference and validation time. */
 export function ExportResult({ result }: { result: TejExport }): JSX.Element {
   return (
-    <Card>
+    <Card size="sm">
       <CardHeader>
         <CardTitle>Export TEJ</CardTitle>
       </CardHeader>

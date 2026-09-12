@@ -54,9 +54,7 @@ export function DecisionPanel({ documentId, onDecided }: DecisionPanelProps): JS
     <Card>
       <CardHeader>
         <CardTitle>Décision</CardTitle>
-        <CardDescription>
-          Le système pré-qualifie, vous décidez. Le contenu du dossier ne peut pas être modifié ici.
-        </CardDescription>
+        <CardDescription>Le système pré-qualifie, vous décidez. Le dossier lui-même n’est pas modifiable.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
