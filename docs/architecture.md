@@ -102,7 +102,7 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 | Entity | Key fields | Notes |
 |---|---|---|
 | `organisation` | id, name, tax id, role assignments | An MSME or the administration side |
-| `document` | id, organisation_id, uploaded_by, storage_ref, status | The raw uploaded file |
+| `document` | id, organisation_id, uploaded_by, filename, storage_ref, status, created_at | The raw uploaded file; `filename` is the name as uploaded, `storage_ref` where the bytes live |
 | `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), extracted_at | One row per structured field pulled from the document |
 | `corpus_chunk` | id, source_id, article_ref, text, embedding (pgvector), url | Article-level legal text, chunked and embedded |
 | `rule` | id, code, citation_source, article_ref, verbatim_text, url, logic_ref | The rule registry entry; `logic_ref` points to the deterministic code that evaluates it |
@@ -119,14 +119,16 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 
 REST, versioned under `/api/v1`:
 
-- `POST /documents` - upload, triggers extraction
-- `GET /documents/{id}` - status, extraction results, findings
-- `GET /documents/{id}/findings` - findings with resolved citations
-- `POST /documents/{id}/counterparty-check` - triggers RNE lookup
-- `GET /officer/queue` - pre-qualified files awaiting review
-- `POST /officer/decisions` - validate or flag a document
-- `POST /documents/{id}/export` - produce and validate the TEJ export (only after validation)
-- `GET /rules` / `POST /rules` (admin) - registry read/write, each write requires a citation (source, article, verbatim text, url) or is rejected
+- `GET /organisations` / `POST /organisations` - list organisations, create an MSME (409 on a duplicate tax id); there is no auth yet
+- `POST /documents?organisation_id=&uploaded_by=` - multipart upload; extraction and rule evaluation run before it returns
+- `GET /documents/{id}` - status, filename, organisation, extraction results, officer decision, export
+- `GET /documents/{id}/findings` - findings with their rule code and resolved citation
+- `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
+- `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name and finding counts
+- `POST /officer/decisions` - validate or flag a document (`officer_id`, `action`, `note`)
+- `POST /documents/{id}/export` - build and validate the TEJ export from caller-supplied declaration fields (only after validation)
+- `GET /export/operation-codes` - the withholding codes the TEJ schema accepts, read from `schemas/tej/`
+- `GET /rules` - registry read; rules are written by the loader in `api/app/rules`, not over HTTP
 
 `web/app/api/` route handlers proxy to these; they hold no business logic.
 

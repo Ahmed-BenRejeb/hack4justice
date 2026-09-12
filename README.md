@@ -37,7 +37,13 @@ api/          Python backend (FastAPI): extraction, corpus retrieval, rules, cou
 
 ## Getting started
 
-`api/` is scaffolded: config, database models and first migration, and a FastAPI app with a health check and document upload. See `api/CLAUDE.md` for setup. `web/` has not been created yet.
+The whole stack runs with Docker Compose: PostgreSQL with pgvector, the FastAPI backend (`api/`) and the Next.js front end (`web/`).
+
+1. `cp api/.env.example api/.env` and fill `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID`. `DATABASE_URL` is set by `docker-compose.yml`.
+2. `cp web/.env.example web/.env` and fill `OFFICER_ID`. `API_BASE_URL` is set by `docker-compose.yml`.
+3. `docker compose up --build`, then open http://localhost:3000.
+
+To work on one side without Docker, follow the local setup in `api/CLAUDE.md` or `web/CLAUDE.md`.
 
 ## Design law
 

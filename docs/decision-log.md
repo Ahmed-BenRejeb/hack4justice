@@ -354,6 +354,32 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-022 - Web and api integration: backend is the contract, minimal extensions
+
+**Date:** 2026-09-12
+
+**Decision:** Merge `feat/web-ui` into `docs/v2-scope-and-architecture` and make the UI work against the real backend. The backend's Pydantic models are the contract; `web/lib/api-types.ts` mirrors them and replaces the shapes D-020 assumed. The backend gains only what the screens need:
+- `document.filename` (migration `a3f9c2d17b64`, backfilled from `storage_ref` for older rows).
+- `GET /documents/{id}` returns the organisation, the officer decision and the latest export; findings carry their `rule_code`.
+- `GET /officer/queue` rows carry filename, organisation name, and decided and abstained counts.
+- `GET` and `POST /organisations`, so the upload screen can pick or create the organisation a file is filed for.
+- `GET /export/operation-codes`, read from the real TEJ schema, so the export form offers exactly the codes the XSD accepts.
+
+On the web side: an organisation picker and the uploader's e-mail feed `POST /documents`; `officer_id` comes from `OFFICER_ID` in `web/.env` until officer sign-in exists; after validation the officer fills the TEJ declaration in a form (amounts typed in dinars, sent in millimes as the schema requires) and refused exports list every XSD error; the RNE check is removed from the screens because no counterparty endpoint exists; the extracted text is shown as a text block because extraction records a single `full_text` field. `docker compose up` now also builds and runs `web`.
+
+**Options considered:**
+- Adapt the UI to the backend as it stood, with no backend change, losing filenames, decision history and queue counts.
+- Extend the backend minimally, each change tested.
+- For identity: a seeded demo organisation with ids in env, or an organisations endpoint with a picker.
+- For export: an officer form, or leaving export out of the UI.
+- For running: web in Docker Compose, or `pnpm dev` beside the compose backend.
+
+**Why:** Chosen by the user in each case. The extensions are read models and one small write (organisations): none moves compliance judgement out of the rules engine, and none infers a declaration value. Deriving the code list from the XSD keeps the form and the validator on one source.
+
+**Result:** Backend tests added for every extension. `docs/architecture.md` sections 4 and 5, `api/CLAUDE.md`, `web/CLAUDE.md`, `docs/design.md` section 4 and `README.md` updated.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -367,3 +393,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
 | 2026-09-12 | team | Added D-020: web UI data flow, tokens and typography, assumed response shapes |
 | 2026-09-12 | team | Added D-021: answer-first file review with a side rail |
+| 2026-09-12 | team | Added D-022: web and api integration, minimal backend extensions |
