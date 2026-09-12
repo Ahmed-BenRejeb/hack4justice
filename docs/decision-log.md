@@ -316,6 +316,23 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
+---
+
+## D-020 - RNE re-checked: reachable, but account-gated, not network-gated
+
+**Date:** 2026-09-12
+
+**Decision:** Re-checked RNE reachability from a different network (the user removed a firewall). `home.registre-entreprises.tn` still returns 503, but `www.registre-entreprises.tn/rne-public` now loads as a real Angular portal. Read its own served JS bundle (public, same as any browser downloads) to find its real API surface rather than guess one: four API bases (`rne-api`, `rne-auth-api`, `rne-bor-api`, `rne-subscription-api`) and a real search endpoint, `GET /api/rne-api/front-office/entites`, with real parameter names (`idUnique`, `denomination`, `nomCommercialFr`, `cnssNumPM`, and others) taken directly from the generated API client code. Called it live, unauthenticated: `401 Access is denied`. Traced the auth flow: `/api/rne-auth-api/oauth/token` needs a real user account; the embedded Basic credential is the SPA's own OAuth client id, not a bypass. No unauthenticated search path exists in the served client code.
+
+**Options considered:**
+- Assume the earlier network-level 503 was the only blocker and build the integration now that the site loads.
+- Verify what actually gates the real search endpoint before writing any integration code.
+- Try further to find or work around the auth requirement (guess a public/guest flow, hunt for a bypass).
+
+**Why:** The root CLAUDE.md rule against fabricating an external contract cuts both ways: it is also wrong to assume a blocker is resolved without checking. The previous "unreachable" finding and the current "requires a real account" finding are both genuine, evidence-based facts, not assumptions, arrived at the same way as D-019. Going further than reading the site's own public client code (trying to obtain or guess credentials, hunting for an undocumented bypass) is a step the team should decide on explicitly, not something to do unilaterally against a live government system.
+
+**Result:** `app/counterparty/` stays unbuilt. `docs/facts.md`'s RNE row is updated with the concrete endpoint, parameters, and the specific 401/OAuth finding, replacing the vaguer "contract-gated" note. If the team obtains real RNE credentials, `front-office/entites?idUnique=<...>` is the endpoint to integrate against, using the parameter names found here (not yet `verified`: a person should confirm `idUnique` is the same identifier as the DGI matricule fiscal before relying on it).
+
 ## Change log
 
 | Date | Author | What changed |
@@ -325,3 +342,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |
 | 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
 | 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
+| 2026-09-12 | team | Added D-020: RNE re-checked, reachable now but account-gated, not network-gated |
