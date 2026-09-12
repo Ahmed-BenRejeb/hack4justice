@@ -16,7 +16,7 @@ export function Section({ id, title, description, action, children }: SectionPro
     <section aria-labelledby={id} className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h2 id={id} className="font-heading text-lg font-semibold tracking-tight">
+          <h2 id={id} className="font-heading text-base font-semibold tracking-tight">
             {title}
           </h2>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}

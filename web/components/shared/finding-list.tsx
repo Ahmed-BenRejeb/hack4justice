@@ -1,10 +1,9 @@
-/** The findings of one file, with a tally, or a waiting state before any rule has run. */
+/** The findings of one file, or a waiting state before any rule has run. The tally lives in the result banner. */
 import type { JSX } from "react";
 import type { Finding } from "@/lib/api-types";
-import { countLabel } from "@/lib/format";
 import { FindingCard } from "./finding-card";
 
-/** Tally line followed by one card per finding, in the order the backend returns them. */
+/** One card per finding, in the order the backend returns them. */
 export function FindingList({ findings }: { findings: Finding[] }): JSX.Element {
   if (findings.length === 0) {
     return (
@@ -18,15 +17,8 @@ export function FindingList({ findings }: { findings: Finding[] }): JSX.Element 
     );
   }
 
-  const decided = findings.filter((finding) => finding.status === "decided").length;
-  const abstained = findings.length - decided;
-
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        {countLabel(decided, "constat décidé", "constats décidés")} ·{" "}
-        {countLabel(abstained, "abstention", "abstentions")}
-      </p>
+    <div className="space-y-3">
       {findings.map((finding) => (
         <FindingCard key={finding.id} finding={finding} />
       ))}

@@ -1,22 +1,21 @@
 "use client";
 
 /**
- * MSME review of one file: live extraction, findings with citations, the RNE check, and what
- * happens next. Single-file focus, generous spacing (docs/design.md section 4).
+ * MSME review of one file, answer first: the result banner and the cited findings lead the main
+ * column, extracted fields follow; progress, the RNE check and the outcome sit in the rail.
  */
 import type { JSX } from "react";
 import { ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
-import { BackLink } from "@/components/shared/back-link";
 import { CounterpartyPanel } from "@/components/shared/counterparty-panel";
 import { DecisionSummary } from "@/components/shared/decision-summary";
 import { ExportResult } from "@/components/shared/export-result";
 import { ExtractionTable } from "@/components/shared/extraction-table";
+import { FileHeader } from "@/components/shared/file-header";
 import { FindingList } from "@/components/shared/finding-list";
-import { PageHeader } from "@/components/shared/page-header";
 import { PipelineProgress } from "@/components/shared/pipeline-progress";
+import { ResultBanner } from "@/components/shared/result-banner";
+import { ReviewLayout } from "@/components/shared/review-layout";
 import { Section } from "@/components/shared/section";
-import { DocumentStatusBadge } from "@/components/shared/status-badge";
-import { formatDateTime, shortId } from "@/lib/format";
 import { pipelineProgress } from "@/lib/pipeline";
 import { useDocumentFile } from "@/lib/use-document-file";
 
@@ -30,53 +29,32 @@ export function DocumentReview({ documentId }: { documentId: string }): JSX.Elem
   const { document: detail, findings } = data;
 
   return (
-    <div className="space-y-12">
-      <div className="space-y-6">
-        <BackLink href="/entreprise">Déposer un autre dossier</BackLink>
-        <PageHeader
-          eyebrow={`Dossier ${shortId(detail.id)}`}
-          title={detail.filename}
-          meta={
-            <>
-              <span>Déposé le {formatDateTime(detail.uploaded_at)}</span>
-              <DocumentStatusBadge status={detail.status} />
-            </>
-          }
-        />
-        {error !== undefined && <StaleNotice onRetry={reload} />}
-        <PipelineProgress stages={pipelineProgress(detail, findings.length)} />
-      </div>
-
-      <Section
-        id="extraction"
-        title="Informations extraites"
-        description="Champs lus sur le document. Les faits assistés portent leur indice de confiance."
-      >
-        <ExtractionTable extractions={detail.extractions} inProgress={findings.length === 0} />
-      </Section>
-
-      <Section
-        id="constats"
-        title="Constats"
-        description="Chaque conclusion cite l’article qui la fonde. Ouvrez la citation pour lire le texte intégral."
-      >
-        <FindingList findings={findings} />
-      </Section>
-
-      <Section
-        id="fournisseur"
-        title="Vérification du fournisseur"
-        description="Faits d’enregistrement au Registre national des entreprises."
-      >
-        <CounterpartyPanel documentId={detail.id} check={detail.counterparty_check} onChecked={reload} />
-      </Section>
-
-      <Section id="suite" title="Suite du dossier" description="Le système pré-qualifie, un agent décide.">
-        <div className="space-y-4">
-          <DecisionSummary decision={detail.officer_decision} />
+    <ReviewLayout
+      header={
+        <>
+          <FileHeader backHref="/entreprise" backLabel="Déposer un autre dossier" document={detail} />
+          {error !== undefined && <StaleNotice onRetry={reload} />}
+        </>
+      }
+      main={
+        <>
+          <ResultBanner findings={findings} extractions={detail.extractions} check={detail.counterparty_check} />
+          <Section id="constats" title="Constats" description="Ouvrez une citation pour lire l’article qui fonde le constat.">
+            <FindingList findings={findings} />
+          </Section>
+          <Section id="extraction" title="Informations extraites">
+            <ExtractionTable extractions={detail.extractions} inProgress={findings.length === 0} />
+          </Section>
+        </>
+      }
+      rail={
+        <>
+          <PipelineProgress stages={pipelineProgress(detail, findings.length)} />
+          <CounterpartyPanel documentId={detail.id} check={detail.counterparty_check} onChecked={reload} />
+          {detail.officer_decision && <DecisionSummary decision={detail.officer_decision} />}
           {detail.export && <ExportResult result={detail.export} />}
-        </div>
-      </Section>
-    </div>
+        </>
+      }
+    />
   );
 }
