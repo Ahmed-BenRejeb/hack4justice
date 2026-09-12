@@ -263,6 +263,29 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-017 - Web UI: client-side data through a thin proxy, fixed tokens, assumed response shapes
+
+**Date:** 2026-09-12
+
+**Decision:** Build the `web/` UI against the backend contract only, with no mock data in the repository. The browser calls `/api/v1/*` on the Next.js app; one catch-all route handler forwards to `API_BASE_URL`; screens load and poll their data client-side. Typography is IBM Plex Sans and Plex Mono, and the token file is `web/app/globals.css`. Where `docs/architecture.md` section 5 does not fix a response shape, the UI assumes the following (defined in `web/lib/api-types.ts`):
+- `GET /documents/{id}` returns `id, filename, status, uploaded_at, extractions[], counterparty_check | null, officer_decision | null, export | null`.
+- `GET /documents/{id}/findings` returns findings with their `rule` embedded (code, source, article, verbatim text, url, logic ref).
+- `GET /officer/queue` returns rows of `document_id, filename, organisation_name, submitted_at, status, decided_count, abstained_count, counterparty_registered | null`.
+- `POST /documents` takes the multipart field `file` and returns the document; `POST /officer/decisions` takes `document_id, action, note`.
+- Document `status` is free text. The UI labels known values and derives pipeline progress from the presence of each stage's output, never from the status string.
+
+**Options considered:**
+- A typed client plus a mock backend inside `web/` for demos before the API exists.
+- A real client only, built against the architecture contract.
+- Static fixtures imported directly by components.
+- Server components fetching the backend directly, instead of client-side polling through a proxy.
+
+**Why:** A mock in the repository would be thrown away and could drift from the backend; the user chose the real client only. Client-side polling is what demo moments 1 and 4 need (fields populating live, a file arriving in the queue). A single proxy keeps the backend origin in the one server-side configuration module (D-014). Presence-based progress stays correct whatever status vocabulary the backend settles on. IBM Plex covers Latin Extended and reads as a sober administrative face.
+
+**Result:** Screens for all three roles on branch `feat/web-ui`, with the admin registry read-only so cut list item 1 stays cheap. The backend confirms or corrects the shapes above, and `web/lib/api-types.ts` changes with any correction. `docs/design.md` sections 2, 3, 5 and 7 updated.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -271,3 +294,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 |---|---|---|
 | 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
+| 2026-09-12 | team | Added D-017: web UI data flow, tokens and typography, assumed response shapes |
