@@ -100,6 +100,17 @@ We measure errors prevented, not time saved. Time saved is generic; every projec
 
 Annual certificate volume x observed error rate x interventions per error. The calculation is shown openly on the slide, every input sourced in `docs/facts.md`. A visible calculation with a modest result is more convincing than a large unexplained number, especially in front of an officer who knows the real figures.
 
+### Agency Benefit slide (mandatory)
+
+The hackathon brief requires one slide, titled "The Agency Benefit," stating exactly how many manual hours, paper processes, or queue delays the agency saves per month. This is a derived conversion of the pilot-level calculation above, not a new headline metric (`docs/decision-log.md` D-016): errors prevented stays the primary claim, and this slide answers the brief's specific required sentence with a number traceable back to it.
+
+Formula: downstream interventions removed per month x average officer time per intervention = officer hours saved per month.
+
+- Downstream interventions removed per month: errors intercepted per file x interventions per error x monthly file volume (pilot level, above).
+- Average officer time per intervention (corrected declaration / cross-check investigation / support call): sourced from DGI process documentation where available; otherwise a labelled estimate, per the estimates rule in `docs/facts.md`.
+
+The slide shows the errors-prevented calculation and the derived hours figure together, so the hours number is never presented without the calculation that produced it.
+
 ## 8. Build phases and gates
 
 Phases are sequential. Do not start a phase until the previous gate is met. When a gate is at risk, cut from section 9, do not slip the gate.
@@ -141,3 +152,4 @@ From `docs/facts.md`, promote to `verified` before the pitch, or drop the claim:
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Regenerated plan from description-projet-v2.md, scoped to withholding-code decision plus export and counterparty check |
+| 2026-09-12 | team | Added Agency Benefit slide subsection to section 7, per D-016 |

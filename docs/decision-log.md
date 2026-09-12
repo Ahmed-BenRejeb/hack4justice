@@ -246,6 +246,23 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 
 ---
 
+## D-016 - Agency Benefit slide: a derived hours figure, not a new primary metric
+
+**Date:** 2026-09-12
+
+**Decision:** Add a labelled, derived hours-saved figure to satisfy the hackathon brief's mandatory "Agency Benefit" slide (45 seconds, one slide, stating exactly how many manual hours the agency saves per month). This figure is computed from the same calculation established in D-009 (downstream interventions removed per month x average officer time per intervention), never presented as an independent or unsourced headline. D-009's primary metric (errors prevented, downstream interventions removed) is unchanged and remains the substantiation for the derived figure.
+
+**Options considered:**
+- Skip the mandatory slide, or retitle it to fit the errors-prevented framing only, accepting we do not literally answer the brief's required sentence.
+- Derive an hours-saved figure from the existing, sourced errors-prevented calculation, and show it alongside that calculation on the mandatory slide.
+- Lead the whole pitch with a generic hours-saved headline (reopening D-009).
+
+**Why:** The brief makes this slide mandatory and names the exact sentence to answer; ignoring it risks losing on a scored requirement. Reopening D-009 to lead with hours would give up the more credible, harder-to-attack metric for no reason, since the hours figure can be derived from it directly. A new multiplicand (average officer time per intervention) is added to the impact calculation, sourced or explicitly labelled as an estimate per the existing estimates rule.
+
+**Result:** `docs/plan.md` section 7 adds an "Agency Benefit slide" subsection with the conversion formula. `docs/facts.md` gains an impact-calculation-inputs row for average officer time per intervention, and the banned-claims entry for "hours saved" is narrowed to exclude this specific, sourced, labelled derivation.
+
+---
+
 **Note on the root `CLAUDE.md`:** D-010 and D-014 change facts the root guide currently states as settled (a single TypeScript tree; one config module repo-wide). That file is binding and is not edited as a side effect of this documentation pass; the edit is proposed to the user as a follow-up.
 
 ## Change log
@@ -253,3 +270,4 @@ Every significant decision, dated. Append, never rewrite history: if a decision 
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
+| 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |

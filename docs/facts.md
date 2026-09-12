@@ -38,6 +38,7 @@ Status values: `verified`, `to verify`, `banned` (a claim we explicitly do not m
 | Annual volume of withholding certificates issued nationally | DGI statistics, if published | to verify | First multiplicand in the national projection formula |
 | Observed error rate on withholding certificates | DGI statistics or pilot-observed rate | to verify | Second multiplicand; pilot data may be the only available source pre-launch |
 | Average downstream interventions triggered per error (corrected declaration, cross-check investigation, support call) | DGI process documentation or estimate, labelled as an estimate if not sourced | to verify | Third multiplicand; if not sourced, must be visibly labelled as an estimate on the slide, per the estimates rule below |
+| Average officer time per downstream intervention (hours) | DGI process documentation or estimate, labelled as an estimate if not sourced | to verify | Fourth multiplicand, used only to derive the mandatory Agency Benefit slide's hours-saved figure from the interventions-removed count (D-016); never used as a standalone or primary headline |
 
 ## Banned claims
 
@@ -46,7 +47,7 @@ Status values: `verified`, `to verify`, `banned` (a claim we explicitly do not m
 | Any claim that the product detects or scores fraud | Explicit scope refusal (D-003): fraud detection is fiscal policing, not this product |
 | Any supplier reputation score or "risk score" | Explicit product decision (D-007): practitioners attached no value to it, feature was withdrawn |
 | "We replace E-Sit-Fisc" or any DGI filing channel | Positioning is "we feed clean data into existing channels," not replacement |
-| Any generic "hours saved" or "time saved" headline figure as the primary impact metric | D-009: the primary metric is errors prevented and downstream interventions removed, not time saved |
+| Any "hours saved" or "time saved" figure presented as the primary metric, or not derived from the sourced errors-prevented calculation | D-009: the primary metric is errors prevented and downstream interventions removed, not time saved. D-016's exception: the mandatory Agency Benefit slide may show one hours-saved figure, derived from this calculation and labelled per the estimates rule, shown alongside it, never standalone |
 
 ## Estimates, to be labelled as such on any slide
 
@@ -57,3 +58,4 @@ Any number in the impact calculation that does not have a `verified` source by p
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Facts register regenerated from description-projet-v2.md; all entries seeded at `to verify` |
+| 2026-09-12 | team | Added officer-time-per-intervention input and narrowed the hours-saved ban, per D-016 |
