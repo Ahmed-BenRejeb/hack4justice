@@ -17,6 +17,7 @@ from app.db.models import Document, Export, OfficerDecision
 from app.db.session import get_db
 from app.export import tej
 from app.export.codes import operation_codes
+from app.export.derive import derive_export_draft
 from app.export.xsd import SchemaValidationError
 from app.storage import save_upload
 
@@ -42,6 +43,7 @@ class OperationIn(BaseModel):
     montant_ttc: int
     montant_rs: int
     montant_net_servi: int
+    montant_tva: int | None = None
     cnpc: bool = False
     p_charge: bool = False
 
@@ -75,6 +77,32 @@ class ExportOut(BaseModel):
 class OperationCodeOut(BaseModel):
     code: str
     description: str
+
+
+class ExportDraftValuesOut(BaseModel):
+    declarant_matricule_fiscal: str | None
+    beneficiary_name: str | None
+    beneficiary_matricule_fiscal: str | None
+    beneficiary_address: str | None
+    invoice_year: str | None
+    code: str | None
+    rate: str | None
+    amount_excl_tax: str | None
+    amount_vat: str | None
+    amount_incl_tax: str | None
+    amount_withheld: str | None
+    amount_net_paid: str | None
+    reference: str | None
+
+
+class ExportDraftOut(BaseModel):
+    """A pre-fill for the officer's export form, in officer units (dinars,
+    ISO dates). Every value stays editable; `derived_fields` names which
+    ones came from the document rather than being typed by the officer.
+    """
+
+    values: ExportDraftValuesOut
+    derived_fields: list[str]
 
 
 def _to_tej_certificat(certificat: CertificatIn) -> tej.Certificat:
@@ -131,6 +159,26 @@ def export_document(
     db.commit()
     db.refresh(export)
     return export
+
+
+@router.get("/{document_id}/export-draft", response_model=ExportDraftOut)
+def get_export_draft(
+    document_id: uuid.UUID, db: Session = Depends(get_db)
+) -> ExportDraftOut:
+    """A pre-filled TEJ export draft, projected from the document's extractions.
+
+    Available regardless of officer decision (the form only renders it
+    after validation); nothing is inferred beyond what was extracted.
+    """
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    draft = derive_export_draft(db, document)
+    return ExportDraftOut(
+        values=ExportDraftValuesOut(**draft.values.__dict__),
+        derived_fields=draft.derived_fields,
+    )
 
 
 @codes_router.get("/operation-codes", response_model=list[OperationCodeOut])
