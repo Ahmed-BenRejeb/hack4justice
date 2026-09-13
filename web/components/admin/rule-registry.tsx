@@ -5,6 +5,7 @@ import { useState, type JSX } from "react";
 import { BookOpenIcon, SearchIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock } from "@/components/shared/api-state";
 import { Citation } from "@/components/shared/citation";
+import { PageGuide } from "@/components/shared/page-guide";
 import { PageHeader } from "@/components/shared/page-header";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
@@ -32,6 +33,13 @@ export function RuleRegistry(): JSX.Element {
         eyebrow="Administration"
         title="Registre des règles"
         description="Chaque règle porte la source, l’article, le texte intégral et le lien du texte qui la fonde. Une règle sans citation vérifiée n’entre pas au registre."
+      />
+      <PageGuide
+        steps={[
+          "Recherchez une règle par son code, son article ou sa source ; la recherche ignore les accents.",
+          "Ouvrez la citation pour lire le texte intégral et suivre le lien vers la source officielle.",
+          "Le registre se consulte seulement : une règle est ajoutée par chargement, après vérification de sa citation par une personne.",
+        ]}
       />
 
       {isLoading ? (

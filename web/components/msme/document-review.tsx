@@ -9,6 +9,7 @@ import { ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-
 import { DecisionSummary } from "@/components/shared/decision-summary";
 import { ExportResult } from "@/components/shared/export-result";
 import { FileHeader } from "@/components/shared/file-header";
+import { PageGuide } from "@/components/shared/page-guide";
 import { PipelineProgress } from "@/components/shared/pipeline-progress";
 import { ReviewLayout } from "@/components/shared/review-layout";
 import { ReviewMain } from "@/components/shared/review-main";
@@ -34,8 +35,17 @@ export function DocumentReview({ documentId }: { documentId: string }): JSX.Elem
     <ReviewLayout
       header={
         <>
-          <FileHeader backHref="/entreprise" backLabel="Déposer un autre dossier" document={detail} />
+          <FileHeader backHref="/entreprise" backLabel="Retour au tableau de bord" document={detail} />
           {error !== undefined && <StaleNotice onRetry={reload} />}
+          <PageGuide
+            defaultOpen={false}
+            steps={[
+              "Le bandeau résume le résultat : le code proposé, les informations manquantes et le nombre de règles appliquées.",
+              "Chaque constat cite l’article qui le fonde ; ouvrez la citation pour en lire le texte.",
+              "Quand une question vous est posée, votre réponse relance l’analyse du dossier.",
+              "La colonne de droite suit l’avancement : la décision de l’agent, puis la déclaration TEJ.",
+            ]}
+          />
         </>
       }
       main={<ReviewMain document={detail} findings={findings} answering={answering} />}

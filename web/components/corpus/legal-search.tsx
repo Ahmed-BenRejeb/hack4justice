@@ -7,6 +7,7 @@
 import { useState, type FormEvent, type JSX } from "react";
 import { SearchIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock } from "@/components/shared/api-state";
+import { PageGuide } from "@/components/shared/page-guide";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +31,16 @@ export function LegalSearch(): JSX.Element {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Textes juridiques"
         title="Recherche dans les textes vérifiés"
         description="Chaque résultat est un passage qu’une personne a comparé au texte officiel ; le système ne répond jamais à votre place, il retrouve le passage."
+      />
+      <PageGuide
+        steps={[
+          "Tapez un numéro d’article, un mot-clé ou une expression, puis lancez la recherche.",
+          "Ouvrez un résultat pour lire le passage complet, ses voisins et la page officielle.",
+          "Un passage qui n’apparaît pas n’a pas encore été vérifié : il n’est jamais affiché.",
+        ]}
       />
 
       <form onSubmit={submit} className="flex gap-2">

@@ -2,9 +2,9 @@
 
 /** The officer's work list: polls the queue, filters it, and announces newly arrived files. */
 import { useRef, useState, type JSX } from "react";
-import Link from "next/link";
-import { ActivityIcon, InboxIcon, RefreshCwIcon } from "lucide-react";
+import { InboxIcon, RefreshCwIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
+import { PageGuide } from "@/components/shared/page-guide";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -91,14 +91,16 @@ export function OfficerQueue(): JSX.Element {
               <RefreshCwIcon aria-hidden />
               Actualiser
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/agent/mesures">
-                <ActivityIcon aria-hidden />
-                Mesures
-              </Link>
-            </Button>
           </>
         }
+      />
+      <PageGuide
+        steps={[
+          "La file s’actualise d’elle-même : un nouveau dossier y apparaît sans recharger la page.",
+          "Filtrez par onglet, ou par information manquante pour traiter ensemble les dossiers bloqués par la même question.",
+          "Cliquez sur une ligne pour ouvrir le dossier, lire ses constats et leurs citations.",
+          "Validez ou signalez le dossier ; il quitte alors la file.",
+        ]}
       />
 
       <p aria-live="polite" className="sr-only">

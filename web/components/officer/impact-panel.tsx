@@ -9,9 +9,10 @@
  * each shown with its basis so an unsourced one reads as an estimate (docs/facts.md). No national
  * figure appears: its multiplicands are neither observed here nor verified.
  */
-import type { JSX, ReactNode } from "react";
+import type { JSX } from "react";
 import { ActivityIcon } from "lucide-react";
 import { ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
+import { ChartCard, StatGrid, StatTile } from "@/components/shared/dashboard";
 import { Section } from "@/components/shared/section";
 import { SimpleBarChart } from "@/components/shared/simple-bar-chart";
 import { StatusBarChart } from "@/components/shared/status-bar-chart";
@@ -24,54 +25,37 @@ import { countLabel } from "@/lib/format";
 import { describeCalculation, INPUT_LABELS } from "@/lib/impact";
 import { useResource } from "@/lib/use-resource";
 
-function Tile({ label, value, hint }: { label: string; value: ReactNode; hint?: string }): JSX.Element {
-  return (
-    <div className="bg-card px-5 py-4">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
 /** The counted outcomes, per rule and per missing fact, then the derived benefit. */
 function Measured({ measurement }: { measurement: Measurement }): JSX.Element {
   const calculation = describeCalculation(measurement);
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="mesures" className="overflow-hidden rounded-xl border">
-        <h3 id="mesures" className="sr-only">
-          Mesures relevées
-        </h3>
-        <dl className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
-          <Tile label="Dossiers déposés" value={measurement.documents} />
-          <Tile label="Dossiers analysés" value={measurement.documents_analysed} />
-          <Tile
-            label="Erreurs interceptées"
-            value={<span className="text-status-decided">{measurement.errors_intercepted}</span>}
-            hint="Constats dont la règle déclare qu’ils signalent un problème"
-          />
-          <Tile
-            label="Informations manquantes"
-            value={<span className="text-status-abstained">{measurement.findings_abstained}</span>}
-            hint={`${countLabel(measurement.facts_confirmed_by_people, "fait confirmé", "faits confirmés")} par une personne`}
-          />
-        </dl>
-      </section>
+      <StatGrid label="Mesures relevées">
+        <StatTile label="Dossiers déposés" value={measurement.documents} />
+        <StatTile label="Dossiers analysés" value={measurement.documents_analysed} />
+        <StatTile
+          label="Erreurs interceptées"
+          value={<span className="text-status-decided">{measurement.errors_intercepted}</span>}
+          hint="Constats dont la règle déclare qu’ils signalent un problème"
+        />
+        <StatTile
+          label="Informations manquantes"
+          value={<span className="text-status-abstained">{measurement.findings_abstained}</span>}
+          hint={`${countLabel(measurement.facts_confirmed_by_people, "fait confirmé", "faits confirmés")} par une personne`}
+        />
+      </StatGrid>
 
       {(measurement.findings_decided > 0 || measurement.findings_abstained > 0) && (
-        <div className="rounded-xl border bg-card px-5 py-4">
-          <h3 className="text-sm font-medium">Décidés contre abstentions</h3>
+        <ChartCard title="Décidés contre abstentions">
           <StatusBarChart decided={measurement.findings_decided} abstained={measurement.findings_abstained} />
-        </div>
+        </ChartCard>
       )}
 
       {measurement.by_rule.length > 0 && (
-        <div className="rounded-xl border bg-card px-5 py-4">
-          <h3 className="text-sm font-medium">Erreurs interceptées par règle</h3>
+        <ChartCard title="Erreurs interceptées par règle">
           <SimpleBarChart data={errorsByRule(measurement.by_rule)} labelWidth={160} />
-        </div>
+        </ChartCard>
       )}
 
       {measurement.by_rule.length > 0 && (
@@ -105,23 +89,20 @@ function Measured({ measurement }: { measurement: Measurement }): JSX.Element {
       )}
 
       {measurement.abstentions_by_missing_fact.length > 0 && (
-        <div className="rounded-xl border bg-card px-5 py-4">
-          <h3 className="text-sm font-medium">Ce qui bloque le plus de dossiers</h3>
+        <ChartCard title="Ce qui bloque le plus de dossiers">
           <SimpleBarChart
             data={missingFactChart(measurement.abstentions_by_missing_fact)}
             labelWidth={180}
             height={Math.max(140, measurement.abstentions_by_missing_fact.length * 36)}
           />
-        </div>
+        </ChartCard>
       )}
 
-      <div className="rounded-xl border bg-card px-5 py-4">
-        <h3 className="text-sm font-medium">Bénéfice pour l’administration</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Dérivé des erreurs interceptées ci-dessus, jamais présenté seul. La mesure principale
-          reste les erreurs évitées, pas le temps gagné.
-        </p>
-        <p className="mt-3 font-mono text-sm break-words">{calculation.formula}</p>
+      <ChartCard
+        title="Bénéfice pour l’administration"
+        description="Dérivé des erreurs interceptées ci-dessus, jamais présenté seul. La mesure principale reste les erreurs évitées, pas le temps gagné."
+      >
+        <p className="font-mono text-sm break-words">{calculation.formula}</p>
         <p className="mt-2 text-2xl font-semibold tabular-nums">{calculation.hours}</p>
         <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
           {measurement.inputs.map((input) => (
@@ -137,7 +118,7 @@ function Measured({ measurement }: { measurement: Measurement }): JSX.Element {
             </li>
           ))}
         </ul>
-      </div>
+      </ChartCard>
     </div>
   );
 }

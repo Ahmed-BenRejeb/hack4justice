@@ -9,6 +9,7 @@ import { ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-
 import { DecisionSummary } from "@/components/shared/decision-summary";
 import { ExportResult } from "@/components/shared/export-result";
 import { FileHeader } from "@/components/shared/file-header";
+import { PageGuide } from "@/components/shared/page-guide";
 import { PipelineProgress } from "@/components/shared/pipeline-progress";
 import { ReviewLayout } from "@/components/shared/review-layout";
 import { ReviewMain } from "@/components/shared/review-main";
@@ -39,8 +40,17 @@ export function OfficerReview({ documentId }: { documentId: string }): JSX.Eleme
     <ReviewLayout
       header={
         <>
-          <FileHeader backHref="/agent" backLabel="Retour à la file" document={detail} />
+          <FileHeader backHref="/agent/dossiers" backLabel="Retour à la file" document={detail} />
           {error !== undefined && <StaleNotice onRetry={reload} />}
+          <PageGuide
+            defaultOpen={false}
+            steps={[
+              "Lisez le bandeau de résultat, puis chaque constat et l’article qui le fonde.",
+              "Si vous connaissez l’information manquante, répondez à la question : le dossier est réévalué.",
+              "Validez ou signalez le dossier dans la colonne de droite.",
+              "Une fois le dossier validé, complétez la déclaration TEJ ; toute erreur s’affiche sur son champ.",
+            ]}
+          />
         </>
       }
       main={

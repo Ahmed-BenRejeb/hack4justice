@@ -4,7 +4,7 @@
 import type { JSX } from "react";
 import { Button } from "@/components/ui/button";
 
-/** Plain explanation with a retry; the error digest links the screen to server logs. */
+/** Plain explanation with a retry; the error digest links the screen to server logs. It replaces the frame, so it is its own `<main>`. */
 export default function ErrorBoundary({
   error,
   retry,
@@ -13,7 +13,7 @@ export default function ErrorBoundary({
   retry: () => void;
 }): JSX.Element {
   return (
-    <div className="mx-auto max-w-xl px-4 py-24 text-center">
+    <main id="contenu" tabIndex={-1} className="mx-auto max-w-xl px-4 py-24 text-center outline-none">
       <p className="text-sm font-medium text-muted-foreground">Erreur inattendue</p>
       <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight">
         L’écran n’a pas pu s’afficher
@@ -23,6 +23,6 @@ export default function ErrorBoundary({
       <Button className="mt-6" onClick={() => retry()}>
         Réessayer
       </Button>
-    </div>
+    </main>
   );
 }

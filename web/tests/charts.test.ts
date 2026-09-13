@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RuleCount } from "../lib/api-types.ts";
-import { errorsByRule, missingFactChart } from "../lib/charts.ts";
+import { errorsByRule, filingsByDay, missingFactChart } from "../lib/charts.ts";
 
 function rule(overrides: Partial<RuleCount> = {}): RuleCount {
   return {
@@ -38,6 +38,19 @@ test("errorsByRule sums rules that cite the same article into one bar", () => {
     [
       { label: "Article 52, I, a)", value: 5 },
       { label: "Article 55, I", value: 1 },
+    ],
+  );
+});
+
+test("filingsByDay labels each day day/month from the ISO date and keeps zero days", () => {
+  assert.deepEqual(
+    filingsByDay([
+      { day: "2026-08-31", count: 0 },
+      { day: "2026-09-01", count: 3 },
+    ]),
+    [
+      { label: "31/08", value: 0 },
+      { label: "01/09", value: 3 },
     ],
   );
 });

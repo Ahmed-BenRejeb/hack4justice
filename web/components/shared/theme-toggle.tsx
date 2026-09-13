@@ -6,8 +6,8 @@ import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 
-/** Toggles between the light and dark token sets. */
-export function ThemeToggle(): JSX.Element {
+/** Toggles between the light and dark token sets; `className` adapts it to the navy ground. */
+export function ThemeToggle({ className }: { className?: string }): JSX.Element {
   const { resolvedTheme, setTheme } = useTheme();
 
   return (
@@ -15,6 +15,7 @@ export function ThemeToggle(): JSX.Element {
       variant="ghost"
       size="icon"
       aria-label="Changer de thème"
+      className={className}
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
       <SunIcon className="hidden dark:block" aria-hidden />
