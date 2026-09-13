@@ -5,11 +5,12 @@ without a corresponding change there is a bug in one of the two.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -131,6 +132,14 @@ class CorpusChunk(Base):
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Set from corpus/verified-passages.json on every load; never shown when unverified (D-029).
+    verification_status: Mapped[str] = mapped_column(
+        Enum("unverified", "verified", name="verification_status", native_enum=False),
+        server_default="unverified",
+        nullable=False,
+    )
+    verified_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    verified_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     embedding: Mapped[list[float]] = mapped_column(
         Vector(settings.embedding_dimensions), nullable=True
     )

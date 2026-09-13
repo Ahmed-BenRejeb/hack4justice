@@ -18,10 +18,12 @@ COPY api/ .
 COPY schemas/ /schemas/
 COPY corpus/sources/ /corpus-sources/
 COPY rules/ /rules/
+COPY corpus/verified-passages.json /verified-passages.json
 
 ENV SCHEMAS_DIR=/schemas
 ENV CORPUS_SOURCES_DIR=/corpus-sources
 ENV RULES_DIR=/rules
+ENV VERIFIED_PASSAGES_PATH=/verified-passages.json
 
 RUN uv sync --frozen --no-dev
 
