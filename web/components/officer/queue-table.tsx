@@ -9,23 +9,34 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { QueueItem } from "@/lib/api-types";
 import { countLabel, formatDateTime } from "@/lib/format";
+import { fieldLabel } from "@/lib/labels";
 import { DocumentStatusBadge, STATUS_TONE } from "@/components/shared/status-badge";
 
-function FindingCounts({ decided, abstained }: { decided: number; abstained: number }): JSX.Element {
+/** Outcome counts, then the facts the abstentions name, so the officer knows what is missing before opening the file (J8). */
+function FindingCounts({ item }: { item: QueueItem }): JSX.Element {
+  const { decided_count: decided, abstained_count: abstained, missing_facts: missingFacts } = item;
   if (decided === 0 && abstained === 0) {
     return <span className="text-muted-foreground">Aucun constat</span>;
   }
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {decided > 0 && (
-        <Badge variant="outline" className={STATUS_TONE.decided}>
-          {countLabel(decided, "décidé", "décidés")}
-        </Badge>
-      )}
-      {abstained > 0 && (
-        <Badge variant="outline" className={STATUS_TONE.abstained}>
-          {countLabel(abstained, "abstention", "abstentions")}
-        </Badge>
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-1.5">
+        {decided > 0 && (
+          <Badge variant="outline" className={STATUS_TONE.decided}>
+            {countLabel(decided, "décidé", "décidés")}
+          </Badge>
+        )}
+        {abstained > 0 && (
+          <Badge variant="outline" className={STATUS_TONE.abstained}>
+            {countLabel(abstained, "abstention", "abstentions")}
+          </Badge>
+        )}
+      </div>
+      {missingFacts.length > 0 && (
+        <p className="max-w-sm text-xs whitespace-normal text-muted-foreground">
+          {missingFacts.length > 1 ? "Informations manquantes" : "Information manquante"} :{" "}
+          {missingFacts.map(fieldLabel).join(", ")}
+        </p>
       )}
     </div>
   );
@@ -76,7 +87,7 @@ export function QueueTable({ items, arrived }: QueueTableProps): JSX.Element {
                 {formatDateTime(item.created_at)}
               </TableCell>
               <TableCell>
-                <FindingCounts decided={item.decided_count} abstained={item.abstained_count} />
+                <FindingCounts item={item} />
               </TableCell>
               <TableCell>
                 <DocumentStatusBadge status={item.status} />

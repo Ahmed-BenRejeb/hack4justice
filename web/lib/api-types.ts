@@ -132,6 +132,8 @@ export interface QueueItem {
   created_at: string;
   decided_count: number;
   abstained_count: number;
+  /** Distinct facts the file's abstentions name, sorted (J8). */
+  missing_facts: string[];
 }
 
 /** POST /officer/decisions body. */

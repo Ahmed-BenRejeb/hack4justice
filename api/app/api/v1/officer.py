@@ -32,6 +32,8 @@ class QueuedDocumentOut(BaseModel):
     created_at: datetime
     decided_count: int
     abstained_count: int
+    # Distinct facts the file's abstentions name, sorted, so the officer sees what is missing (J8).
+    missing_facts: list[str]
 
 
 @router.get("/queue", response_model=list[QueuedDocumentOut])
@@ -45,14 +47,23 @@ def get_queue(db: Session = Depends(get_db)) -> list[QueuedDocumentOut]:
         .order_by(Document.created_at)
         .all()
     )
+    document_ids = [document.id for document in documents]
     finding_counts = {
         (document_id, status): count
         for document_id, status, count in db.query(
             Finding.document_id, Finding.status, func.count()
         )
-        .filter(Finding.document_id.in_([document.id for document in documents]))
+        .filter(Finding.document_id.in_(document_ids))
         .group_by(Finding.document_id, Finding.status)
     }
+    missing_facts: dict[uuid.UUID, list[str]] = {}
+    for document_id, missing_fact in (
+        db.query(Finding.document_id, Finding.missing_fact)
+        .filter(Finding.document_id.in_(document_ids), Finding.status == "abstained")
+        .distinct()
+        .order_by(Finding.document_id, Finding.missing_fact)
+    ):
+        missing_facts.setdefault(document_id, []).append(missing_fact)
     return [
         QueuedDocumentOut(
             id=document.id,
@@ -64,6 +75,7 @@ def get_queue(db: Session = Depends(get_db)) -> list[QueuedDocumentOut]:
             created_at=document.created_at,
             decided_count=finding_counts.get((document.id, "decided"), 0),
             abstained_count=finding_counts.get((document.id, "abstained"), 0),
+            missing_facts=missing_facts.get(document.id, []),
         )
         for document in documents
     ]

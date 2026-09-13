@@ -14,7 +14,7 @@ import {
 } from "../lib/format.ts";
 import { documentStatusLabel, fieldLabel } from "../lib/labels.ts";
 import { pipelineProgress } from "../lib/pipeline.ts";
-import { filterQueue, newArrivals } from "../lib/queue.ts";
+import { filterQueue, newArrivals, queueMissingFacts, withMissingFact } from "../lib/queue.ts";
 
 test("errorMessages reads string, validation-list and plain-list details", () => {
   assert.deepEqual(errorMessages({ detail: "document not found" }), ["document not found"]);
@@ -94,22 +94,37 @@ test("newArrivals ignores the first load and reports only new ids", () => {
   assert.deepEqual([...newArrivals(new Set(["a"]), ["a", "b", "c"])], ["b", "c"]);
 });
 
-test("filterQueue separates files with abstentions from fully decided ones", () => {
-  const item = (id: string, decided: number, abstained: number): QueueItem => ({
-    id,
-    organisation_id: "org",
-    organisation_name: "Organisation",
-    uploaded_by: "comptable@example.tn",
-    filename: `${id}.pdf`,
-    status: "extracted",
-    created_at: "2026-09-12T10:00:00Z",
-    decided_count: decided,
-    abstained_count: abstained,
-  });
-  const items = [item("a", 2, 0), item("b", 1, 1), item("c", 0, 0)];
-  const ids = (list: QueueItem[]) => list.map((entry) => entry.id);
+const queueItem = (id: string, decided: number, missingFacts: string[] = []): QueueItem => ({
+  id,
+  organisation_id: "org",
+  organisation_name: "Organisation",
+  uploaded_by: "comptable@example.tn",
+  filename: `${id}.pdf`,
+  status: "extracted",
+  created_at: "2026-09-12T10:00:00Z",
+  decided_count: decided,
+  abstained_count: missingFacts.length,
+  missing_facts: missingFacts,
+});
+const queueIds = (list: QueueItem[]) => list.map((entry) => entry.id);
 
-  assert.deepEqual(ids(filterQueue(items, "abstained")), ["b"]);
-  assert.deepEqual(ids(filterQueue(items, "decided")), ["a"]);
+test("filterQueue separates files with abstentions from fully decided ones", () => {
+  const items = [queueItem("a", 2), queueItem("b", 1, ["status"]), queueItem("c", 0)];
+
+  assert.deepEqual(queueIds(filterQueue(items, "abstained")), ["b"]);
+  assert.deepEqual(queueIds(filterQueue(items, "decided")), ["a"]);
   assert.equal(filterQueue(items, "all").length, 3);
+});
+
+test("queueMissingFacts lists each missing fact once and withMissingFact keeps the files naming it", () => {
+  const items = [
+    queueItem("a", 0, ["beneficiary_fiscal_regime", "article_52_category"]),
+    queueItem("b", 1, ["article_52_category"]),
+    queueItem("c", 2),
+  ];
+
+  assert.deepEqual(queueMissingFacts(items), ["article_52_category", "beneficiary_fiscal_regime"]);
+  assert.deepEqual(queueIds(withMissingFact(items, "article_52_category")), ["a", "b"]);
+  assert.deepEqual(queueIds(withMissingFact(items, "beneficiary_fiscal_regime")), ["a"]);
+  assert.equal(withMissingFact(items, "").length, 3);
 });
