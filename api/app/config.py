@@ -17,6 +17,12 @@ VERIFIED_PASSAGES_PATH_DEFAULT = "../corpus/verified-passages.json"
 # is split by sentence, leaving room for its heading path under a 512-token
 # model limit (docs/feature-research.md section 5.3).
 CORPUS_CHUNK_MAX_TOKENS = 450
+# Retrieval evaluation (docs/feature-research.md section 5.8): recall@5 on the
+# question set people wrote must reach the target before related texts and
+# legal search ship to the UI. 0.9 is the plan's proposal until the team fixes one.
+RETRIEVAL_EVAL_TOP_K = 5
+RETRIEVAL_RECALL_TARGET = 0.9
+EVAL_QUESTIONS_PATH = "../corpus/eval/questions.json"
 
 
 def _require(name: str) -> str:
