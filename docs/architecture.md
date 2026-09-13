@@ -100,6 +100,8 @@ Steps 2 and 3 happen before step 4, so no full document text crosses the provide
 
 Step 2's structured fields are extracted with one shared model call per document (`api/app/providers/openrouter.py:extract_fields()`), recorded as `extraction` rows with `source = "assisted"`; a field the model could not establish with sufficient confidence is simply absent, so any rule needing it abstains naming that field rather than judging a guess (`docs/decision-log.md` D-043). The call receives the masked text only; placeholders in its answers are read back in memory (D-046).
 
+Step 2 also renders every page once (`api/app/extraction/ocr.py`) and records each word's position on it, so a structured field can be outlined where it was read on the page (J3, D-055): a born-digital PDF's own text layer is positioned with `pdfplumber`; a scanned or image document's OCR path uses Tesseract's own word boxes, already in the rasterised page's pixel space. `api/app/extraction/positions.py` locates a field's as-written value among those words by exact substring match, never an approximate one, and stores nothing when no match is found.
+
 ## 4. Data model
 
 Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
@@ -108,7 +110,8 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 |---|---|---|
 | `organisation` | id, name, tax id, role assignments | An MSME or the administration side |
 | `document` | id, organisation_id, uploaded_by, filename, storage_ref, status, created_at | The raw uploaded file; `filename` is the name as uploaded, `storage_ref` where the bytes live |
-| `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), extracted_at | One row per structured field pulled from the document; `full_text` and its `masked_text` copy, the only text a model receives (A1, D-042) |
+| `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), page (nullable), bbox (nullable JSON), extracted_at | One row per structured field pulled from the document; `full_text` and its `masked_text` copy, the only text a model receives (A1, D-042). `page`/`bbox` locate the field on the page it was read from (J3, D-055); null when no exact match was found there |
+| `document_page` | id, document_id, page, image_ref, width, height | One rendered page per document, at a fixed DPI; the pixel space every `extraction.bbox` on that page is expressed in (J3, D-055) |
 | `corpus_source` | id (the manifest source id), title, edition, publisher, url, sha256, language, page_count, loaded_at | An official document the corpus is indexed from; provenance shown next to its text (D-031) |
 | `corpus_chunk` | id, source_id, article_ref, paragraph_ref, heading_path, page, char_start, char_end, token_count, text, text_sha256, text_search (tsvector generated with the accent-folding `chahed_french` configuration, GIN index), embedding (pgvector), url, verification_status ("unverified"/"verified"), verified_by, verified_on | Paragraph- or item-level legal text, embedded; unique on (source_id, article_ref, paragraph_ref, char_start) so re-indexing updates in place (D-031). Verification comes from `corpus/verified-passages.json` on every load; unverified text never leaves the API (D-029, D-032) |
 | `rule` | id, code, citation_source, article_ref, verbatim_text, url, logic_ref, error_codes (JSON list) | The rule registry entry; `logic_ref` points to the deterministic code that evaluates it. `error_codes` names the decided codes that report a problem found, declared by the rule's author so the impact panel counts errors without inferring meaning from code names (J9, D-048) |
@@ -130,6 +133,8 @@ REST, versioned under `/api/v1`:
 - `POST /documents?organisation_id=&uploaded_by=` - multipart upload; extraction and rule evaluation run before it returns
 - `GET /documents/{id}` - status, filename, organisation, extraction results, officer decision, export
 - `GET /documents/{id}/findings` - findings with their rule code, decision trace and resolved citation
+- `GET /documents/{id}/pages` - the document's rendered pages (page number, pixel width/height, image URL), for the source viewer (J3, D-055)
+- `GET /documents/{id}/pages/{page}/image` - that page's rendered PNG
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
 - `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name, finding counts and the distinct missing facts their abstentions name
 - `POST /officer/decisions` - validate or flag a document (`officer_id`, `action`, `note`)
@@ -184,3 +189,4 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | Structured field extraction (section 3), GET /documents/{id}/export-draft (section 5); data model (section 4) unchanged, per D-043 |
 | 2026-09-13 | team | supplier_fact and rule.error_codes (section 4); answerable-facts, supplier-facts and impact endpoints (section 5), per D-047 and D-048 |
 | 2026-09-13 | team | Pipeline: masking before the one assisted extraction call, answers read back locally (D-046) |
+| 2026-09-13 | team | Pipeline: page rendering and word positions (section 3); `document_page` table, `extraction.page`/`bbox` (section 4); pages endpoints (section 5), per D-055 |

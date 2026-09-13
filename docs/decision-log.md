@@ -937,11 +937,25 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** `recharts` added as a real dependency (`pnpm add recharts`, lockfile updated). `lib/charts.ts` holds the only data shaping (aggregation by article, field labelling), unit-tested per `docs/frontend-plan.md` section 4; the chart components themselves are eye-verified against light and dark mode, screenshotted against live data. `docs/design.md` section 2 records the ramp rule. This is a correction to D-050's literal instruction, not a reversal of its reasoning; if a future screen genuinely needs Tremor's fuller feature set (multi-series legends, clickable filtering), that is a fresh decision, not an extension of this one.
 
+## D-055 - Evidence outlined on the document page (J3): word positions, no new PDF viewer library
+
+**Date:** 2026-09-13
+
+**Decision:** Build J3 rather than cut it. `app/extraction/ocr.py` now renders every page once at a fixed DPI (`RASTER_DPI`, 150) and returns each word's bounding box in that same pixel space: `pdfplumber` for a born-digital PDF's own text layer (scaled from PDF points), Tesseract's own `image_to_data()` word boxes for the OCR path, already in the rasterised image's pixel space. `app/extraction/positions.py` locates a structured field's raw (pre-normalisation) value among those words by exact substring match after stripping punctuation and case, and returns the union bounding box of the matching run, or nothing. A new `document_page` table (one row per rendered page: image ref, pixel width and height) and two new nullable `extraction` columns (`page`, `bbox`) carry this; `GET /documents/{id}/pages` and `GET /documents/{id}/pages/{page}/image` serve it. The web field table can select a located field, outlining it over the page image in `components/shared/document-viewer.tsx`.
+
+**Options considered:**
+- Cut J3 to the cut list (`docs/plan.md` section 9 already names "evidence outlines on the page" as a cuttable item) and keep the field table as the only evidence.
+- Build it: OCR-level word positions plus a page-image viewer (chosen).
+- Build it with a client-side PDF renderer (`pdf.js`) instead of server-rendered page images, so the browser draws the original vector PDF rather than a raster.
+
+**Why:** The user asked for it built, not cut, once the gap was found. Server-rendered page images (already a dependency, `pdf2image`/Poppler, used for the OCR path) avoid adding a PDF.js dependency and avoid a second coordinate system: the same raster the browser displays is the same raster Tesseract's own boxes are already in, and `pdfplumber`'s point-space boxes need only one scalar conversion (`RASTER_DPI / 72`) to agree with it. Matching on the field's `raw_value` (as written on the document) rather than its normalised `value` (a canonical decimal, e.g. `"1000.500"`) is required: the normalised form does not appear anywhere on the page to search for. An exact substring match, not a fuzzy one, keeps the same "never guess" law this codebase applies to a compliance finding: a field whose value cannot be found verbatim among the document's own words gets no outline, not an approximate one. This is pure display evidence: `app/rules/service.py` still reads only `Extraction.value`; no rule reads `page` or `bbox`, so the citation and abstention machinery is unchanged.
+
+**Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Verified end to end against the live Docker stack: a real hero invoice upload produces a page image and an outlined field.
+
 ## Change log
 
 | Date | Author | What changed |
 |---|---|---|
-| 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
 | 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |
 | 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
@@ -980,3 +994,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
 | 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
+| 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |
