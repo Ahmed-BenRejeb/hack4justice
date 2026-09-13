@@ -2,7 +2,7 @@
 
 Chahed is a regulatory compliance platform for Tunisian MSMEs, built for Hack4Justice 2026 Challenge A. It reads the documents a business already holds, checks them against Tunisian fiscal and registry law with every conclusion tied to a cited article, verifies counterparties against the RNE, and hands a public officer a pre-qualified file plus a TEJ export that validates against the DGI's published schema.
 
-The hackathon outcome is decided by a 3-minute pitch and a live demo. Everything in this repo serves one of the demo moments listed in docs/plan.md section 6 or a feature listed in docs/plan.md section 12, or it does not get built (D-028).
+The hackathon outcome is decided by a 3-minute pitch and a live demo. Everything in this repo serves one of the demo moments listed in docs/plan.md section 6 or a feature listed in docs/plan.md section 12, or it does not get built (D-030).
 
 Source of truth for what we build:
 
@@ -55,7 +55,7 @@ The application is a two-process monorepo: a TypeScript front end and a Python b
 - Never commit empty functions, placeholder returns, TODO stubs, or dead code. Code lands only when it is implemented and tested.
 - **Design law: compliance judgement is deterministic code. The model extracts facts, explains, and drafts text. It never decides whether a finding exists.** Assisted rules are the one nuance: the model supplies a fact the document does not state, with a confidence, and the deterministic rule judges from that fact. When the model cannot establish the fact, the rule escalates a specific question to a human. It never guesses. See docs/plan.md section 4 and rules/CLAUDE.md.
 - **No finding without a citation.** Every rule carries the source, article number, verbatim text, and URL of the text that grounds it. A rule without a verified citation does not enter the registry.
-- **No fact on a slide or on screen that is not in docs/facts.md with status `verified`.** Article numbers are checked by a person against the official source, never recalled from memory and never taken from a model. This covers retrieved legal passages: an unverified passage is never displayed, not even with a label, and a model-drafted explanation appears only after a person approves it (D-027).
+- **No fact on a slide or on screen that is not in docs/facts.md with status `verified`.** Article numbers are checked by a person against the official source, never recalled from memory and never taken from a model. This covers retrieved legal passages: an unverified passage is never displayed, not even with a label, and a model-drafted explanation appears only after a person approves it (D-029).
 - Configuration enters each process through exactly one module: `web/lib/env.ts` for the Next.js app, `api/app/config.py` for the Python service. Neither process reads the environment anywhere else.
   - Anything that identifies a system, an account, or a vendor gets no default and no fallback: URLs, tokens, API keys, provider names, model ids. Missing means missing, and it fails loudly, naming the variable.
   - Algorithm parameters (confidence thresholds, benefit calculation constants) are not identity. They may keep a documented default in a sibling `config.ts`/`config.py`.
@@ -101,4 +101,4 @@ The application is a two-process monorepo: a TypeScript front end and a Python b
 |---|---|---|
 | 2026-09-12 | team | Initial root guide |
 | 2026-09-12 | team | Restored project guide (working copy had reverted to a generic template); updated repository map and configuration rule for the web/+api split, section refs updated for the regenerated docs |
-| 2026-09-13 | team | Build rule includes plan features (D-028); feature-research added to sources of truth; facts rule covers retrieved passages and explanations (D-027) |
+| 2026-09-13 | team | Build rule includes plan features (D-030); feature-research added to sources of truth; facts rule covers retrieved passages and explanations (D-029) |
