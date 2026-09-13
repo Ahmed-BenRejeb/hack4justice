@@ -107,7 +107,7 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 | `corpus_source` | id (the manifest source id), title, edition, publisher, url, sha256, language, page_count, loaded_at | An official document the corpus is indexed from; provenance shown next to its text (D-031) |
 | `corpus_chunk` | id, source_id, article_ref, paragraph_ref, heading_path, page, char_start, char_end, token_count, text, text_sha256, text_search (tsvector generated with the accent-folding `chahed_french` configuration, GIN index), embedding (pgvector), url, verification_status ("unverified"/"verified"), verified_by, verified_on | Paragraph- or item-level legal text, embedded; unique on (source_id, article_ref, paragraph_ref, char_start) so re-indexing updates in place (D-031). Verification comes from `corpus/verified-passages.json` on every load; unverified text never leaves the API (D-029, D-032) |
 | `rule` | id, code, citation_source, article_ref, verbatim_text, url, logic_ref | The rule registry entry; `logic_ref` points to the deterministic code that evaluates it |
-| `finding` | id, document_id, rule_id, status ("decided"/"abstained"), decided_code, missing_fact (nullable), created_at | One evaluation outcome per rule per document |
+| `finding` | id, document_id, rule_id, status ("decided"/"abstained"), decided_code, missing_fact (nullable), trace (JSON list of steps: fact, source "document"/"model", value, confidence, threshold), created_at | One evaluation outcome per rule per document; the trace records the facts the rule used, in order (J1, D-039) |
 | `citation` | id, finding_id, rule_id | Join surface so a finding's citation is always resolvable in one query |
 | `counterparty_check` | id, document_id, rne_id, registered (bool), identifiers_match (bool), status_text | Registration facts only; no score field, per D-007 |
 | `officer_decision` | id, document_id, officer_id, action ("validated"/"flagged"), note, decided_at | The one human-authority step before export |
@@ -123,7 +123,7 @@ REST, versioned under `/api/v1`:
 - `GET /organisations` / `POST /organisations` - list organisations, create an MSME (409 on a duplicate tax id); there is no auth yet
 - `POST /documents?organisation_id=&uploaded_by=` - multipart upload; extraction and rule evaluation run before it returns
 - `GET /documents/{id}` - status, filename, organisation, extraction results, officer decision, export
-- `GET /documents/{id}/findings` - findings with their rule code and resolved citation
+- `GET /documents/{id}/findings` - findings with their rule code, decision trace and resolved citation
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
 - `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name and finding counts
 - `POST /officer/decisions` - validate or flag a document (`officer_id`, `action`, `note`)
@@ -167,3 +167,4 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | Data model: `corpus_chunk` verification fields from the passage register (D-032) |
 | 2026-09-13 | team | Data model: `corpus_chunk.text_search` for hybrid retrieval (D-035) |
 | 2026-09-13 | team | API surface: corpus search, passage, sources, verification queue and related-text endpoints; `text_search` generated with an accent-folding configuration (D-036) |
+| 2026-09-13 | team | Data model and API: `finding.trace`, the decision trace (D-039) |

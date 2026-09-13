@@ -12,6 +12,9 @@ const FIELD_LABELS = new Map<string, string>([
   ["service_description", "Objet de la prestation"],
   ["invoice_date", "Date de facture"],
   ["amount_excl_tax", "Montant hors taxes"],
+  // Facts the Article 52, I, a) rule uses (api/app/rules/cirppis_art52_honoraires.py).
+  ["article_52_category", "Catégorie du paiement (honoraires, commissions, courtages, loyers)"],
+  ["withholding_mention", "Mention « retenue » dans le texte"],
 ]);
 
 // The statuses api/ writes: upload and extraction (documents.py), then the officer's action (officer.py).

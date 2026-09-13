@@ -2,10 +2,12 @@
 import type { JSX } from "react";
 import { cn } from "cn";
 import type { Finding } from "@/lib/api-types";
+import { fieldLabel } from "@/lib/labels";
 import { Citation } from "./citation";
+import { DecisionTrace } from "./decision-trace";
 import { FindingStatusBadge } from "./status-badge";
 
-/** Status and rule on one line, then the code or the missing fact, then the citation. */
+/** Status and rule on one line, then the code or the missing fact, then how the rule got there, then the citation. */
 export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
   const decided = finding.status === "decided";
   const titleId = `finding-${finding.id}`;
@@ -39,14 +41,15 @@ export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
           <h3 id={titleId} className="text-sm text-muted-foreground">
             Information manquante
           </h3>
-          <p className="mt-1 text-base font-medium">{finding.missing_fact}</p>
+          <p className="mt-1 text-base font-medium">{fieldLabel(finding.missing_fact ?? "")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Aucun code n’est proposé tant que ce fait n’est pas établi.
           </p>
         </div>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 space-y-2">
+        <DecisionTrace finding={finding} />
         <Citation citation={finding.citation} />
       </div>
     </article>

@@ -5,7 +5,8 @@ decision itself is always this deterministic dispatch, never the model.
 """
 
 import importlib
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -14,13 +15,30 @@ from app.db.models import Citation, Finding, Rule
 
 
 @dataclass(frozen=True)
+class TraceStep:
+    """One fact a rule used, where it came from, and the value the rule read (J1).
+
+    A model-supplied fact carries its confidence and the threshold the rule
+    required, so a reader sees why the rule accepted or refused it.
+    """
+
+    fact: str
+    source: Literal["document", "model"]
+    value: str | bool | None
+    confidence: float | None = None
+    threshold: float | None = None
+
+
+@dataclass(frozen=True)
 class Decision:
     code: str
+    trace: tuple[TraceStep, ...] = ()
 
 
 @dataclass(frozen=True)
 class Abstention:
     missing_fact: str
+    trace: tuple[TraceStep, ...] = ()
 
 
 RuleOutcome = Decision | Abstention
@@ -58,6 +76,7 @@ def evaluate(
             f"rule logic {rule.logic_ref} returned {type(outcome)!r}, "
             "expected Decision or Abstention"
         )
+    finding.trace = [asdict(step) for step in outcome.trace]
 
     db.add(finding)
     db.flush()

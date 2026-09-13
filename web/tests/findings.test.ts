@@ -18,6 +18,7 @@ function finding(id: string, status: FindingStatus, code: string | null): Findin
     status,
     decided_code: code,
     missing_fact: status === "abstained" ? "Fait manquant" : null,
+    trace: [],
     created_at: "2026-09-12T10:00:00Z",
     citation,
   };

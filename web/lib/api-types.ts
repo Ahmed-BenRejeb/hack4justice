@@ -51,6 +51,21 @@ export interface Rule extends Citation {
 /** A rule either reached a finding or abstained; an abstention is a correct outcome, not an error. */
 export type FindingStatus = "decided" | "abstained";
 
+/** Where a fact a rule used came from: read in the document, or supplied by the model. */
+export type TraceSource = "document" | "model";
+
+/** One fact a rule used, in the order the rule used it (J1). */
+export interface TraceStep {
+  fact: string;
+  source: TraceSource;
+  /** A boolean for a yes-or-no fact; null when the fact could not be established. */
+  value: string | boolean | null;
+  /** Between 0 and 1, set when the model supplied the fact. */
+  confidence: number | null;
+  /** The confidence the rule required, between 0 and 1. */
+  threshold: number | null;
+}
+
 /** GET /documents/{id}/findings: one rule outcome with its rule code and citation resolved. */
 export interface Finding {
   id: string;
@@ -60,6 +75,8 @@ export interface Finding {
   decided_code: string | null;
   /** Set when status is "abstained": the specific fact the rule needs and could not establish. */
   missing_fact: string | null;
+  /** The facts the rule used; empty for findings recorded before traces existed. */
+  trace: TraceStep[];
   created_at: string;
   citation: Citation;
 }

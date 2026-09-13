@@ -20,8 +20,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -189,6 +190,10 @@ class Finding(Base):
     )
     decided_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     missing_fact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The facts the rule used, in order, each with its source (J1, D-039).
+    trace: Mapped[list[dict]] = mapped_column(
+        JSONB, server_default=text("'[]'::jsonb"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
