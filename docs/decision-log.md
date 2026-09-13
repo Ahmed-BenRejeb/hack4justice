@@ -1107,6 +1107,21 @@ Fixing the network was rejected because it is machine-specific and would leave t
 
 **Result:** `docs/deploy.md` section 7 documents the Cloudflare record and the GitHub repository variable; `Notes and limitations` now names the DNS record as a second thing that goes stale if the instance is ever stopped and started, alongside the sslip.io hostname and certificate it already listed.
 
+## D-064 - README rewritten as the public entry point, demo credentials published in it
+
+**Date:** 2026-09-13
+
+**Decision:** The root `README.md` is rewritten to present the product on several axes (problem, capabilities, pipeline, design law, roles, stack, scope), point to each document in `docs/`, show screenshots of the live site stored in `docs/screenshots/`, and walk a reader through the live demo step by step. At the team's request it publishes the shared demo accounts (`contact@nexsol-consulting.tn` and `officer@dgi.tn`) with their password, so judges and visitors can sign in without asking. This supersedes the stance in `docs/deploy.md` and `seed/seed_demo_data.py` that the demo password is never written in the repository.
+
+**Options considered:**
+- Credentials in the README (chosen).
+- Credentials shared out of band, the README showing only public pages.
+- A separate read-only demo role, which does not exist and would need building.
+
+**Why:** The README is the first thing a judge opens, and a demo that needs a password request is a demo nobody tries. The accounts hold only seeded demo data, and admin credentials stay unpublished, so the rule registry and the corpus verification cannot be changed from these accounts.
+
+**Result:** Anyone can sign in to the live demo as the business or the officer, and so can validate or flag files and file documents. If the demo data is damaged, re-run `seed/seed_demo_data.py` per `docs/deploy.md`; rotate the password after the hackathon. The logo is referenced at `web/public/logo.jpg`, its real location.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1159,3 +1174,4 @@ Fixing the network was rejected because it is machine-specific and would leave t
 | 2026-09-13 | team | Added D-061: continuous deployment to main via a self-hosted runner on the demo instance |
 | 2026-09-13 | team | Added D-062: navigation column with a dashboard per space, `GET /impact/activity`, page guides, brochure home page, in the D-058 style |
 | 2026-09-13 | team | Added D-063: custom domain via Cloudflare, SITE_ADDRESS fixed as a repo variable |
+| 2026-09-13 | team | Added D-064: README rewritten with screenshots and a demo guide, shared demo credentials published |
