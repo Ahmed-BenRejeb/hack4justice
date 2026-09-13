@@ -67,8 +67,7 @@
 
   /* A file arriving in the officer queue: still the one animation nothing else gets. */
   --animate-queue-arrive: queue-arrive 1.8s ease-out;
-  /* Ambient motion on marketing surfaces only (D-055); never on a screen reporting a finding. */
-  --animate-float: float 5s ease-in-out infinite;
+  /* Ambient motion on the entry screen only (D-055); never on a screen reporting a finding. */
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
 
   @keyframes queue-arrive {
@@ -84,16 +83,6 @@
     }
     100% {
       background-color: transparent;
-    }
-  }
-
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0) rotate(var(--rot, 0deg));
-    }
-    50% {
-      transform: translateY(-10px) rotate(var(--rot, 0deg));
     }
   }
 

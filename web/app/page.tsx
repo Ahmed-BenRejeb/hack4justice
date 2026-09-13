@@ -2,7 +2,6 @@
 import type { JSX } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, BookOpenIcon, Building2Icon, LandmarkIcon, SearchIcon } from "lucide-react";
-import { LiveCounts } from "@/components/shared/live-counts";
 import { Button } from "@/components/ui/button";
 
 const SPACES = [
@@ -83,11 +82,6 @@ export default function HomePage(): JSX.Element {
                 </Link>
               </Button>
             </div>
-          </div>
-
-          {/* Real counts from this deployment, or nothing at all: never an illustrative figure. */}
-          <div className="mt-14 animate-float">
-            <LiveCounts />
           </div>
         </div>
       </section>
