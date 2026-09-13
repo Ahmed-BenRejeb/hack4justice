@@ -52,6 +52,21 @@ def test_extract_fact_raises_when_the_model_returns_json_that_is_not_an_object(
         openrouter.extract_fact(context="Facture d'honoraires.", question="Catégorie ?")
 
 
+def test_a_message_with_an_unmasked_identifier_is_refused_unsent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_if_sent(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the request must not be sent")
+
+    monkeypatch.setattr(openrouter.httpx, "post", fail_if_sent)
+
+    with pytest.raises(openrouter.OpenRouterError) as raised:
+        openrouter.extract_fact(context="Fournisseur MF 1234567A", question="Régime ?")
+
+    assert "MATRICULE" in str(raised.value)
+    assert "1234567A" not in str(raised.value)
+
+
 def test_complete_raises_on_an_invalid_model_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

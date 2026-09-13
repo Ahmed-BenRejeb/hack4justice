@@ -11,6 +11,7 @@ import json
 import httpx
 
 from app.config import settings
+from app.extraction.masking import unmasked_identifiers
 
 CHAT_COMPLETIONS_URL = "https://openrouter.ai/api/v1/chat/completions"
 TIMEOUT_SECONDS = 30.0
@@ -22,6 +23,20 @@ class OpenRouterError(RuntimeError):
 
 
 def _post(payload: dict) -> dict:
+    # Last check before text leaves the workstation (A1): callers send masked text,
+    # and a message still carrying a fixed-format identifier is refused, unsent.
+    # The error names the kind only, never the value.
+    leaked = sorted(
+        {
+            kind
+            for message in payload.get("messages", [])
+            for kind in unmasked_identifiers(message["content"])
+        }
+    )
+    if leaked:
+        raise OpenRouterError(
+            f"refused to send unmasked identifiers: {', '.join(leaked)}"
+        )
     response = httpx.post(
         CHAT_COMPLETIONS_URL,
         headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},

@@ -59,10 +59,36 @@ def test_upload_document_persists_and_extracts_it(db: Session) -> None:
     assert detail_body["organisation"]["name"] == "Atelier Ben Salah"
     assert detail_body["officer_decision"] is None
     assert detail_body["export"] is None
-    extractions = detail_body["extractions"]
-    assert len(extractions) == 1
-    assert extractions[0]["field_name"] == "full_text"
-    assert "article 62" in extractions[0]["value"]
+    extractions = {e["field_name"]: e["value"] for e in detail_body["extractions"]}
+    assert set(extractions) == {"full_text", "masked_text"}
+    assert "article 62" in extractions["full_text"]
+
+
+def test_upload_stores_a_masked_copy_without_identifiers_or_the_filer_name(
+    db: Session,
+) -> None:
+    organisation = _make_organisation(db)
+    pdf_bytes = make_born_digital_pdf(
+        "Facture Atelier Ben Salah, MF 1234567A/A/M/000, contact compta@atelier.tn"
+    )
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    detail = client.get(f"/api/v1/documents/{upload.json()['id']}").json()
+    masked = next(
+        e["value"] for e in detail["extractions"] if e["field_name"] == "masked_text"
+    )
+
+    assert "[NOM_1]" in masked and "[MATRICULE_1]" in masked and "[EMAIL_1]" in masked
+    assert "Ben Salah" not in masked
+    assert "1234567A" not in masked
+    assert "compta@atelier.tn" not in masked
 
 
 def test_document_detail_includes_decision_and_export(db: Session) -> None:

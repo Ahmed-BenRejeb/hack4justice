@@ -44,17 +44,18 @@ def propose_withholding_code(facts: dict[str, str]) -> RuleOutcome:
     """Propose RS2_000001 or RS2_000002 for an honoraires/commissions/
     courtages payment, or abstain naming the missing or out-of-scope fact.
 
-    Facts required: "full_text" (the document's extracted text).
+    Facts required: "masked_text" (the document's masked text, the only text
+    the model sees, A1).
     """
-    full_text = facts.get("full_text", "")
-    if not full_text:
-        return Abstention(missing_fact="full_text")
+    masked_text = facts.get("masked_text", "")
+    if not masked_text:
+        return Abstention(missing_fact="masked_text")
 
-    category = extract_fact(context=full_text, question=CATEGORY_QUESTION)
+    category = extract_fact(context=masked_text, question=CATEGORY_QUESTION)
     if category.value is None or category.confidence < CONFIDENCE_THRESHOLD:
         return Abstention(missing_fact="withholding_code_category")
 
-    regime = extract_fact(context=full_text, question=REGIME_QUESTION)
+    regime = extract_fact(context=masked_text, question=REGIME_QUESTION)
     if regime.value is None or regime.confidence < CONFIDENCE_THRESHOLD:
         return Abstention(missing_fact="beneficiary_fiscal_regime")
 
