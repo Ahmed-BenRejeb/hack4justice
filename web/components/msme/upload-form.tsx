@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Upload of a payment file: the organisation it is filed for, who files it, and the file.
- * The backend reads the document and applies the rules before answering, then the review opens.
+ * Upload of a payment file for one of the signed-in user's organisations. The backend records the
+ * user as its filer, reads the document and applies the rules before answering, then the review opens.
  */
 import { useId, useRef, useState, type DragEvent, type FormEvent, type JSX } from "react";
 import { useRouter } from "next/navigation";
@@ -11,24 +11,22 @@ import { cn } from "cn";
 import { ErrorNotice } from "@/components/shared/api-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
+import type { Organisation } from "@/lib/api-types";
 import { formatFileSize } from "@/lib/format";
 import { OrganisationPicker } from "./organisation-picker";
 
 // The content types api/app/extraction/ocr.py can read.
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/tiff"];
 
-/** Organisation picker, then the file form. */
-export function UploadForm(): JSX.Element {
+/** The organisation picker when the user files for several, then the file form. */
+export function UploadForm({ organisations }: { organisations: Organisation[] }): JSX.Element {
   const router = useRouter();
   const inputId = useId();
-  const emailId = useId();
   const typeErrorId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [organisationId, setOrganisationId] = useState("");
-  const [uploadedBy, setUploadedBy] = useState("");
+  // An MSME user files for exactly one organisation, so there is nothing to choose.
+  const [organisationId, setOrganisationId] = useState(organisations.length === 1 ? organisations[0].id : "");
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,7 +58,7 @@ export function UploadForm(): JSX.Element {
     setIsSubmitting(true);
     setError(null);
     try {
-      const created = await api.uploadDocument(file, organisationId, uploadedBy.trim());
+      const created = await api.uploadDocument(file, organisationId);
       // Stay in the submitting state: the review screen replaces this one.
       router.push(`/entreprise/dossiers/${encodeURIComponent(created.id)}`);
     } catch (caught) {
@@ -69,11 +67,13 @@ export function UploadForm(): JSX.Element {
     }
   }
 
-  const canSubmit = Boolean(file && organisationId && uploadedBy.trim()) && !isSubmitting;
+  const canSubmit = Boolean(file && organisationId) && !isSubmitting;
 
   return (
     <div className="space-y-4">
-      <OrganisationPicker value={organisationId} onChange={setOrganisationId} />
+      {organisations.length > 1 && (
+        <OrganisationPicker organisations={organisations} value={organisationId} onChange={setOrganisationId} />
+      )}
 
       <Card>
         <CardHeader>
@@ -85,19 +85,6 @@ export function UploadForm(): JSX.Element {
         </CardHeader>
         <CardContent>
           <form onSubmit={(event) => void onSubmit(event)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor={emailId}>Votre adresse e-mail</Label>
-              <Input
-                id={emailId}
-                type="email"
-                autoComplete="email"
-                value={uploadedBy}
-                onChange={(event) => setUploadedBy(event.target.value)}
-                placeholder="comptable@entreprise.tn"
-                required
-              />
-            </div>
-
             <label
               htmlFor={inputId}
               onDragOver={(event) => {

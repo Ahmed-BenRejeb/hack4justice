@@ -18,7 +18,6 @@ interface ReviewMainProps {
   answering?: {
     documentId: string;
     answerable: AnswerableFacts;
-    answeredBy: string;
     onAnswered: () => void;
   };
 }

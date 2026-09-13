@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth.deps import require_officer
 from app.db.models import Document, Export, OfficerDecision
 from app.db.session import get_db
 from app.export import tej
@@ -25,8 +26,13 @@ from app.export.field_errors import arithmetic_field_errors, schema_field_errors
 from app.export.xsd import SchemaValidationError
 from app.storage import save_upload
 
-router = APIRouter(prefix="/documents", tags=["export"])
-codes_router = APIRouter(prefix="/export", tags=["export"])
+# The export is the officer's own declaration (D-008), so every route here is theirs alone.
+router = APIRouter(
+    prefix="/documents", tags=["export"], dependencies=[Depends(require_officer)]
+)
+codes_router = APIRouter(
+    prefix="/export", tags=["export"], dependencies=[Depends(require_officer)]
+)
 
 
 class BeneficiaireIn(BaseModel):

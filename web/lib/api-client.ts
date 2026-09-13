@@ -15,8 +15,6 @@ import type {
   OfficerDecision,
   OfficerDecisionInput,
   OperationCode,
-  Organisation,
-  OrganisationInput,
   PassageDetail,
   PassageHit,
   QueueItem,
@@ -93,21 +91,14 @@ const documentPath = (id: string): string => `/documents/${encodeURIComponent(id
 
 /** The backend operations the UI uses, one method per endpoint. */
 export const api = {
-  /** GET /organisations: every organisation, alphabetically. */
-  listOrganisations(signal?: AbortSignal): Promise<Organisation[]> {
-    return request("/organisations", { signal });
-  },
-
-  /** POST /organisations: creates an MSME; a duplicate tax id is refused with 409. */
-  createOrganisation(input: OrganisationInput): Promise<Organisation> {
-    return postJson("/organisations", input);
-  },
-
-  /** POST /documents: uploads a payment file; extraction and rule evaluation run before it returns. */
-  uploadDocument(file: File, organisationId: string, uploadedBy: string): Promise<DocumentSummary> {
+  /**
+   * POST /documents: uploads a payment file for one of the signed-in user's organisations, who is
+   * recorded as its filer; extraction and rule evaluation run before it returns.
+   */
+  uploadDocument(file: File, organisationId: string): Promise<DocumentSummary> {
     const form = new FormData();
     form.append("file", file);
-    const query = new URLSearchParams({ organisation_id: organisationId, uploaded_by: uploadedBy });
+    const query = new URLSearchParams({ organisation_id: organisationId });
     return request(`/documents?${query}`, { method: "POST", body: form });
   },
 

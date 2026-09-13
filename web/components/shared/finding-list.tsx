@@ -14,7 +14,6 @@ interface FindingListProps {
   answering?: {
     documentId: string;
     answerable: AnswerableFacts;
-    answeredBy: string;
     onAnswered: () => void;
   };
 }
