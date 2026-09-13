@@ -827,20 +827,6 @@ A prior team project (`Backend-Dashboard-RH-Treso-24-25`, a NestJS/TypeORM treas
 
 **Result:** One model call per upload, on masked text. Five rules are registered beside `CIRPPIS-ART52-I-A`, all tracing their facts. The merge commit keeps the branch's commits and authorship.
 
-## D-047 - Constats grouped by outcome when distinct rules share a precondition
-
-**Date:** 2026-09-13
-
-**Decision:** On the file review screen, when two or more registered rules reach the identical visible outcome (same status, same missing fact or same decided code, same citation), the "Constats" section renders one card naming every contributing rule instead of one card per rule. Nothing changes server side: each rule still runs, still records its own `Finding` and `Citation`, and still carries its own trace (J1); the grouping is a presentation concern in `web/lib/findings.ts`.
-
-**Options considered:**
-- Group visually identical findings onto one card, listing every rule code (chosen).
-- Leave one card per finding.
-- Change the rule registry so `CIRPPIS-ART52-I-A`/`CIRPPIS-ART52-I-A-CODE` and `CIRPPIS-ART55-I-CONTENU`/`CIRPPIS-ART55-I-NET` share one rule instead of two.
-
-**Why:** `CIRPPIS-ART52-I-A` and `CIRPPIS-ART52-I-A-CODE` both abstain naming `payment_category` when that fact is absent, from the same Article 52 citation; `CIRPPIS-ART55-I-CONTENU` and `CIRPPIS-ART55-I-NET` do the same for `amount_net_paid` from Article 55. Both pairs answer genuinely different questions (mention vs. code family; completeness vs. arithmetic) and each carries its own verified citation, so merging the rules themselves would blur two distinct compliance questions into one and is not a call to make without the citation review the root CLAUDE.md requires. Left as one card per finding, the two abstentions read as the same constat shown twice, which is what an officer flagged as a duplication bug. Grouping by visible outcome fixes the reading without touching rule logic, the registry, or the `Finding`/`Citation` tables.
-
-**Result:** `web/lib/findings.ts:groupFindings()` groups by `(status, missing_fact, decided_code, citation.article_ref, citation.verbatim_text)`; `FindingCard` takes a group and lists every contributing `rule_code`, rendering each finding's own `DecisionTrace` underneath one shared citation. The "Règles appliquées" tally in the result banner still counts every finding, ungrouped.
 ## D-047 - Abstentions are answered against the supplier, and the rule re-decides
 
 **Date:** 2026-09-13
@@ -872,6 +858,22 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 **Why:** Only the rule's author knows which of its outcomes means a problem was found: `ART52_WITHHOLDING_PRESENT` and `ART52_WITHHOLDING_MISSING` are both decisions, and only one is an error. Inferring that from code names would put meaning in a spelling convention. The two multiplicands are not observed in this database and are not verified, so each is returned with its basis and shown as an estimate, per the estimates rule in `docs/facts.md`; the hours figure is returned beside the counts that produce it, never alone (D-016). No national projection is computed: its multiplicands are neither observed here nor verified.
 
 **Result:** Verified against a live server: three files, two errors intercepted (one `ART55_NET_INCOHERENT`, one `TEJ_MATRICULE_INVALID`), one abstention named, one fact confirmed by a person, and the derived figure shown with both inputs labelled "estimation". The panel states that it describes a demonstration set.
+
+## D-049 - Constats grouped by outcome when distinct rules share a precondition
+
+**Date:** 2026-09-13
+
+**Decision:** On the file review screen, when two or more registered rules reach the identical visible outcome (same status, same missing fact or same decided code, same citation), the "Constats" section renders one card naming every contributing rule instead of one card per rule. Nothing changes server side: each rule still runs, still records its own `Finding` and `Citation`, and still carries its own trace (J1); the grouping is a presentation concern in `web/lib/findings.ts`.
+
+**Options considered:**
+- Group visually identical findings onto one card, listing every rule code (chosen).
+- Leave one card per finding.
+- Change the rule registry so `CIRPPIS-ART52-I-A`/`CIRPPIS-ART52-I-A-CODE` and `CIRPPIS-ART55-I-CONTENU`/`CIRPPIS-ART55-I-NET` share one rule instead of two.
+
+**Why:** `CIRPPIS-ART52-I-A` and `CIRPPIS-ART52-I-A-CODE` both abstain naming `payment_category` when that fact is absent, from the same Article 52 citation; `CIRPPIS-ART55-I-CONTENU` and `CIRPPIS-ART55-I-NET` do the same for `amount_net_paid` from Article 55. Both pairs answer genuinely different questions (mention vs. code family; completeness vs. arithmetic) and each carries its own verified citation, so merging the rules themselves would blur two distinct compliance questions into one and is not a call to make without the citation review the root CLAUDE.md requires. Left as one card per finding, the two abstentions read as the same constat shown twice, which is what an officer flagged as a duplication bug. Grouping by visible outcome fixes the reading without touching rule logic, the registry, or the `Finding`/`Citation` tables.
+
+**Result:** `web/lib/findings.ts:groupFindings()` groups by `(status, missing_fact, decided_code, citation.article_ref, citation.verbatim_text)`; `FindingCard` takes a group and lists every contributing `rule_code`, rendering each finding's own `DecisionTrace` underneath one shared citation. The "Règles appliquées" tally in the result banner still counts every finding, ungrouped.
+
 
 ## Change log
 
@@ -909,6 +911,6 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-044: Article 55(I) certificate rules and a schema-grounded matricule rule |
 | 2026-09-13 | team | Added D-045: fiscal ledger reframed as the rule engine's fact base, not a declaration product |
 | 2026-09-13 | team | Added D-046: fiscal fact layer merged, with masked extraction, provenance traces and optional VAT; branch decisions renumbered D-043 to D-045 |
-| 2026-09-13 | team | Added D-047: constats grouped by outcome when distinct rules share a precondition |
 | 2026-09-13 | team | Added D-047: abstentions answered against the supplier, rules re-decide, person source in the trace (J4, B3, B4, J11) |
 | 2026-09-13 | team | Added D-048: rules declare their error codes; impact panel counts them with the labelled benefit calculation (J9) |
+| 2026-09-13 | team | Renumbered the constats grouping decision to D-049: it and the abstention loop were both merged as D-047 |
