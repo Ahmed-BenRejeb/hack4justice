@@ -13,12 +13,14 @@ import type { JSX, ReactNode } from "react";
 import { ActivityIcon } from "lucide-react";
 import { ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
 import { Section } from "@/components/shared/section";
+import { SimpleBarChart } from "@/components/shared/simple-bar-chart";
+import { StatusBarChart } from "@/components/shared/status-bar-chart";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api-client";
 import type { Measurement } from "@/lib/api-types";
+import { errorsByRule, missingFactChart } from "@/lib/charts";
 import { countLabel } from "@/lib/format";
-import { fieldLabel } from "@/lib/labels";
 import { describeCalculation, INPUT_LABELS } from "@/lib/impact";
 import { useResource } from "@/lib/use-resource";
 
@@ -58,6 +60,20 @@ function Measured({ measurement }: { measurement: Measurement }): JSX.Element {
         </dl>
       </section>
 
+      {(measurement.findings_decided > 0 || measurement.findings_abstained > 0) && (
+        <div className="rounded-xl border bg-card px-5 py-4">
+          <h3 className="text-sm font-medium">Décidés contre abstentions</h3>
+          <StatusBarChart decided={measurement.findings_decided} abstained={measurement.findings_abstained} />
+        </div>
+      )}
+
+      {measurement.by_rule.length > 0 && (
+        <div className="rounded-xl border bg-card px-5 py-4">
+          <h3 className="text-sm font-medium">Erreurs interceptées par règle</h3>
+          <SimpleBarChart data={errorsByRule(measurement.by_rule)} labelWidth={160} />
+        </div>
+      )}
+
       {measurement.by_rule.length > 0 && (
         <div className="overflow-hidden rounded-xl border bg-card">
           <Table>
@@ -91,14 +107,11 @@ function Measured({ measurement }: { measurement: Measurement }): JSX.Element {
       {measurement.abstentions_by_missing_fact.length > 0 && (
         <div className="rounded-xl border bg-card px-5 py-4">
           <h3 className="text-sm font-medium">Ce qui bloque le plus de dossiers</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            {measurement.abstentions_by_missing_fact.map((entry) => (
-              <li key={entry.fact_name} className="flex items-baseline justify-between gap-4">
-                <span className="min-w-0 break-words">{fieldLabel(entry.fact_name)}</span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">{entry.count}</span>
-              </li>
-            ))}
-          </ul>
+          <SimpleBarChart
+            data={missingFactChart(measurement.abstentions_by_missing_fact)}
+            labelWidth={180}
+            height={Math.max(140, measurement.abstentions_by_missing_fact.length * 36)}
+          />
         </div>
       )}
 
@@ -131,7 +144,7 @@ function Measured({ measurement }: { measurement: Measurement }): JSX.Element {
 
 /** Loads the measurement; a failure says so instead of showing an empty panel as if it were zero. */
 export function ImpactPanel(): JSX.Element {
-  const { data, error, isLoading, reload } = useResource("impact", (signal) => api.getImpact(signal));
+  const { data, error, isLoading, reload } = useResource("impact", (signal) => api.getImpact(undefined, signal));
 
   if (isLoading) return <LoadingBlock label="Chargement des mesures" rows={3} />;
   if (!data) return <ErrorNotice error={error} onRetry={reload} />;
