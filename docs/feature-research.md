@@ -1,11 +1,11 @@
 # Feature research
 
-Research into the features Chahed will build, researched 2026-09-13 against the repository (commit `55e83fd`) and public sources. It has three parts:
+Research into the features Chahed will build, researched 2026-09-13 against the repository (commits up to `a11f057`) and public sources. It has three parts:
 - a post-hackathon roadmap toward a pilot with a real administration and real MSMEs (sections 1 to 4)
 - an implementation plan for a retrieval-augmented generation (RAG) system integrated into the UI (section 5)
 - features built for the demo that also have real use (section 6)
 
-Every feature in sections 4 to 6 is in the scope of `docs/plan.md`, which schedules them in phases (D-028). This document holds the detail and the evidence; section 7 lists what stays out. Only verified legal text reaches a screen (D-027).
+Every feature in sections 4 to 6 is in the scope of `docs/plan.md`, which schedules them in phases (D-030). This document holds the detail and the evidence; section 7 lists what stays out. Only verified legal text reaches a screen (D-029).
 
 ## How to read this
 
@@ -24,7 +24,7 @@ Every feature in sections 4 to 6 is in the scope of `docs/plan.md`, which schedu
 
 | Area | State | Evidence |
 |---|---|---|
-| Rule registry | One rule, `CIRPPIS-ART52-I-A`. It decides whether a withholding *mention* is present, not which TEJ code applies | `[repo]` `rules/cirppis-art52-i-a.json` |
+| Rule registry | One registered rule, `CIRPPIS-ART52-I-A`. It decides whether a withholding *mention* is present, not which TEJ code applies. A code-proposal engine for the RS2 family exists but is not registered (D-028) | `[repo]` `rules/cirppis-art52-i-a.json`, `api/app/rules/withholding_code_proposal.py` |
 | Extraction | One `full_text` field per document. No parties, tax ids, amounts or dates | `[repo]` `api/app/extraction/service.py` |
 | Masking before model calls | Not implemented. The Art. 52 rule sends the full extracted text to OpenRouter, contrary to D-013 | `[repo]` no `mask` symbol in `api/app`; `cirppis_art52_honoraires.py:37` |
 | Retrieval | Built and tested, but not called anywhere in the pipeline, and it cannot see most of the corpus. The embedding model reads 128 tokens and chunks are whole articles, so only 2% of Article 52 (6,949 tokens) is embedded, and 9% to 19% of Articles 53 to 55 | `[repo]` `corpus/retrieval.search` has no caller; `[measured]` `max_seq_length` 128 |
@@ -100,7 +100,7 @@ OECD work on "tax compliance by design" argues for building compliance into the 
 These are not features, but the research surfaced them and they bear on the pitch. Each needs a person to check it and, if confirmed, an update to the named file. `docs/plan.md` section 10 lists them as checks before presenting.
 
 1. **`docs/facts.md` misdescribes E-Sit-Fisc** as "the DGI's existing filing channel". The DGI's own page calls it a supplier tax-situation consultation service for public buyers (2.3). The positioning line "we feed E-Sit-Fisc clean data" does not hold as written.
-2. **The anchor "article 62" may be Article 62 of the 2014 finance law**, not an article of the IRPP/IS code. That article describes exactly the plan's story: a supplier whose payment by a public buyer is blocked by a missing tax-situation certificate. That is a tax-situation certificate, not a withholding certificate. The anchor case in `docs/plan.md` section 2 should be re-read against the official text before it goes on stage.
+2. **The anchor "article 62" is not the IRPP/IS code's Article 62**, which governs bookkeeping (D-027, with candidates Article 52(I)(a) and Article 55(I)). This research adds a third candidate: Article 62 of the 2014 finance law describes exactly the plan's story, a supplier whose payment by a public buyer is blocked by a missing certificate. That is a tax-situation certificate, not a withholding certificate. Choosing the anchor is the team's call before it goes on stage.
 3. **Masking (D-013) is not implemented** while a live model call already receives the full document text. This affects the prepared Q&A answer "only masked text crosses to the hosted model" (`docs/plan.md` section 11).
 4. **The TEJ schema in the repository matches today's official download** (section 1). Half of the `to verify` note on the schema fact is now evidenced; confirming that this zip is the current version remains a human step.
 
@@ -167,6 +167,7 @@ Grouped by theme. Each feature states why (with evidence), how it respects the d
 
 - Most of these facts are not on an invoice (supplier regime, IS rate, residency). That is why B3 and B4 matter.
 - Design law: each code is a deterministic branch over named facts. The model may supply "nature of the service" as an assisted fact with a confidence; everything else is a declared or confirmed fact. Every branch cites a verified article before it is registered.
+- Starting point: `api/app/rules/withholding_code_proposal.py` already separates RS2_000001 from RS2_000002 by the beneficiary's fiscal regime (D-028). It enters the registry once its citation is verified.
 - Depends on: B1, and a person verifying each governing article (the XSD descriptions are not citations, `schemas/tej/SOURCE.md`).
 
 **B3. Supplier fact profile** - M
@@ -264,7 +265,7 @@ Grouped by theme. Each feature states why (with evidence), how it respects the d
 - Needs a decision: `docs/design.md` section 6 currently fixes French as the interface language.
 
 **G2. Plain-language explanation drafts** - S
-- Now part of section 5 (R3): deterministic quote verification, then a person's approval before any screen shows it (D-027).
+- Now part of section 5 (R3): deterministic quote verification, then a person's approval before any screen shows it (D-029).
 
 **G3. Phone capture** - S
 - What: `<input type="file" accept="image/*" capture>` on the upload screen, so a paper invoice is photographed and sent to the existing OCR path.
@@ -285,7 +286,7 @@ RAG in Chahed finds and explains law. It never creates, changes or removes a fin
 | **R3 Plain-language explanation** | A short explanation of the governing article. Every sentence carries a verbatim quote of a verified passage, checked by code, and a person approves the whole explanation before any screen shows it | Chat model, checked by code, approved by a person |
 | **R4 Grounded assisted facts** (later) | An assisted-fact question gets the defining paragraph as context, for example what counts as "honoraires". Nothing is displayed; the rule still judges | Chat model, judged by the rule as today |
 
-Only verified legal text reaches a screen (D-027):
+Only verified legal text reaches a screen (D-029):
 - **Verified passage:** a paragraph a person has checked against the official PDF page, recorded in a tracked register. A rule citation is a verified passage that also grounds a rule.
 - **Unverified chunk:** indexed and ranked by the backend, but never returned as text by the API. There is no "non vérifié" label anywhere, because unverified text is never shown. An admin sees an unverified chunk only as a reference (article, paragraph, link to the official PDF page) in the verification queue, so the person checks the official page, not our extraction.
 - **Explanation:** drafted by the model into a file, reviewed and approved by a person in that file, and loaded only once approved.
@@ -348,9 +349,9 @@ Deferred, each with the trigger that justifies it:
 | Change | Fields | Why |
 |---|---|---|
 | New `corpus_source` | id, title, edition, publisher, url, sha256, language, page_count, loaded_at | Provenance shown in the UI. The source watch (B7) compares sha256 |
-| `corpus_chunk` gains | paragraph_ref, heading_path, page, char_start, char_end, token_count, text_sha256, text_search (`tsvector`, GIN index), verification_status (`unverified` or `verified`), verified_by, verified_on | Cite and open the exact paragraph and page; full-text search; the D-027 filter |
+| `corpus_chunk` gains | paragraph_ref, heading_path, page, char_start, char_end, token_count, text_sha256, text_search (`tsvector`, GIN index), verification_status (`unverified` or `verified`), verified_by, verified_on | Cite and open the exact paragraph and page; full-text search; the D-029 filter |
 | `corpus_chunk` unique key | (source_id, article_ref, paragraph_ref, char_start) | Reloading replaces instead of duplicating (known gap, `api/CLAUDE.md`) |
-| New tracked `corpus/verified-passages.json` | source sha256, article_ref, paragraph_ref, page, text_sha256, checked_by, checked_on | The passage register of D-027, reviewable in git. `docs/facts.md` gains one row pointing to it. A source whose sha256 changes loads with its passages back to unverified |
+| New tracked `corpus/verified-passages.json` | source sha256, article_ref, paragraph_ref, page, text_sha256, checked_by, checked_on | The passage register of D-029, reviewable in git. `docs/facts.md` gains one row pointing to it. A source whose sha256 changes loads with its passages back to unverified |
 | New tracked `rules/explanations/<code>.json` | rule code, source sha256, model id, prompt sha256, passage refs, sentences with quotes, approved_by, approved_on | Approved explanations, with their audit fields. Drafts (`<code>.draft.json`) are never loaded |
 | New `explanation` table | the same fields, loaded from approved files | Served by the API. An explanation whose source sha256 no longer matches is not served |
 | Rule files gain | `paragraph_ref` next to `article_ref` | Separates the governing paragraph from related ones without parsing prose |
@@ -389,7 +390,7 @@ Excerpts use `ts_headline` with sentinel markers that cannot occur in the source
 
 ### 5.7 UI integration
 
-Principles, from `docs/design.md` and D-027:
+Principles, from `docs/design.md` and D-029:
 - The answer comes first; retrieval never pushes the finding down.
 - Only verified passages and approved explanations appear. When nothing verified matches, the element is absent or says that nothing verified is available; there is no placeholder text and no "non vérifié" label.
 - Colour carries status only. Related texts use neutral tokens (`--muted`, `--border`, `--accent` for highlights), never a status colour.
@@ -477,7 +478,7 @@ Decisions to log when reached:
 - the recall target
 - the "citation vérifiée" / "texte connexe" display rules, as a `docs/design.md` section
 
-Already decided: unverified text is never displayed, and explanations need a person's approval (D-027).
+Already decided: unverified text is never displayed, and explanations need a person's approval (D-029).
 
 ---
 
@@ -491,7 +492,7 @@ The pitch lasts three minutes (`docs/plan.md` section 6). Hack4Justice is run by
 - a human visibly in control
 - a file the administration's own schema accepts
 
-Every feature below is real product behaviour on seeded demo data, not a staged screen (D-022, no mocks). `docs/plan.md` section 6 carries them as part of the demo moments (D-028).
+Every feature below is real product behaviour on seeded demo data, not a staged screen (D-022, no mocks). `docs/plan.md` section 6 carries them as part of the demo moments (D-030).
 
 ### 6.2 The features
 
@@ -560,7 +561,7 @@ Every feature below is real product behaviour on seeded demo data, not a staged 
 
 ### 6.3 Priority for the pitch
 
-All eleven are in scope (D-028). This order decides what is cut first if a pre-pitch gate is at risk (`docs/plan.md` section 9).
+All eleven are in scope (D-030). This order decides what is cut first if a pre-pitch gate is at risk (`docs/plan.md` section 9).
 
 | Tier | Features | Rationale |
 |---|---|---|
@@ -570,7 +571,7 @@ All eleven are in scope (D-028). This order decides what is cut first if a pre-p
 
 ### 6.4 Not shown in the demo
 
-These are in scope (D-028) but get no stage time:
+These are in scope (D-030) but get no stage time:
 - **Arabic interface (G1):** the demo runs in French.
 - **TEIF ingestion (D1) and certificate corrections (C1):** real value, but no visual moment worth stage time.
 
@@ -596,7 +597,7 @@ Anything animated for effect is out entirely: `docs/design.md` section 5 forbids
   - the embedding model loads at container start
   - a model-call failure shows its documented state, not a crash
   - a recorded run of the full script is ready as a fallback
-- **Verified only (D-027):** every passage and explanation the script opens is verified or approved, and the presenter narrates only verified facts. Before the pitch, check every figure visible in the script against `docs/facts.md`.
+- **Verified only (D-029):** every passage and explanation the script opens is verified or approved, and the presenter narrates only verified facts. Before the pitch, check every figure visible in the script against `docs/facts.md`.
 - **Motion and access:** no new animation beyond answers to user actions. The presenter drives the whole script by keyboard with reduced motion on, per `docs/design.md` section 8.
 
 ---
@@ -614,7 +615,7 @@ Anything animated for effect is out entirely: `docs/design.md` section 5 forbids
 
 ## 8. Sequencing
 
-Phases and their gates live in `docs/plan.md` section 8 (D-028). This table maps features to them.
+Phases and their gates live in `docs/plan.md` section 8 (D-030). This table maps features to them.
 
 | `docs/plan.md` phase | Features |
 |---|---|
@@ -632,11 +633,11 @@ Phases and their gates live in `docs/plan.md` section 8 (D-028). This table maps
 
 1. Who in the team verifies articles, passages and explanations, and at what pace? B2, the verified passage register and R3 are all bounded by person time, not code.
 2. Pilot partner: the DGI (officer side), a public buyer (E2), or an accountancy firm (A4)? Each changes phase 6.
-3. Is the anchor case Article 62 LF 2014 (section 3.2)? The answer changes the pitch and possibly whether E2 moves earlier.
+3. Which article anchors the story: Article 55(I) or Article 52(I)(a) (D-027), or Article 62 LF 2014 (section 3.2)? The answer changes the pitch and possibly whether E2 moves earlier.
 4. Arabic interface: a product decision against `docs/design.md` section 6.
 5. Hosting and data residency for a public-sector pilot, given 2.6.
 
-Answered on 2026-09-13: display of unverified text and explanation approval (D-027); scope and phases (D-028).
+Answered on 2026-09-13: display of unverified text and explanation approval (D-029); scope and phases (D-030).
 
 ## 10. Sources
 
@@ -683,4 +684,4 @@ Vendor and consultancy
 |---|---|---|
 | 2026-09-13 | team | Initial post-hackathon feature research |
 | 2026-09-13 | team | Added the RAG implementation plan (section 5, with measured retrieval baseline) and demo-facing features (section 6); renumbered later sections |
-| 2026-09-13 | team | Applied D-027 (only verified passages on screen, explanations approved by a person) to sections 5 and 6; scope moved into `docs/plan.md` per D-028, section 8 now maps features to plan phases |
+| 2026-09-13 | team | Applied D-029 (only verified passages on screen, explanations approved by a person) to sections 5 and 6; scope moved into `docs/plan.md` per D-030, section 8 now maps features to plan phases |
