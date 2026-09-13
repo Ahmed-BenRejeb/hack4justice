@@ -706,6 +706,31 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 
 **Result:** Demo moment 4 shows the missing fact on the arriving row. The labels are neutral text; only the count badges carry status colour.
 
+## D-041 - Refused export values explained on their fields; VAT and arithmetic checked
+
+**Date:** 2026-09-13
+
+**Decision:** J7 with C3.
+- **VAT:** operations carry `taux_tva` and `montant_tva`, emitted as `TauxTVA` and `MontantTVA`, and `TotalMontantTVA` is their sum instead of 0.
+- **Arithmetic:** before export, code checks in integer millimes that HT + TVA = TTC and retenue + net servi = TTC. No rate is recomputed.
+- **Placement:** schema errors keep their element path and lxml type. `app/export/field_errors.py` maps each path to its request field. The 422 detail uses FastAPI's own `{loc, msg, type}` shape, so request validation, schema and arithmetic errors all land on fields the same way.
+- **Web:** the export form shows one French message per field, restating the schema's constraint ("7 chiffres suivis d’une lettre majuscule (schéma TEJ)") or the failed sum, and moves focus to the first field to correct. Errors no field matches still list below the form. The form adds VAT rate and amount fields.
+- **Browser patterns removed:** the matricule and invoice year `pattern` attributes are gone, so the schema decides and explains the format.
+
+**Options considered:**
+- Error shape: FastAPI's `{loc, msg, type}` (chosen); a custom `{field, facet}` object; plain strings as before.
+- French text: in `web/lib/tej.ts`, keyed by form field and error type (chosen); built by the backend from each facet's value.
+- Browser format checks: keep `pattern` attributes; remove them so the schema is the one validator (chosen).
+- Certificate totals: check them against the sum of operations; skip, since `tej.py` computes them from the operations and they cannot disagree (chosen).
+
+**Why:**
+- **Error shape:** one shape means one placement function in the web for every refusal.
+- **French text in `web/lib`:** interface copy stays in the web app, and the messages name the constraint rather than echoing a regular expression.
+- **Removing browser patterns:** with a `pattern`, the browser blocks submission with its own tooltip in the browser's language, so demo moment 5 would never reach the schema. `required` and input types stay, since they only block empty or non-numeric input.
+- **Copy says "schéma TEJ", not "schéma de la DGI":** the schema's DGI provenance is still `to verify` in `docs/facts.md`.
+
+**Result:** A wrong matricule or an unbalanced amount is refused with its reason on its field, and nothing is stored. The arithmetic checks cite no article: they are internal consistency checks on the declaration's own amounts, not compliance findings.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -736,3 +761,4 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 | 2026-09-13 | team | Added D-038: gate-independent features (J1, J8, J7 with C3, A1 with J5) proceed while the recall gate stays open |
 | 2026-09-13 | team | Added D-039: decision trace returned by rules, stored on the finding, shown under the answer |
 | 2026-09-13 | team | Added D-040: officer queue rows name their missing facts, with a filter by missing fact |
+| 2026-09-13 | team | Added D-041: refused export values explained on their fields; VAT emitted and arithmetic checked |

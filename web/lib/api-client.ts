@@ -26,12 +26,15 @@ export class ApiError extends Error {
   readonly status: number;
   /** Each message from the response body, such as every XSD validation error of a refused export. */
   readonly details: string[];
+  /** The parsed response body, for callers that place structured errors (a refused export's fields). */
+  readonly body: unknown;
 
-  constructor(status: number, message: string, details: string[] = []) {
+  constructor(status: number, message: string, details: string[] = [], body: unknown = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.details = details;
+    this.body = body;
   }
 }
 
@@ -64,7 +67,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
     const messages = errorMessages(body);
-    throw new ApiError(response.status, messages.join("; ") || response.statusText, messages);
+    throw new ApiError(response.status, messages.join("; ") || response.statusText, messages, body);
   }
   return (await response.json()) as T;
 }

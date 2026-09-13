@@ -26,6 +26,8 @@ OPERATION = Operation(
     annee_facturation="2026",
     montant_ht=1000000,
     taux_rs="1.50",
+    taux_tva="19.00",
+    montant_tva=190000,
     montant_ttc=1190000,
     montant_rs=15000,
     montant_net_servi=1175000,
@@ -49,6 +51,27 @@ def test_build_and_validate_produces_schema_valid_xml() -> None:
 
     assert b"RS7_000001" in xml_bytes
     assert b"1234567A" in xml_bytes
+    assert b"<TauxTVA>19.00</TauxTVA><MontantTVA>190000</MontantTVA>" in xml_bytes
+
+
+def test_certificate_vat_total_sums_the_operations() -> None:
+    second = Operation(**{**OPERATION.__dict__, "montant_tva": 70000})
+
+    xml_bytes = build_and_validate(
+        declarant=DECLARANT,
+        annee_depot="2026",
+        mois_depot="03",
+        certificats=[
+            Certificat(
+                beneficiaire=BENEFICIAIRE,
+                date_payement="15/03/2026",
+                reference="CERT-003",
+                operations=[OPERATION, second],
+            )
+        ],
+    )
+
+    assert b"<TotalMontantTVA>260000</TotalMontantTVA>" in xml_bytes
 
 
 def test_build_and_validate_rejects_an_invalid_withholding_code() -> None:

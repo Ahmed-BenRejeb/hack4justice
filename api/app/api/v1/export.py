@@ -2,7 +2,9 @@
 
 The caller supplies every field the real DGI schema requires (see
 app/export/tej.py): field-level extraction (parties, amounts, rates) is not
-built yet, so nothing here is inferred or defaulted from guesswork.
+built yet, so nothing here is inferred or defaulted from guesswork. A refused
+export answers 422 with every schema and arithmetic error placed on its request
+field (app/export/field_errors.py).
 """
 
 import uuid
@@ -17,6 +19,7 @@ from app.db.models import Document, Export, OfficerDecision
 from app.db.session import get_db
 from app.export import tej
 from app.export.codes import operation_codes
+from app.export.field_errors import arithmetic_field_errors, schema_field_errors
 from app.export.xsd import SchemaValidationError
 from app.storage import save_upload
 
@@ -39,6 +42,8 @@ class OperationIn(BaseModel):
     annee_facturation: str
     montant_ht: int
     taux_rs: str
+    taux_tva: str
+    montant_tva: int
     montant_ttc: int
     montant_rs: int
     montant_net_servi: int
@@ -113,6 +118,8 @@ def export_document(
     )
     certificats = [_to_tej_certificat(c) for c in payload.certificats]
 
+    # Both checks always run, so the officer sees every refused value at once.
+    errors = arithmetic_field_errors(certificats)
     try:
         xml_bytes = tej.build_and_validate(
             declarant=declarant,
@@ -122,7 +129,15 @@ def export_document(
             acte_depot=payload.acte_depot,
         )
     except SchemaValidationError as error:
-        raise HTTPException(status_code=422, detail=error.errors) from error
+        errors = schema_field_errors(error.errors) + errors
+    if errors:
+        raise HTTPException(
+            status_code=422,
+            detail=[
+                {"loc": ["body", *error.loc], "msg": error.msg, "type": error.type}
+                for error in errors
+            ],
+        )
 
     xml_ref = save_upload("declaration.xml", xml_bytes)
 
