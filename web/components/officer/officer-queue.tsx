@@ -6,11 +6,14 @@ import { InboxIcon, RefreshCwIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api-client";
 import { QUEUE_POLL_MS } from "@/lib/config";
 import { countLabel, formatTime } from "@/lib/format";
-import { filterQueue, newArrivals, type QueueFilter } from "@/lib/queue";
+import { fieldLabel } from "@/lib/labels";
+import { filterQueue, newArrivals, queueMissingFacts, withMissingFact, type QueueFilter } from "@/lib/queue";
 import { useResource } from "@/lib/use-resource";
 import { QueueTable } from "./queue-table";
 
@@ -20,10 +23,42 @@ const FILTERS: { value: QueueFilter; label: string }[] = [
   { value: "decided", label: "Entièrement décidés" },
 ];
 
-/** Queue screen with refresh indicator, filter tabs and the arrival announcement. */
+interface MissingFactFilterProps {
+  facts: string[];
+  value: string;
+  onChange: (fact: string) => void;
+}
+
+/** Narrows the queue to files missing one fact (J8); absent while no file abstains. */
+function MissingFactFilter({ facts, value, onChange }: MissingFactFilterProps): JSX.Element | null {
+  if (facts.length === 0) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <Label htmlFor="missing-fact-filter" className="shrink-0 text-xs text-muted-foreground">
+        Information manquante
+      </Label>
+      <NativeSelect
+        id="missing-fact-filter"
+        className="w-auto max-w-72"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">Toutes</option>
+        {facts.map((fact) => (
+          <option key={fact} value={fact}>
+            {fieldLabel(fact)}
+          </option>
+        ))}
+      </NativeSelect>
+    </div>
+  );
+}
+
+/** Queue screen with refresh indicator, filter tabs, the missing-fact filter and the arrival announcement. */
 export function OfficerQueue(): JSX.Element {
   const seenIds = useRef<Set<string> | null>(null);
   const [filter, setFilter] = useState<QueueFilter>("all");
+  const [missingFact, setMissingFact] = useState("");
 
   const { data, error, isLoading, updatedAt, reload } = useResource(
     "officer-queue",
@@ -80,18 +115,26 @@ export function OfficerQueue(): JSX.Element {
             />
           ) : (
             <Tabs value={filter} onValueChange={(value) => setFilter(value as QueueFilter)}>
-              <TabsList>
-                {FILTERS.map(({ value, label }) => (
-                  <TabsTrigger key={value} value={value}>
-                    {label}
-                    <span className="text-muted-foreground tabular-nums">
-                      {filterQueue(data.items, value).length}
-                    </span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <TabsList>
+                  {FILTERS.map(({ value, label }) => (
+                    <TabsTrigger key={value} value={value}>
+                      {label}
+                      <span className="text-muted-foreground tabular-nums">
+                        {filterQueue(withMissingFact(data.items, missingFact), value).length}
+                      </span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <MissingFactFilter
+                  // The selected fact stays listed after the last file naming it leaves the queue.
+                  facts={queueMissingFacts(missingFact ? [...data.items, { missing_facts: [missingFact] }] : data.items)}
+                  value={missingFact}
+                  onChange={setMissingFact}
+                />
+              </div>
               {FILTERS.map(({ value }) => {
-                const items = filterQueue(data.items, value);
+                const items = filterQueue(withMissingFact(data.items, missingFact), value);
                 return (
                   <TabsContent key={value} value={value} className="mt-2">
                     {items.length === 0 ? (

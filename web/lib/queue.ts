@@ -27,3 +27,13 @@ export function filterQueue(items: readonly QueueItem[], filter: QueueFilter): Q
   }
   return [...items];
 }
+
+/** Every fact some file in the queue is missing, each once, sorted. */
+export function queueMissingFacts(items: readonly Pick<QueueItem, "missing_facts">[]): string[] {
+  return [...new Set(items.flatMap((item) => item.missing_facts))].sort();
+}
+
+/** Files whose abstentions name the fact; an empty fact keeps every file. */
+export function withMissingFact(items: readonly QueueItem[], fact: string): QueueItem[] {
+  return fact === "" ? [...items] : items.filter((item) => item.missing_facts.includes(fact));
+}

@@ -43,10 +43,10 @@ def test_queue_lists_extracted_documents_awaiting_decision(db: Session) -> None:
     assert item["filename"] == "certificat.pdf"
     assert item["organisation_name"] == "Atelier Ben Salah"
     assert (item["decided_count"], item["abstained_count"]) == (0, 0)
+    assert item["missing_facts"] == []
 
 
-def test_queue_counts_findings_per_status(db: Session) -> None:
-    document = _make_extracted_document(db)
+def _make_rule(db: Session) -> Rule:
     rule = Rule(
         code="TEST-COUNT",
         citation_source="Fixture Code, not a real legal text",
@@ -57,6 +57,41 @@ def test_queue_counts_findings_per_status(db: Session) -> None:
     )
     db.add(rule)
     db.flush()
+    return rule
+
+
+def test_queue_names_each_missing_fact_once_per_file(db: Session) -> None:
+    document = _make_extracted_document(db)
+    rule = _make_rule(db)
+    db.add_all(
+        [
+            Finding(
+                document_id=document.id,
+                rule_id=rule.id,
+                status="abstained",
+                missing_fact=fact,
+            )
+            for fact in ("status", "beneficiary_fiscal_regime", "status")
+        ]
+        + [
+            Finding(
+                document_id=document.id,
+                rule_id=rule.id,
+                status="decided",
+                decided_code="TEST-A",
+            )
+        ]
+    )
+    db.commit()
+
+    [item] = client.get("/api/v1/officer/queue").json()
+
+    assert item["missing_facts"] == ["beneficiary_fiscal_regime", "status"]
+
+
+def test_queue_counts_findings_per_status(db: Session) -> None:
+    document = _make_extracted_document(db)
+    rule = _make_rule(db)
     db.add_all(
         [
             Finding(
