@@ -22,7 +22,7 @@ The application is a two-process monorepo: a TypeScript front end and a Python b
 | Path | What it is |
 |---|---|
 | `web/app/` | Next.js routes: `(msme)`, `(officer)`, `(admin)` route groups, plus `api/` handlers that proxy to the backend |
-| `web/components/` | React components: `ui/` shadcn/ui primitives, `msme/`, `officer/`, `shared/` |
+| `web/components/` | React components: `ui/` shadcn/ui primitives, `msme/`, `officer/`, `admin/`, `corpus/` (legal source search and reader, J2/J10), `shared/` |
 | `web/lib/` | Front-end support: API client, formatting, and `env.ts` |
 | `api/app/extraction/` | OCR and structured document extraction |
 | `api/app/corpus/` | Chunking, embedding, and retrieval over the legal corpus |
@@ -102,3 +102,4 @@ The application is a two-process monorepo: a TypeScript front end and a Python b
 | 2026-09-12 | team | Initial root guide |
 | 2026-09-12 | team | Restored project guide (working copy had reverted to a generic template); updated repository map and configuration rule for the web/+api split, section refs updated for the regenerated docs |
 | 2026-09-13 | team | Build rule includes plan features (D-030); feature-research added to sources of truth; facts rule covers retrieved passages and explanations (D-029) |
+| 2026-09-13 | team | Repository map: added `components/admin/` and `components/corpus/` (legal source surface, D-052) |

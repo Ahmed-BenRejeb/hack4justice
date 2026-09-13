@@ -61,7 +61,9 @@ Specified against the demo moments in `docs/plan.md` section 6. First implementa
 | MSME extraction review, findings with citation, abstention with named missing fact | `/entreprise/dossiers/[id]` |
 | Officer queue (list) | `/agent` |
 | Officer file review (validate/flag) and export confirmation (TEJ XML produced, XSD-validated) | `/agent/dossiers/[id]` |
-| Admin rule registry (read-only) | `/admin` |
+| Admin rule registry (read-only) and corpus verification queue | `/admin` |
+| Legal search, verified passages only (J10) | `/textes` |
+| Verified passage reader: full text, neighbours, article outline, official source (J2) | `/textes/[chunkId]` |
 
 ## 8. Quality floor
 
@@ -75,3 +77,4 @@ Every screen above must be legible and usable with the reduced-motion preference
 | 2026-09-12 | team | Fixed token file location, status hues, IBM Plex typography; static loading states; screen-to-route table (D-022) |
 | 2026-09-12 | team | Section 4: answer-first file review with a side rail, clickable queue rows (D-023) |
 | 2026-09-12 | team | Section 4: review adapted to the real backend, RNE removed, TEJ form placement (D-024) |
+| 2026-09-13 | team | Section 7: added the legal search and passage reader screens, admin now also hosts the corpus verification queue (D-052) |

@@ -907,6 +907,21 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** `docs/deploy.md` is the runbook: provision, rsync the repo (secrets included), bring the stack up with `deploy/docker-compose.prod.yml`, smoke test, seed with `seed/seed_demo_data.py` run from the operator's own machine against the deployed API (the script has its own Python dependencies, so it does not run inside either container), then `terraform destroy` as soon as the demo window closes, confirmed with an `aws ec2 describe-instances` check since a failed destroy step can leave a resource behind silently.
 
+## D-052 - Legal source surface built: search, passage reader, related passages, verification queue
+
+**Date:** 2026-09-13
+
+**Decision:** Implement `docs/frontend-plan.md` section 3.1 in full: a passage reader at `/textes/[chunkId]` (`GET /corpus/chunks/{id}`), a legal search screen at `/textes` (`GET /corpus/search`), a "Textes apparentés" panel under each finding card (`GET /findings/{id}/related`), and a corpus verification queue on `/admin` (`GET /corpus/verification-queue`). Added a fourth top-level nav space, "Textes", alongside Entreprise/Agent/Administration.
+
+**Options considered:**
+- Link the reader from a rule's own `Citation` component directly, by resolving a matching corpus chunk from the rule's `article_ref`.
+- Link the reader only from "related passages" under a finding, where a real chunk id already exists via `GET /findings/{id}/related` (chosen).
+- Add "Textes" as a fourth nav space (chosen) versus leaving the search screen reachable only by a link from other screens.
+
+**Why:** A `Rule`'s citation (hand-verified `verbatim_text`, root CLAUDE.md) and a `CorpusChunk` (RAG-indexed, verified separately per D-032) are two different provenance records with no guaranteed one-to-one match; inferring one from an `article_ref` string would be a guess, not a citation. `GET /findings/{id}/related` already resolves to real, verified chunk ids for a specific finding, so linking from there is honest instead of invented. J10 (legal search) is named in `docs/plan.md` as a Q&A backup the team should be able to show on request, which argues for it being one click from the header rather than buried inside a finding.
+
+**Result:** With the corpus register nearly empty of verified entries (1 of 78 chunks today), the reader's 404 branch reads as "ce passage n'est pas encore vérifié" rather than a generic error (D-029's binding constraint, made calm rather than alarming per the plan's explicit instruction); `related-passages.tsx` renders nothing while loading, on error, or with zero hits, so it never flashes into view only to disappear. `docs/design.md` section 7 gains the two new routes; `web/CLAUDE.md` and the root `CLAUDE.md` repository map record `components/corpus/` and `components/admin/`.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -948,3 +963,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Renumbered the constats grouping decision to D-049: it and the abstention loop were both merged as D-047 |
 | 2026-09-13 | team | Added D-050: front end stays on shadcn, Tremor for charts only, no block library; front-end plan added |
 | 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
+| 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
