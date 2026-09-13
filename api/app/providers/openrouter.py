@@ -102,3 +102,63 @@ def extract_fact(
         raise OpenRouterError(
             f"model did not return valid JSON: {content!r}"
         ) from error
+
+
+ASSISTED_FIELDS_SYSTEM_PROMPT = (
+    "Reply only with JSON: an object mapping each given field name to "
+    '{"value": string or null, "confidence": number from 0 to 1}. Answer '
+    "every field listed, in the same context. Use null and confidence 0 "
+    "for any field the context does not state. Never guess: a low-"
+    "confidence answer is worse than admitting the context does not say."
+)
+DEFAULT_FIELDS_MAX_TOKENS = 1500
+
+
+def extract_fields(
+    context: str, fields: dict[str, str], max_tokens: int = DEFAULT_FIELDS_MAX_TOKENS
+) -> dict[str, AssistedFact]:
+    """Ask the model to answer every question in `fields` from one shared context.
+
+    One call answering several questions, not several single-question calls:
+    the answers must come from one coherent reading of the same document (an
+    invoice's HT, TVA, TTC, and withheld amounts are not independent facts),
+    and a live upload cannot afford one round trip per field. Same design
+    law as extract_fact(): the model supplies facts, it never judges them.
+    A field missing from the reply, or with confidence 0, is treated the
+    same as a null answer, not as an error.
+    """
+    questions = "\n".join(f"- {name}: {question}" for name, question in fields.items())
+    data = _post(
+        {
+            "messages": [
+                {"role": "system", "content": ASSISTED_FIELDS_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Context: {context}\n\nFields:\n{questions}",
+                },
+            ],
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
+        }
+    )
+    content = _message_content(data)
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as error:
+        raise OpenRouterError(
+            f"model did not return valid JSON: {content!r}"
+        ) from error
+
+    result: dict[str, AssistedFact] = {}
+    for name in fields:
+        entry = parsed.get(name)
+        if not isinstance(entry, dict):
+            result[name] = AssistedFact(value=None, confidence=0.0)
+            continue
+        try:
+            result[name] = AssistedFact(
+                value=entry.get("value"), confidence=float(entry.get("confidence", 0))
+            )
+        except (TypeError, ValueError):
+            result[name] = AssistedFact(value=None, confidence=0.0)
+    return result

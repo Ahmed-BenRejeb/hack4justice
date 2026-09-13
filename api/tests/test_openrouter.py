@@ -37,6 +37,28 @@ def test_extract_fact_abstains_when_context_lacks_the_answer() -> None:
     assert fact.confidence < 0.5
 
 
+def test_extract_fields_answers_every_field_from_shared_context() -> None:
+    facts = openrouter.extract_fields(
+        context=(
+            "Facture: Atelier Ben Salah, matricule fiscal 1234567A. "
+            "Honoraires de conseil, montant HT 1000.000 TND."
+        ),
+        fields={
+            "supplier_name": "What is the supplier's name?",
+            "supplier_tax_id": "What is the supplier's matricule fiscal?",
+            "invoice_date": "What date is this document dated?",
+        },
+    )
+
+    assert set(facts) == {"supplier_name", "supplier_tax_id", "invoice_date"}
+    assert facts["supplier_name"].value is not None
+    assert "ben salah" in facts["supplier_name"].value.lower()
+    assert facts["supplier_tax_id"].value is not None
+    assert "1234567a" in facts["supplier_tax_id"].value.lower()
+    # Not stated in the context: abstains with confidence 0, not a guess.
+    assert facts["invoice_date"].confidence < 0.5
+
+
 def test_complete_raises_on_an_invalid_model_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

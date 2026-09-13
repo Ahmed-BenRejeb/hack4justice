@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import Document, Export, OfficerDecision, Organisation, Rule
+from app.extraction.fields import FIELD_QUESTIONS
 from app.main import app
 from tests.conftest import make_born_digital_pdf
 
@@ -60,9 +61,41 @@ def test_upload_document_persists_and_extracts_it(db: Session) -> None:
     assert detail_body["officer_decision"] is None
     assert detail_body["export"] is None
     extractions = detail_body["extractions"]
-    assert len(extractions) == 1
-    assert extractions[0]["field_name"] == "full_text"
-    assert "article 62" in extractions[0]["value"]
+    # At least full_text; sparse source text may or may not yield structured
+    # fields above the confidence threshold (live model call).
+    assert len(extractions) >= 1
+    full_text = next(e for e in extractions if e["field_name"] == "full_text")
+    assert "article 62" in full_text["value"]
+
+
+def test_upload_extracts_structured_fiscal_fields(db: Session) -> None:
+    organisation = _make_organisation(db)
+    pdf_bytes = make_born_digital_pdf(
+        "Facture Atelier Ben Salah matricule fiscal 1234567A, "
+        "honoraires de conseil, montant HT 1000.000 TND, regime reel."
+    )
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    document_id = upload.json()["id"]
+
+    detail = client.get(f"/api/v1/documents/{document_id}").json()
+    extractions = detail["extractions"]
+
+    assert len(extractions) > 1
+    field_names = {e["field_name"] for e in extractions}
+    # Every structured field name is either the full document text or from
+    # the fixed vocabulary web/lib/labels.ts also carries.
+    assert field_names <= {"full_text"} | set(FIELD_QUESTIONS)
+    structured = [e for e in extractions if e["field_name"] != "full_text"]
+    assert all(e["source"] == "assisted" for e in structured)
+    assert all(e["confidence"] >= 0.5 for e in structured)
 
 
 def test_document_detail_includes_decision_and_export(db: Session) -> None:
