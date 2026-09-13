@@ -536,6 +536,23 @@ Two real articles in the same code do match the narrative:
 
 **Result:** `app/corpus/chunking.py`, `service.py`, `load_corpus.py`, migration `5b8e1c4f9a02`, updated `corpus/sources/manifest.json`; the text extract is removed. Consequence for step 3: the `Article 52, I` lead-in chunk lies entirely inside the verified citation of `CIRPPIS-ART52-I-A`, but the `Article 52, I, a)` chunk also holds sentences the team has not verified ("Le taux de 10%(1) s'applique également...", "Ce taux est réduit à :"). It needs its own verification before it can be shown.
 
+---
+
+## D-032 - Verified passage register, applied on every corpus load
+
+**Date:** 2026-09-13
+
+**Decision:** RAG step 3. `corpus/verified-passages.json` records each passage a person has checked: source PDF sha256, article, paragraph, page, text sha256, checked by, checked on. `load_corpus` applies it after indexing: matching chunks become `verified`, all others `unverified`, and an entry that matches nothing is printed. A CLI prints a chunk's text, its official page link, and a register entry with the checker and date left blank. The register is seeded with one entry, `Article 52, I`.
+
+**Options considered:**
+- Seed: leave the register empty; seed only text already covered by a person's check (chosen); also seed `Article 52, I, a)` because the rule citing it is verified.
+- Stale entries: fail the load; report and leave unverified (chosen).
+- API-side filter: build it now; build it with the first endpoint that returns chunk text, RAG step 7 (chosen), since no endpoint returns corpus text yet and an unused filter would be dead code.
+
+**Why:** The user chose to build the mechanism and seed it truthfully. The `Article 52, I` chunk text is verbatim inside the citation the team verified on 2026-09-13 (checked in code), so its entry carries that check. The `I, a)` chunk also holds sentences nobody checked, so seeding it would put unverified text on screen, which D-029 forbids. A changed source must not block loading: the plan says its passages return to unverified, and the printed report tells a person which checks to redo.
+
+**Result:** `app/corpus/verification.py`, migration `7c2d9e3a41b5`, `VERIFIED_PASSAGES_PATH` (documented default), `docs/facts.md` row for the register. Phase 1 still needs a person to verify the passages the demo shows, starting with `Article 52, I, a)`.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -557,3 +574,4 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-029: only verified legal text on screen, explanations approved by a person |
 | 2026-09-13 | team | Added D-030: plan scope includes every researched feature, phases 6 to 9 added |
 | 2026-09-13 | team | Added D-031: corpus chunked by paragraph from the official PDF, with page provenance |
+| 2026-09-13 | team | Added D-032: verified passage register applied on every corpus load |

@@ -17,4 +17,4 @@ The plain-text extract previously kept here (`cirppis-retenues-a-la-source.txt`)
 
 ## Verification status
 
-Article 52, paragraphe I, a) is `verified` in `docs/facts.md` (checked by team, 2026-09-13) and grounds rule `CIRPPIS-ART52-I-A`. Everything else in Articles 52 to 55, every rate included, is not verified and must not be stated on screen or on a slide.
+Article 52, paragraphe I, a) is `verified` in `docs/facts.md` (checked by team, 2026-09-13) and grounds rule `CIRPPIS-ART52-I-A`. Everything else in Articles 52 to 55, every rate included, is not verified and must not be stated on screen or on a slide. Passage-level verification of the indexed chunks lives in `corpus/verified-passages.json` (D-032); a new edition of this PDF changes its sha256 and returns every passage to unverified.
