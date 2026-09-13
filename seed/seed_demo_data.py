@@ -20,6 +20,11 @@ upload.
 Run from the repository root:
 
     api/.venv/bin/python seed/seed_demo_data.py
+
+Running `api/tests` (`uv run pytest`) against this same database wipes it:
+`api/tests/conftest.py` drops and recreates every table before each test, by
+design, against whatever `DATABASE_URL` points at (api/CLAUDE.md). Re-run
+this script afterwards to restore the demo dataset.
 """
 
 import os
