@@ -1,0 +1,45 @@
+name: Deploy to production
+
+# Runs on the demo EC2 instance itself (see docs/deploy.md section 6): the
+# security group only allows SSH from the admin's own IP (deploy/terraform,
+# D-051), so a GitHub-hosted runner has no way in. A self-hosted runner
+# avoids opening that up and needs no SSH key or AWS credential in GitHub
+# at all (D-061).
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, chahed-demo]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore api/.env and web/.env
+        run: |
+          cp /opt/chahed/env/api.env api/.env
+          cp /opt/chahed/env/web.env web/.env
+
+      - name: Resolve this instance's sslip.io address
+        id: site
+        run: |
+          token=$(curl -sf -X PUT "http://169.254.169.254/latest/api/token" \
+            -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+          ip=$(curl -sf -H "X-aws-ec2-metadata-token: $token" \
+            http://169.254.169.254/latest/meta-data/public-ipv4)
+          echo "address=$(echo "$ip" | tr '.' '-').sslip.io" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy stack
+        env:
+          SITE_ADDRESS: ${{ steps.site.outputs.address }}
+        run: docker compose -f deploy/docker-compose.prod.yml up -d --build
+
+      - name: Smoke test
+        env:
+          SITE_ADDRESS: ${{ steps.site.outputs.address }}
+        run: curl -sf "https://${SITE_ADDRESS}/api/v1/health"

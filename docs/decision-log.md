@@ -1061,6 +1061,21 @@ Fixing the network was rejected because it is machine-specific and would leave t
 
 **Result:** Found live, both blocking a first real launch: `docker compose ... up -d --build` failed with "required variable SITE_ADDRESS is missing a value" until reissued as `sudo SITE_ADDRESS=$SITE_ADDRESS docker compose ...`; the seed script failed with `401 {"detail": "not signed in"}` against the public `site_url` until run as `docker compose -f deploy/docker-compose.prod.yml run --rm -v .../seed:/seed:ro -v .../fixtures:/fixtures:ro -e CHAHED_API_BASE_URL=http://api:8000/api/v1 ... api uv run python /seed/seed_demo_data.py`, reaching `api` by its internal compose hostname with the repo's `seed/`/`fixtures/` bind-mounted in (the `api` image does not bundle either, `api/Dockerfile`). `docs/deploy.md` rewritten at both points. Verified for real: the AWS account initially refused any non-free-tier instance type until upgraded mid-session, then `c6i.xlarge` provisioned cleanly in `eu-central-1`, `https://<sslip.io host>/api/v1/health` answering over a real Let's Encrypt certificate, and the five hero documents seeded and decided through the live instance.
 
+## D-061 - Continuous deployment: self-hosted runner on the demo instance
+
+**Date:** 2026-09-13
+
+**Decision:** Every push to `main` redeploys automatically (`.github/workflows/deploy.yml`): checkout, restore `api/.env`/`web/.env` from `/opt/chahed/env/` (kept outside the git working tree so a fresh checkout cannot remove them), resolve this run's `SITE_ADDRESS` from the instance's own IMDS public IP (matching `deploy/terraform/outputs.tf`'s `site_url` formula), then `docker compose -f deploy/docker-compose.prod.yml up -d --build` and a health-endpoint smoke test. The job runs on a GitHub Actions self-hosted runner installed on the instance itself (`docs/deploy.md` section 6), not a GitHub-hosted one. This reverses D-051's "throwaway, torn down after the demo" framing for the instance: it now needs to stay up between rehearsals for continuous deploy to mean anything, at the ongoing cost that implies instead of one $2-3 demo day.
+
+**Options considered:**
+- Self-hosted runner installed on the instance, job runs locally (chosen).
+- GitHub-hosted runner reaching the instance over SSH/rsync, widening the security group's port 22 beyond `admin_cidr` to admit GitHub's runner IP ranges.
+- GitHub-hosted runner over AWS SSM Send-Command (no SSH key, but needs an IAM role/OIDC setup and a separate file-transfer path since SSM has no rsync equivalent).
+
+**Why:** `deploy/terraform/main.tf`'s security group deliberately allows SSH only from `admin_cidr`, one admin IP; GitHub-hosted runners have no stable IP to add there, so admitting them means opening port 22 broadly, undoing that design point for the sake of automation. A self-hosted runner keeps the security group exactly as it is and needs no SSH key or AWS credential stored in GitHub at all, since the job never leaves the box. SSM was rejected as more setup (IAM role, OIDC, a staging path for files) than the hackathon timeline justifies when the self-hosted runner is simpler and satisfies the same "no long-lived secret in GitHub" goal. The env files move to `/opt/chahed/env/` because `actions/checkout`'s default clean step can remove untracked files, which `api/.env`/`web/.env` are by design (root CLAUDE.md's configuration rule); restoring them from a stable path avoids depending on checkout's clean behaviour at all.
+
+**Result:** `.github/workflows/deploy.yml` added; `docs/deploy.md` gained section 6 (one-time runner registration) and a note under "Notes and limitations" that the instance is now expected to stay running between rehearsals rather than being destroyed after each one.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1110,3 +1125,4 @@ Fixing the network was rejected because it is machine-specific and would leave t
 | 2026-09-13 | team | Added D-058: modern-SaaS visual direction adopted wholesale, charts extended to every route with real data |
 | 2026-09-13 | team | Added D-059: fonts ship as @fontsource npm packages so the image build never contacts fonts.gstatic.com |
 | 2026-09-13 | team | Added D-060: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |
+| 2026-09-13 | team | Added D-061: continuous deployment to main via a self-hosted runner on the demo instance |

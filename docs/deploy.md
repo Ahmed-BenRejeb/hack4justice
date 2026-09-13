@@ -178,6 +178,58 @@ aws ec2 describe-instances --region eu-central-1 \
 # expect: [] or ["terminated"]
 ```
 
+## 6. Set up continuous deployment (one-time)
+
+After the manual steps above have put the stack up once, register the
+instance as a GitHub Actions self-hosted runner so every push to `main`
+redeploys automatically (`.github/workflows/deploy.yml`, D-061). The job
+runs on the box itself: GitHub-hosted runners have no stable IP, and the
+security group only allows SSH from `admin_cidr` by design (D-051), so
+running the deploy locally avoids opening that up or storing any SSH key
+or AWS credential in GitHub.
+
+1. Move the two secret files out of the git working tree, to a path the
+   workflow restores into place on every run (a fresh `actions/checkout`
+   would otherwise leave them missing, since they are untracked):
+
+   ```bash
+   ssh ubuntu@<public_ip>
+   mkdir -p /opt/chahed/env
+   cp /opt/chahed/app/api/.env /opt/chahed/env/api.env
+   cp /opt/chahed/app/web/.env /opt/chahed/env/web.env
+   ```
+
+2. On GitHub: repo Settings > Actions > Runners > New self-hosted runner,
+   Linux x64. Copy the `--url` and `--token` values from the generated
+   `config.sh` command; the token expires in about an hour, so do step 3
+   promptly after.
+
+3. On the instance, install the runner as the `ubuntu` user, not root: the
+   deploy step needs `ubuntu`'s docker group membership (`user_data.sh`),
+   which a fresh systemd service picks up cleanly, so no `sudo` workaround
+   is needed here the way step 3 above needs one for an inherited SSH
+   session.
+
+   ```bash
+   sudo mkdir -p /opt/actions-runner
+   sudo chown ubuntu:ubuntu /opt/actions-runner
+   cd /opt/actions-runner
+   curl -o actions-runner.tar.gz -L \
+     https://github.com/actions/runner/releases/download/v<version>/actions-runner-linux-x64-<version>.tar.gz
+   tar xzf actions-runner.tar.gz
+   ./config.sh --url https://github.com/<org>/<repo> --token <token> \
+     --labels chahed-demo --unattended
+   sudo ./svc.sh install ubuntu
+   sudo ./svc.sh start
+   ```
+
+4. Confirm the runner shows "Idle" under Settings > Actions > Runners, then
+   push to `main` (or re-run the workflow) to verify a full deploy.
+
+Re-provisioning a fresh instance from scratch (after a `terraform destroy`)
+still starts with steps 1-4 above once (rsync included); redo this section
+afterward instead of relying on manual rsync/compose for ongoing deploys.
+
 ## Notes and limitations
 
 - No Elastic IP: intentional, to avoid a resource that can outlive the
@@ -189,3 +241,7 @@ aws ec2 describe-instances --region eu-central-1 \
 - Postgres data lives in a named Docker volume on the instance, so
   container restarts during the demo do not lose data; destroying the
   instance does.
+- Continuous deployment (section 6) assumes the instance now stays up
+  between rehearsals rather than being torn down after each one (D-061);
+  the "one-day, fully torn down" framing above still applies once the
+  demo window has actually closed and `terraform destroy` is run.
