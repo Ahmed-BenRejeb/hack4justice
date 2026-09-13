@@ -4,8 +4,9 @@ Deterministic, no model and no dependency: fixed-format identifiers are found by
 pattern (e-mail, IBAN, RIB, matricule fiscal, telephone, CIN, bare 8-digit
 numbers) and names by exact match against the names the system already holds.
 The same value always gets the same placeholder, so the model can still tell
-two parties apart. The mapping back to the values is never stored: the original
-text is already kept locally, and a placeholder only needs to be read, not reversed.
+two parties apart. Each placeholder's original value is kept in memory only, so
+a model's answer naming a placeholder can be read back locally (`unmask`); it is
+never stored or sent (D-046).
 
 Known ceiling (D-042): a person or company name the system does not hold, a street
 address, and an 8-digit phone number written in groups without a label match no
@@ -13,7 +14,7 @@ pattern and stay in the text.
 """
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 # Tunisian IBAN: TN, 2 check digits, then the 20-digit RIB.
@@ -44,6 +45,7 @@ _FIXED_FORMATS = (
     ("TELEPHONE", _TELEPHONE_INTERNATIONAL),
 )
 MIN_NAME_CHARS = 3
+_PLACEHOLDER = re.compile(r"\[[A-Z]+_\d+\]")
 
 
 def _normalise(value: str) -> str:
@@ -52,13 +54,33 @@ def _normalise(value: str) -> str:
 
 def mask(text: str, known_names: Iterable[str] = ()) -> str:
     """The text with each identifier and known name replaced by a placeholder such as [MATRICULE_1]."""
+    return mask_with_originals(text, known_names)[0]
+
+
+def unmask(text: str, originals: Mapping[str, str]) -> str:
+    """The text with each placeholder `originals` knows replaced by its value; any other stays as written."""
+    return _PLACEHOLDER.sub(
+        lambda match: originals.get(match.group(), match.group()), text
+    )
+
+
+def mask_with_originals(
+    text: str, known_names: Iterable[str] = ()
+) -> tuple[str, dict[str, str]]:
+    """The masked text, and each placeholder's value as first written in the text.
+
+    The originals are for the caller to read a model's answer back in memory;
+    they are never stored or sent (D-046).
+    """
     placeholders: dict[tuple[str, str], str] = {}
+    originals: dict[str, str] = {}
 
     def placeholder(kind: str, value: str) -> str:
         key = (kind, _normalise(value))
         if key not in placeholders:
             number = sum(1 for existing, _ in placeholders if existing == kind) + 1
             placeholders[key] = f"[{kind}_{number}]"
+            originals[placeholders[key]] = value
         return placeholders[key]
 
     for kind, pattern in _FIXED_FORMATS:
@@ -87,11 +109,11 @@ def mask(text: str, known_names: Iterable[str] = ()) -> str:
     for name in sorted(names, key=len, reverse=True):
         text = re.sub(
             rf"(?<!\w){re.escape(name)}(?!\w)",
-            lambda _match, name=name: placeholder("NOM", name),
+            lambda match: placeholder("NOM", match.group()),
             text,
             flags=re.IGNORECASE,
         )
-    return text
+    return text, originals
 
 
 def unmasked_identifiers(text: str) -> list[str]:

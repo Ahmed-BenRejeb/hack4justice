@@ -1,8 +1,10 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from app.db.models import Citation, Document, Organisation, Rule
-from app.rules.engine import evaluate
+from app.db.models import Citation, Document, Extraction, Organisation, Rule
+from app.extraction.fields import FIELD_CONFIDENCE_THRESHOLD
+from app.rules.engine import Facts, TraceStep, evaluate
+from app.rules.service import document_facts
 
 FIXTURE_RULE = {
     "code": "TEST-001",
@@ -90,6 +92,69 @@ def test_evaluate_abstains_and_names_the_missing_fact(db: Session) -> None:
     assert finding.missing_fact == "status"
     assert finding.decided_code is None
     assert finding.trace[0]["value"] is None
+
+
+def test_facts_step_traces_model_facts_with_their_confidence() -> None:
+    facts = Facts(
+        {"payment_category": "honoraires", "status": "known"},
+        model_confidences={"payment_category": 0.86, "beneficiary_fiscal_regime": None},
+        threshold=0.5,
+    )
+
+    assert facts["status"] == "known"
+    assert facts.step("payment_category") == TraceStep(
+        fact="payment_category",
+        source="model",
+        value="honoraires",
+        confidence=0.86,
+        threshold=0.5,
+    )
+    # Asked of the model but not established: still traced as the model's, with no value.
+    assert facts.step("beneficiary_fiscal_regime") == TraceStep(
+        fact="beneficiary_fiscal_regime",
+        source="model",
+        value=None,
+        confidence=None,
+        threshold=0.5,
+    )
+    assert facts.step("status") == TraceStep(
+        fact="status", source="document", value="known"
+    )
+
+
+def test_document_facts_mark_every_field_the_model_is_asked_for(db: Session) -> None:
+    document = _make_document(db)
+    db.add_all(
+        [
+            Extraction(
+                document_id=document.id,
+                field_name="full_text",
+                value="texte",
+                confidence=1.0,
+                source="extracted",
+            ),
+            Extraction(
+                document_id=document.id,
+                field_name="payment_category",
+                value="honoraires",
+                confidence=0.8,
+                source="assisted",
+            ),
+        ]
+    )
+    db.flush()
+
+    facts = document_facts(db, document.id)
+
+    assert facts.step("full_text").source == "document"
+    assert facts.step("payment_category").confidence == 0.8
+    assert facts.step("supplier_tax_id") == TraceStep(
+        fact="supplier_tax_id",
+        source="model",
+        value=None,
+        confidence=None,
+        threshold=FIELD_CONFIDENCE_THRESHOLD,
+    )
 
 
 def test_evaluate_rejects_a_rule_that_returns_the_wrong_type(db: Session) -> None:

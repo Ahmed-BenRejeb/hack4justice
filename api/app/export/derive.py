@@ -3,11 +3,11 @@
 Pure projection, no new table: app/rules/service.py:evaluate_all_rules()
 already reads only Extraction rows, so a stored certificate would be
 invisible to every rule and would only ever serve this one projection
-(docs/decision-log.md D-029). Nothing here is computed that was not read:
+(docs/decision-log.md D-043). Nothing here is computed that was not read:
 a field the extraction pipeline could not read stays null, never
 calculated from other fields (the withholding-base question is an
 unresolved citation, see rules/CLAUDE.md equivalent note in
-docs/decision-log.md D-030). The officer supplies whatever is null
+docs/decision-log.md D-044). The officer supplies whatever is null
 (D-008: the officer decides and is responsible; this only saves retyping
 what the document already states).
 """
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Citation, Document, Extraction, Finding, Rule
 
-# The registered rule whose decided_code is a TEJ operation code (D-029, D-030).
+# The registered rule whose decided_code is a TEJ operation code (D-043, D-044).
 CODE_PROPOSAL_RULE_CODE = "CIRPPIS-ART52-I-A-CODE"
 
 

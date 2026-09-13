@@ -5,6 +5,7 @@ decision itself is always this deterministic dispatch, never the model.
 """
 
 import importlib
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Literal
 from uuid import UUID
@@ -29,6 +30,40 @@ class TraceStep:
     threshold: float | None = None
 
 
+class Facts(dict[str, str]):
+    """Fact values by name, remembering which facts the model supplies (J1, D-046).
+
+    Rules read it as the plain dict of values it is; `step()` turns one fact
+    into its trace step, so a model-supplied fact is always traced with its
+    confidence and the threshold extraction applied, and no rule restates
+    where a fact came from.
+    """
+
+    def __init__(
+        self,
+        values: Mapping[str, str] | None = None,
+        model_confidences: Mapping[str, float | None] | None = None,
+        threshold: float | None = None,
+    ) -> None:
+        super().__init__(values or {})
+        # Every fact the model is asked for: its confidence, or None when it was not established.
+        self.model_confidences = dict(model_confidences or {})
+        self.threshold = threshold
+
+    def step(self, name: str) -> TraceStep:
+        """The trace step for one fact: its value (None when absent) and where it came from."""
+        value = self.get(name) or None
+        if name in self.model_confidences:
+            return TraceStep(
+                fact=name,
+                source="model",
+                value=value,
+                confidence=self.model_confidences[name],
+                threshold=self.threshold,
+            )
+        return TraceStep(fact=name, source="document", value=value)
+
+
 @dataclass(frozen=True)
 class Decision:
     code: str
@@ -50,9 +85,7 @@ def _load_logic(logic_ref: str):
     return getattr(module, function_name)
 
 
-def evaluate(
-    db: Session, document_id: UUID, rule: Rule, facts: dict[str, str]
-) -> Finding:
+def evaluate(db: Session, document_id: UUID, rule: Rule, facts: Facts) -> Finding:
     """Run rule.logic_ref against facts and record the resulting finding."""
     logic = _load_logic(rule.logic_ref)
     outcome = logic(facts)

@@ -23,7 +23,9 @@ export function describeTraceStep(step: TraceStep): TraceLine {
   else if (typeof step.value === "boolean") value = step.value ? "oui" : "non";
   else value = step.value;
 
-  const origin = [SOURCE_LABELS[step.source]];
+  // A fact the model was asked for but could not establish was requested, not supplied.
+  const source = step.source === "model" && step.value === null ? "demandé au modèle" : SOURCE_LABELS[step.source];
+  const origin = [source];
   if (step.confidence !== null) origin.push(`confiance ${formatConfidence(step.confidence)}`);
   if (step.threshold !== null) origin.push(`seuil ${formatConfidence(step.threshold)}`);
 

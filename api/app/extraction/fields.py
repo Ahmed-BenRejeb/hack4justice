@@ -1,9 +1,12 @@
 """The fixed vocabulary of structured fiscal fields extracted from a document.
 
 One multi-field model call (app/providers/openrouter.py:extract_fields())
-answers every question below from the same OCR'd text, so the amounts stay
-mutually consistent. Each field name mirrors web/lib/labels.ts: a name
-introduced here without a label there breaks the officer's field table.
+answers every question below from the same masked text, so the amounts stay
+mutually consistent. The model sees placeholders instead of identifiers; an
+answer naming a placeholder is read back locally, so identifiers are
+extracted without leaving the workstation (A1, D-046). Each field name mirrors
+web/lib/labels.ts: a name introduced here without a label there breaks the
+officer's field table.
 
 Design law: this module only asks questions and normalises the model's
 literal answers. It never decides whether a fact satisfies a rule; that
@@ -11,12 +14,14 @@ judgement stays in app/rules/ (root CLAUDE.md).
 """
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
+from app.extraction.masking import unmask
 from app.providers.openrouter import AssistedFact, extract_fields
 
-# Same threshold as the two existing assisted rules
-# (app/rules/cirppis_art52_honoraires.py, app/rules/withholding_code_proposal.py).
+# Below this confidence a field is not recorded, so a rule needing it abstains;
+# decision traces show it as the threshold of every model-supplied fact (J1).
 FIELD_CONFIDENCE_THRESHOLD = 0.5
 
 FIELD_QUESTIONS: dict[str, str] = {
@@ -157,10 +162,12 @@ AMOUNT_FIELDS = frozenset(
 NUMERIC_FIELDS = AMOUNT_FIELDS | {"withholding_rate"}
 
 
-def _normalize(field_name: str, fact: AssistedFact) -> ExtractedField | None:
+def _normalize(
+    field_name: str, fact: AssistedFact, originals: Mapping[str, str]
+) -> ExtractedField | None:
     if fact.value is None or fact.confidence < FIELD_CONFIDENCE_THRESHOLD:
         return None
-    value = fact.value.strip()
+    value = unmask(str(fact.value), originals).strip()
     if not value:
         return None
     if field_name in NUMERIC_FIELDS:
@@ -171,19 +178,24 @@ def _normalize(field_name: str, fact: AssistedFact) -> ExtractedField | None:
     return ExtractedField(value=value, confidence=fact.confidence)
 
 
-def extract_document_fields(full_text: str) -> dict[str, ExtractedField]:
-    """Extract every field in FIELD_QUESTIONS from one document's text.
+def extract_document_fields(
+    masked_text: str, originals: Mapping[str, str]
+) -> dict[str, ExtractedField]:
+    """Extract every field in FIELD_QUESTIONS from one document's masked text.
 
-    One live call (extract_fields()); fields below the confidence threshold,
-    or with no answer, are absent from the result entirely, so a rule that
-    needs one abstains naming it, rather than judging a guess.
+    One live call (extract_fields()) that receives the masked text only;
+    `originals` (from app/extraction/masking.py:mask_with_originals()) turns
+    each placeholder in an answer back into its value. Fields below the
+    confidence threshold, or with no answer, are absent from the result
+    entirely, so a rule that needs one abstains naming it, rather than judging
+    a guess.
     """
-    if not full_text.strip():
+    if not masked_text.strip():
         return {}
-    facts = extract_fields(context=full_text, fields=FIELD_QUESTIONS)
+    facts = extract_fields(context=masked_text, fields=FIELD_QUESTIONS)
     result: dict[str, ExtractedField] = {}
     for field_name, fact in facts.items():
-        normalized = _normalize(field_name, fact)
+        normalized = _normalize(field_name, fact, originals)
         if normalized is not None:
             result[field_name] = normalized
     return result

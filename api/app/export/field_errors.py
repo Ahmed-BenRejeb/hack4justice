@@ -111,7 +111,9 @@ def schema_field_errors(errors: list[SchemaError]) -> list[FieldError]:
 def arithmetic_field_errors(certificats: list[Certificat]) -> list[FieldError]:
     """Operations whose amounts do not add up: HT + VAT = TTC, and withheld + net paid = TTC.
 
-    Compared in integer millimes, so there is no rounding tolerance. Rates are
+    An operation reporting no VAT counts it as 0 (D-046). These check the
+    consistency of the values the officer typed; they are not compliance
+    findings. Compared in integer millimes, so there is no rounding tolerance. Rates are
     never recomputed: a withholding rate comes from a cited rule, not arithmetic.
     Certificate totals are summed from the operations by app/export/tej.py, so
     they cannot disagree and are not checked here.
@@ -120,7 +122,7 @@ def arithmetic_field_errors(certificats: list[Certificat]) -> list[FieldError]:
     for certificat_index, certificat in enumerate(certificats):
         for operation_index, operation in enumerate(certificat.operations):
             loc = ("certificats", certificat_index, "operations", operation_index)
-            ht_plus_tva = operation.montant_ht + operation.montant_tva
+            ht_plus_tva = operation.montant_ht + (operation.montant_tva or 0)
             if ht_plus_tva != operation.montant_ttc:
                 errors.append(
                     FieldError(

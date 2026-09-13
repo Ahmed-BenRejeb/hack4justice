@@ -104,34 +104,32 @@ def test_build_and_validate_rejects_a_malformed_matricule_fiscal() -> None:
         )
 
 
-def test_build_and_validate_includes_tva_when_given_and_sums_it_in_the_total() -> None:
-    operation_with_tva = Operation(**{**OPERATION.__dict__, "montant_tva": 190000})
-    certificat = Certificat(
-        beneficiaire=BENEFICIAIRE,
-        date_payement="15/03/2026",
-        reference="CERT-003",
-        operations=[operation_with_tva],
-    )
-
-    xml_bytes = build_and_validate(
-        declarant=DECLARANT,
-        annee_depot="2026",
-        mois_depot="03",
-        certificats=[certificat],
-    )
-
-    assert b"<MontantTVA>190000</MontantTVA>" in xml_bytes
-    assert b"<TotalMontantTVA>190000</TotalMontantTVA>" in xml_bytes
-
-
 def test_build_and_validate_still_validates_without_tva() -> None:
+    without_tva = Operation(
+        **{
+            **OPERATION.__dict__,
+            "taux_tva": None,
+            "montant_tva": None,
+            "montant_ttc": 1000000,
+            "montant_net_servi": 985000,
+        }
+    )
+
     xml_bytes = build_and_validate(
         declarant=DECLARANT,
         annee_depot="2026",
         mois_depot="03",
-        certificats=[CERTIFICAT],
+        certificats=[
+            Certificat(
+                beneficiaire=BENEFICIAIRE,
+                date_payement="15/03/2026",
+                reference="CERT-004",
+                operations=[without_tva],
+            )
+        ],
     )
 
+    assert b"<TauxTVA>" not in xml_bytes
     assert b"<MontantTVA>" not in xml_bytes
     assert b"<TotalMontantTVA>0</TotalMontantTVA>" in xml_bytes
 

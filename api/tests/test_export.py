@@ -179,3 +179,28 @@ def test_operation_codes_come_from_the_real_schema() -> None:
     assert "RS7_000001" in values
     assert len(values) == len(set(values))
     assert all(item["description"] for item in codes)
+
+
+def test_export_without_vat_is_accepted_when_ht_equals_ttc(db: Session) -> None:
+    document = _make_validated_document(db)
+    certificat = VALID_PAYLOAD["certificats"][0]
+    operation = {
+        key: value
+        for key, value in certificat["operations"][0].items()
+        if key not in ("taux_tva", "montant_tva")
+    }
+    payload = {
+        **VALID_PAYLOAD,
+        "certificats": [
+            {
+                **certificat,
+                "operations": [
+                    {**operation, "montant_ttc": 1000000, "montant_net_servi": 985000}
+                ],
+            }
+        ],
+    }
+
+    response = client.post(f"/api/v1/documents/{document.id}/export", json=payload)
+
+    assert response.status_code == 201

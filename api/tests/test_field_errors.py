@@ -99,3 +99,15 @@ def test_arithmetic_names_the_sum_that_fails() -> None:
             "arithmetic.rs_plus_net",
         ),
     ]
+
+
+def test_arithmetic_counts_an_absent_vat_as_zero() -> None:
+    no_vat = replace(OPERATION, taux_tva=None, montant_tva=None)
+    balanced = replace(no_vat, montant_ttc=1000000, montant_net_servi=985000)
+
+    assert arithmetic_field_errors([replace(CERTIFICAT, operations=[balanced])]) == []
+    # HT alone is not TTC once the VAT line is left out.
+    assert [
+        error.type
+        for error in arithmetic_field_errors([replace(CERTIFICAT, operations=[no_vat])])
+    ] == ["arithmetic.ht_plus_tva"]

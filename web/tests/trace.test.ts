@@ -16,18 +16,19 @@ test("describeTraceStep states a document fact as yes or no", () => {
 
 test("describeTraceStep gives a model fact its confidence and the rule's threshold", () => {
   const line = describeTraceStep({
-    fact: "article_52_category",
+    fact: "payment_category",
     source: "model",
     value: "honoraires",
     confidence: 0.86,
     threshold: 0.5,
   });
+  assert.equal(line.label, "Catégorie du paiement");
   assert.equal(line.value, "honoraires");
   assert.match(line.origin, /^fourni par le modèle, confiance 86\s%, seuil 50\s%$/u);
 });
 
-test("describeTraceStep says a fact the rule could not establish is not established", () => {
-  const line = describeTraceStep({ fact: "article_52_category", source: "model", value: null, confidence: 0, threshold: 0.5 });
+test("describeTraceStep says a fact the model could not establish was requested, not supplied", () => {
+  const line = describeTraceStep({ fact: "payment_category", source: "model", value: null, confidence: null, threshold: 0.5 });
   assert.equal(line.value, "non établi");
-  assert.match(line.origin, /confiance 0\s%/u);
+  assert.match(line.origin, /^demandé au modèle, seuil 50\s%$/u);
 });

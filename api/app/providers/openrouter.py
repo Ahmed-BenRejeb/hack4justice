@@ -125,7 +125,10 @@ ASSISTED_FIELDS_SYSTEM_PROMPT = (
     '{"value": string or null, "confidence": number from 0 to 1}. Answer '
     "every field listed, in the same context. Use null and confidence 0 "
     "for any field the context does not state. Never guess: a low-"
-    "confidence answer is worse than admitting the context does not say."
+    "confidence answer is worse than admitting the context does not say. "
+    "Bracketed placeholders such as [MATRICULE_1] stand for masked "
+    "identifiers: when one is the answer, reply with the placeholder exactly "
+    "as written."
 )
 DEFAULT_FIELDS_MAX_TOKENS = 1500
 
@@ -164,6 +167,8 @@ def extract_fields(
         raise OpenRouterError(
             f"model did not return valid JSON: {content!r}"
         ) from error
+    if not isinstance(parsed, dict):
+        raise OpenRouterError(f"model did not return a JSON object: {content!r}")
 
     result: dict[str, AssistedFact] = {}
     for name in fields:

@@ -1,6 +1,11 @@
 """Masking before provider calls (A1): each identifier kind, stable placeholders, known names, and what stays."""
 
-from app.extraction.masking import mask, unmasked_identifiers
+from app.extraction.masking import (
+    mask,
+    mask_with_originals,
+    unmask,
+    unmasked_identifiers,
+)
 
 
 def test_fixed_format_identifiers_are_replaced_by_kind() -> None:
@@ -42,6 +47,23 @@ def test_amounts_dates_and_invoice_numbers_are_left_readable() -> None:
 
     assert mask(text) == text
     assert unmasked_identifiers(text) == []
+
+
+def test_originals_read_a_model_answer_back_in_memory() -> None:
+    masked, originals = mask_with_originals(
+        "Atelier Ben Salah, MF 1234567A/A/M/000", known_names=["atelier ben salah"]
+    )
+
+    assert masked == "[NOM_1], MF [MATRICULE_1]"
+    # Each value as first written in the document, not as the known name was spelled.
+    assert originals == {
+        "[NOM_1]": "Atelier Ben Salah",
+        "[MATRICULE_1]": "1234567A/A/M/000",
+    }
+    assert (
+        unmask("Fournisseur [NOM_1] ([MATRICULE_1]), [EMAIL_9]", originals)
+        == "Fournisseur Atelier Ben Salah (1234567A/A/M/000), [EMAIL_9]"
+    )
 
 
 def test_unmasked_identifiers_names_each_kind_left_in_the_text() -> None:
