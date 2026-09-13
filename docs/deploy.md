@@ -71,21 +71,24 @@ terraform -chdir=deploy/terraform output -raw site_url
 # https://3-120-45-6.sslip.io
 ```
 
-Then, on the instance:
+Then, on the instance. `sudo` resets the environment by default (Ubuntu's
+stock sudoers), so a plain `export` before it is invisible to the sudo'd
+process: set the variable on the `sudo` command itself, every time, rather
+than exporting it first.
 
 ```bash
 ssh ubuntu@<public_ip>
 cd /opt/chahed/app
-export SITE_ADDRESS=3-120-45-6.sslip.io   # paste your value, no scheme
+export SITE_ADDRESS=3-120-45-6.sslip.io   # paste your value, no scheme; kept for reference below
 
-sudo docker compose -f deploy/docker-compose.prod.yml up -d --build
+sudo SITE_ADDRESS=$SITE_ADDRESS docker compose -f deploy/docker-compose.prod.yml up -d --build
 ```
 
 The first build takes 15-25 minutes: the API image installs `torch` and
 downloads the embedding model at build time. Watch it with:
 
 ```bash
-sudo docker compose -f deploy/docker-compose.prod.yml logs -f
+sudo SITE_ADDRESS=$SITE_ADDRESS docker compose -f deploy/docker-compose.prod.yml logs -f
 ```
 
 Caddy requests its Let's Encrypt certificate on first request to port 80;
@@ -106,27 +109,54 @@ Then open `<site_url>` in a browser and walk the demo path end to end.
 `POST /documents` pipeline (not a DB insert), so it needs a working API,
 loaded rules, and a real `OPENROUTER_API_KEY` already in `api/.env` on the
 instance (it reads that key through the running API, not from the local
-machine). Run it from your own machine against the deployed API, since it is
-a developer script with its own Python deps, not part of either container.
+machine).
 
-Every call is signed in (D-054). Pick a strong demo password, never written to
-the repository since the site is public, and create the officer account on the
-instance first, entering that password at the prompt:
+**Run it from the instance, inside the compose network, not against the
+public `site_url`.** `caddy` only reverse-proxies to `web` (`Caddyfile`), and
+`web/app/api/v1/[...path]/route.ts` derives the bearer header it forwards
+to the API from its own session cookie, discarding any `Authorization`
+header the caller already sent (D-054): a script setting its own bearer
+token against the public URL gets `401 {"detail": "not signed in"}` on
+every call past sign-up/sign-in, since sign-up and sign-in are the only two
+routes that need no existing session to answer. This is the same
+architecture as a real browser session, not a bug to route around by
+opening the API container's port. Run the script as a one-off container on
+the compose network instead, reaching `api` directly by its internal
+hostname:
 
 ```bash
-docker compose -f deploy/docker-compose.prod.yml exec api \
+ssh ubuntu@<public_ip>
+cd /opt/chahed/app
+export SITE_ADDRESS=3-120-45-6.sslip.io   # paste your value, no scheme; kept for reference below
+```
+
+Pick a strong demo password, never written to the repository since the site
+is public, and create the officer account first, entering that password at
+the prompt (`sudo` needs `SITE_ADDRESS` passed on its own command line here
+too, same reason as step 3):
+
+```bash
+sudo SITE_ADDRESS=$SITE_ADDRESS docker compose -f deploy/docker-compose.prod.yml exec api \
   uv run python -m app.auth.create_user officer@dgi.tn officer
 ```
 
-The script signs the two MSME owners up with the same password:
+Then run the seed script itself as a throwaway container, with the repo's
+own `seed/` and `fixtures/` mounted in (the `api` image does not bundle
+either, per `api/Dockerfile`) and `CHAHED_API_BASE_URL` pointed at `api`'s
+internal address, not the public one:
 
 ```bash
-CHAHED_API_BASE_URL=https://<site_url>/api/v1 CHAHED_DEMO_PASSWORD='<password>' \
-  api/.venv/bin/python seed/seed_demo_data.py
+sudo SITE_ADDRESS=$SITE_ADDRESS docker compose -f deploy/docker-compose.prod.yml run --rm \
+  -v /opt/chahed/app/seed:/seed:ro \
+  -v /opt/chahed/app/fixtures:/fixtures:ro \
+  -e CHAHED_API_BASE_URL=http://api:8000/api/v1 \
+  -e CHAHED_DEMO_PASSWORD='<password>' \
+  api uv run --no-dev python /seed/seed_demo_data.py
 ```
 
 If `fixtures/hero/*.pdf` are missing, generate them first with
-`seed/generate_fixtures.py` (see that file's docstring).
+`seed/generate_fixtures.py` (see that file's docstring), then rsync again
+before this step.
 
 ## 5. Teardown
 

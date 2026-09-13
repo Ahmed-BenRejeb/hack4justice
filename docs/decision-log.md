@@ -970,6 +970,21 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 
 **Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Merged after D-054 (sign-in): the new pages endpoints are gated the same way as the sibling document endpoints (`readable_document`), and the browser's plain `<img>` still works unauthenticated-looking, since the Next.js proxy attaches the session's bearer token server-side before forwarding, the same as every other call.
 
+## D-056 - Live AWS deploy: two runbook bugs found and fixed, real end to end
+
+**Date:** 2026-09-13
+
+**Decision:** Actually ran `docs/deploy.md` for the first time end to end (`terraform apply`, rsync, `docker compose up`, seed) rather than only reasoning about it, and fixed the two real bugs it surfaced instead of working around them by hand each time.
+
+**Options considered:**
+- Route `/api/v1/*` at Caddy directly to `api`, bypassing `web`'s proxy, so a bearer-token script works against the public URL like the doc originally claimed.
+- Keep the proxy as the one path for `/api/v1/*` (browser and script alike), and run the seed script inside the compose network instead (chosen).
+- Leave the plain `export SITE_ADDRESS=...; sudo docker compose ...` sequence in the doc and rely on operators discovering the fix themselves.
+
+**Why:** Routing `/api/v1/*` straight to `api` would leave the browser's own calls broken: `web/app/api/v1/[...path]/route.ts` is what turns the session cookie into the bearer header the API requires (D-054), and FastAPI's `readable_document`/`current_user` never look at a cookie. Bypassing the proxy for the whole prefix fixes a script at the cost of the actual product. `docker-compose.prod.yml`'s own comment ("Only Caddy is reachable from outside the instance") already says the right place to reach `api` directly is inside the compose network, not from outside it; the seed script just needed to run there. Separately, `sudo` resets the environment under Ubuntu's stock sudoers, so `export SITE_ADDRESS=...` followed by a plain `sudo docker compose ...` on the next line silently loses the variable - every command against `docker-compose.prod.yml` needs it, since Compose interpolates the whole file (including `caddy`'s required-variable declaration) before running any subcommand, `ps` and `logs` included, not only `up`.
+
+**Result:** Found live, both blocking a first real launch: `docker compose ... up -d --build` failed with "required variable SITE_ADDRESS is missing a value" until reissued as `sudo SITE_ADDRESS=$SITE_ADDRESS docker compose ...`; the seed script failed with `401 {"detail": "not signed in"}` against the public `site_url` until run as `docker compose -f deploy/docker-compose.prod.yml run --rm -v .../seed:/seed:ro -v .../fixtures:/fixtures:ro -e CHAHED_API_BASE_URL=http://api:8000/api/v1 ... api uv run python /seed/seed_demo_data.py`, reaching `api` by its internal compose hostname with the repo's `seed/`/`fixtures/` bind-mounted in (the `api` image does not bundle either, `api/Dockerfile`). `docs/deploy.md` rewritten at both points. Verified for real: the AWS account initially refused any non-free-tier instance type until upgraded mid-session, then `c6i.xlarge` provisioned cleanly in `eu-central-1`, `https://<sslip.io host>/api/v1/health` answering over a real Let's Encrypt certificate, and the five hero documents seeded and decided through the live instance.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1014,3 +1029,4 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
 | 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
 | 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |
+| 2026-09-13 | team | Added D-056: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |
