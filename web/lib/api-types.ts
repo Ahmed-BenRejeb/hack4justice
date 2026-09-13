@@ -9,6 +9,14 @@
 /** Whether a field was read from the document, or supplied by the model with a confidence for an assisted rule. */
 export type ExtractionSource = "extracted" | "assisted";
 
+/** A field's outline on its page (J3), in that page's own pixel space (see DocumentPage). */
+export interface BBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 /** One field pulled from an uploaded document. Today the backend records a single `full_text` field. */
 export interface Extraction {
   id: string;
@@ -17,6 +25,17 @@ export interface Extraction {
   /** Between 0 and 1. */
   confidence: number;
   source: ExtractionSource;
+  /** Where this field was found; null for full_text/masked_text and for a field found nowhere on the page. */
+  page: number | null;
+  bbox: BBox | null;
+}
+
+/** One rendered document page (GET /documents/{id}/pages), the pixel size every Extraction.bbox on it agrees with. */
+export interface DocumentPage {
+  page: number;
+  width: number;
+  height: number;
+  image_url: string;
 }
 
 /** An organisation documents are filed for (GET /organisations). */

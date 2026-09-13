@@ -9,6 +9,7 @@ import type {
   ConfirmFactInput,
   CorpusSourceSummary,
   DocumentDetail,
+  DocumentPage,
   DocumentSummary,
   Finding,
   Measurement,
@@ -119,6 +120,11 @@ export const api = {
   /** GET /documents/{id}/findings: findings with their rule code and citation resolved. */
   getFindings(id: string, signal?: AbortSignal): Promise<Finding[]> {
     return request(`${documentPath(id)}/findings`, { signal });
+  },
+
+  /** GET /documents/{id}/pages: the document's rendered pages, for the source viewer (J3). */
+  getDocumentPages(id: string, signal?: AbortSignal): Promise<DocumentPage[]> {
+    return request(`${documentPath(id)}/pages`, { signal });
   },
 
   /** GET /officer/queue: extracted files awaiting an officer decision. */

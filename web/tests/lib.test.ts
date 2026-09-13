@@ -58,7 +58,15 @@ test("labels fall back to a readable identifier, including prototype property na
 });
 
 test("pipelineProgress reads stage outputs, failures and flags", () => {
-  const extraction = { id: "x1", field_name: "full_text", value: "texte", confidence: 1, source: "extracted" as const };
+  const extraction = {
+    id: "x1",
+    field_name: "full_text",
+    value: "texte",
+    confidence: 1,
+    source: "extracted" as const,
+    page: null,
+    bbox: null,
+  };
   const decision = (action: OfficerDecision["action"]): OfficerDecision => ({
     id: "d1",
     document_id: "doc",
