@@ -12,6 +12,10 @@ EMBEDDING_DIMENSIONS_DEFAULT = 384
 SCHEMAS_DIR_DEFAULT = "../schemas"
 RULES_DIR_DEFAULT = "../rules"
 CORPUS_SOURCES_DIR_DEFAULT = "../corpus/sources"
+# Size guard for corpus chunks, in embedding-model tokens: a paragraph above it
+# is split by sentence, leaving room for its heading path under a 512-token
+# model limit (docs/feature-research.md section 5.3).
+CORPUS_CHUNK_MAX_TOKENS = 450
 
 
 def _require(name: str) -> str:

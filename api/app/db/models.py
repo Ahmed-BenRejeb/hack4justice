@@ -8,7 +8,16 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -76,15 +85,52 @@ class Extraction(Base):
     )
 
 
+class CorpusSource(Base):
+    """An official document the corpus is indexed from, with the provenance shown next to its text."""
+
+    __tablename__ = "corpus_source"
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    edition: Mapped[str] = mapped_column(String(50), nullable=False)
+    publisher: Mapped[str] = mapped_column(String(255), nullable=False)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    language: Mapped[str] = mapped_column(String(10), nullable=False)
+    page_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    loaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class CorpusChunk(Base):
-    """Article-level legal text, chunked and embedded."""
+    """Paragraph- or item-level legal text, embedded, with its position in the source."""
 
     __tablename__ = "corpus_chunk"
+    # Re-indexing a source updates chunks in place, so chunk ids stay stable.
+    __table_args__ = (
+        UniqueConstraint(
+            "source_id",
+            "article_ref",
+            "paragraph_ref",
+            "char_start",
+            name="uq_corpus_chunk_position",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    source_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_id: Mapped[str] = mapped_column(
+        String(255), ForeignKey("corpus_source.id"), nullable=False
+    )
     article_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    paragraph_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    heading_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    page: Mapped[int] = mapped_column(Integer, nullable=False)
+    char_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    char_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    token_count: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     embedding: Mapped[list[float]] = mapped_column(
         Vector(settings.embedding_dimensions), nullable=True
     )

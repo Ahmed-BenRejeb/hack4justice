@@ -19,6 +19,11 @@ def _model() -> SentenceTransformer:
     return SentenceTransformer(MODEL_NAME)
 
 
+def count_tokens(text: str) -> int:
+    """How many tokens the embedding model reads for this text, special tokens excluded."""
+    return len(_model().tokenizer(text, add_special_tokens=False)["input_ids"])
+
+
 def embed(texts: list[str]) -> list[list[float]]:
     """Embed a batch of texts. Vector length matches app.config's embedding_dimensions."""
     vectors = _model().encode(texts, normalize_embeddings=True)
