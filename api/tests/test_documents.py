@@ -140,26 +140,29 @@ def test_upload_extracts_structured_fiscal_fields_from_the_masked_text(
     assert supplier_tax_id[0]["bbox"] is not None
 
 
-def test_document_pages_are_rendered_and_served(db: Session) -> None:
+def test_document_pages_are_rendered_and_served(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     pdf_bytes = make_born_digital_pdf("Facture pour verifier le rendu de page.")
 
     upload = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
     )
     document_id = upload.json()["id"]
 
-    pages = client.get(f"/api/v1/documents/{document_id}/pages").json()
+    pages = client.get(
+        f"/api/v1/documents/{document_id}/pages", headers=headers
+    ).json()
     assert len(pages) == 1
     assert pages[0]["page"] == 1
     assert pages[0]["width"] > 0 and pages[0]["height"] > 0
 
-    image = client.get(pages[0]["image_url"])
+    image = client.get(pages[0]["image_url"], headers=headers)
     assert image.status_code == 200
     assert image.headers["content-type"] == "image/png"
     assert image.content.startswith(b"\x89PNG")
