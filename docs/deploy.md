@@ -107,10 +107,21 @@ Then open `<site_url>` in a browser and walk the demo path end to end.
 loaded rules, and a real `OPENROUTER_API_KEY` already in `api/.env` on the
 instance (it reads that key through the running API, not from the local
 machine). Run it from your own machine against the deployed API, since it is
-a developer script with its own Python deps, not part of either container:
+a developer script with its own Python deps, not part of either container.
+
+Every call is signed in (D-053). Pick a strong demo password, never written to
+the repository since the site is public, and create the officer account on the
+instance first, entering that password at the prompt:
 
 ```bash
-CHAHED_API_BASE_URL=https://<site_url>/api/v1 \
+docker compose -f deploy/docker-compose.prod.yml exec api \
+  uv run python -m app.auth.create_user officer@dgi.tn officer
+```
+
+The script signs the two MSME owners up with the same password:
+
+```bash
+CHAHED_API_BASE_URL=https://<site_url>/api/v1 CHAHED_DEMO_PASSWORD='<password>' \
   api/.venv/bin/python seed/seed_demo_data.py
 ```
 

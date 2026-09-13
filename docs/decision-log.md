@@ -922,6 +922,22 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** With the corpus register nearly empty of verified entries (1 of 78 chunks today), the reader's 404 branch reads as "ce passage n'est pas encore vérifié" rather than a generic error (D-029's binding constraint, made calm rather than alarming per the plan's explicit instruction); `related-passages.tsx` renders nothing while loading, on error, or with zero hits, so it never flashes into view only to disappear. `docs/design.md` section 7 gains the two new routes; `web/CLAUDE.md` and the root `CLAUDE.md` repository map record `components/corpus/` and `components/admin/`.
 
+## D-053 - Sign-in: database sessions, four roles, organisation-scoped files
+
+**Date:** 2026-09-13
+
+**Decision:** Build A3's first step on both processes. Accounts carry one role (`msme`, `accountant`, `officer`, `admin`); sessions are opaque random tokens whose SHA-256 is stored in `user_session`, passwords are hashed with the standard library's scrypt. Every route except health, sign-up and sign-in requires a session and is gated by role; a document is read only by an officer or a member of its organisation (404 otherwise, like a missing one); `uploaded_by`, `officer_id` and `confirmed_by` are taken from the session, no longer from the request. MSME owners sign up themselves, which creates their organisation; officer, admin and accountant accounts are created with `python -m app.auth.create_user`, an accountant granted each organisation by matricule fiscal. The web app signs in through server actions that keep the token in an HttpOnly cookie, the proxy forwards it as a bearer token, and route-group layouts send each role to its own space. The sign-in and sign-up screens are the shadcn `login-03` block (shadcn's own registry, not a third-party block library, so D-050 holds).
+
+**Options considered:**
+- Database sessions with stdlib scrypt (chosen), stateless JWT (a new secret and dependency, and a token cannot be revoked before it expires), or auth in Next.js only (the backend would stay open to anyone calling it directly).
+- MSME self sign-up (chosen) or seeded accounts only.
+- An accountant role with per-organisation membership now (chosen), or deferring it to A4.
+- The `login-03` block (chosen), `login-01`, or composing Card and Field primitives.
+
+**Why:** The backend is the trust boundary: identity fields were typed by the client and the demo deploy is reachable from the internet (D-051). Database sessions make sign-out real and need no new dependency. Self sign-up replaces the organisation picker's create path, which existed only because there was no sign-in (D-024).
+
+**Result:** Migration `e6b1c9d4a7f2` adds `app_user`, `organisation_member` and `user_session`; `/auth/signup`, `/auth/login`, `/auth/logout` and `/auth/me` are added and `/organisations` is removed. `OFFICER_ID` leaves `web/.env`. `seed/seed_demo_data.py` signs every call in: it needs `CHAHED_DEMO_PASSWORD` and an officer account created first. Verified end to end against a running stack: role redirects, the proxy's 401/403, sign-in, sign-up and sign-out through the server actions, and uploads and decisions recording the signed-in user. Not built: a delegation the MSME grants and revokes itself (A4), DigiGo and Mobile ID, password reset, login rate limiting, purging expired sessions. Sign-up does not prove the person runs the organisation they name; that needs a verified identity.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -964,3 +980,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-050: front end stays on shadcn, Tremor for charts only, no block library; front-end plan added |
 | 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
 | 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
+| 2026-09-13 | team | Added D-053: sign-in with database sessions, four roles, organisation-scoped files |
