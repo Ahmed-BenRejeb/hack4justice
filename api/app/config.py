@@ -27,6 +27,8 @@ CORPUS_TEXT_SEARCH_CONFIG = "chahed_french"
 RETRIEVAL_CANDIDATES = 20
 RRF_K = 60
 RETRIEVAL_MIN_SIMILARITY = 0.4
+# Full-text query terms shorter than this are dropped (D-037).
+TEXT_QUERY_MIN_LEXEME_CHARS = 3
 # Retrieval evaluation (docs/feature-research.md section 5.8): recall@5 on the
 # question set people wrote must reach the target before related texts and
 # legal search ship to the UI. 0.9 is the plan's proposal until the team fixes one.
