@@ -40,6 +40,9 @@ EVAL_QUESTIONS_PATH = "../corpus/eval/questions.json"
 SESSION_TTL_HOURS = 12
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 256
+# Phone capture (G3, D-056). A capture link a laptop shows as a QR code stops
+# working this long after it was made, or once one document is filed through it.
+CAPTURE_LINK_TTL_MINUTES = 10
 
 
 def _require(name: str) -> str:

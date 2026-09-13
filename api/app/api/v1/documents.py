@@ -63,21 +63,14 @@ class DocumentDetailOut(DocumentOut):
     export: ExportOut | None
 
 
-@router.post("", response_model=DocumentOut, status_code=201)
-async def upload_document(
-    file: list[UploadFile],
-    organisation_id: uuid.UUID,
-    user: User = Depends(require_filer),
-    db: Session = Depends(get_db),
+async def file_document(
+    db: Session, organisation_id: uuid.UUID, uploaded_by: str, file: list[UploadFile]
 ) -> Document:
-    """Store a file the signed-in user files for one of their organisations, and run extraction on it.
+    """Store an upload as one document, read it and apply the rules; the caller commits.
 
     Several `file` parts are the photographed pages of one paper document (G3):
     they are stored and read as one PDF, named after the first photo.
     """
-    if not member_of(user, organisation_id):
-        raise HTTPException(status_code=404, detail="organisation not found")
-
     # Keep the base name only: some clients send a path, and the name is shown to people.
     filename = Path(file[0].filename or "document").name
     if len(file) == 1:
@@ -94,7 +87,7 @@ async def upload_document(
 
     document = Document(
         organisation_id=organisation_id,
-        uploaded_by=user.email,
+        uploaded_by=uploaded_by,
         filename=filename,
         storage_ref=storage_ref,
         status="uploaded",
@@ -105,7 +98,20 @@ async def upload_document(
     run_extraction(db, document, content, content_type)
     if document.status == "extracted":
         evaluate_all_rules(db, document.id)
+    return document
 
+
+@router.post("", response_model=DocumentOut, status_code=201)
+async def upload_document(
+    file: list[UploadFile],
+    organisation_id: uuid.UUID,
+    user: User = Depends(require_filer),
+    db: Session = Depends(get_db),
+) -> Document:
+    """Store a file the signed-in user files for one of their organisations, and run extraction on it."""
+    if not member_of(user, organisation_id):
+        raise HTTPException(status_code=404, detail="organisation not found")
+    document = await file_document(db, organisation_id, user.email, file)
     db.commit()
     db.refresh(document)
     return document

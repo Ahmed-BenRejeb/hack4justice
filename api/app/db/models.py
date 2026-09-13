@@ -131,6 +131,37 @@ class Document(Base):
     organisation: Mapped["Organisation"] = relationship()
 
 
+class CaptureLink(Base):
+    """A short-lived link a phone opens to file one document for the user who made it (G3).
+
+    Only the token's SHA-256 is stored. `document_id` is set when a document is
+    filed through the link, which tells the laptop it arrived and ends the link.
+    """
+
+    __tablename__ = "capture_link"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id"), nullable=False
+    )
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organisation.id"), nullable=False
+    )
+    token_sha256: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("document.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    user: Mapped["User"] = relationship()
+    organisation: Mapped["Organisation"] = relationship()
+
+
 class Extraction(Base):
     """One structured field pulled from a document."""
 

@@ -3,7 +3,8 @@
 Every route except health, sign-up and sign-in depends on one of these. A
 request without a valid session answers 401, a role that may not use the route
 403, and a document outside the user's organisations 404, exactly like a
-missing one, so a filer cannot learn which document ids exist elsewhere.
+missing one, so a filer cannot learn which document ids exist elsewhere. The
+phone capture routes take a capture link in place of a session (G3, D-056).
 """
 
 import uuid
@@ -13,8 +14,9 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.auth.capture import usable_capture_link
 from app.auth.service import FILER_ROLES, session_user
-from app.db.models import Document, User
+from app.db.models import CaptureLink, Document, User
 from app.db.session import get_db
 
 bearer = HTTPBearer(auto_error=False)
@@ -72,3 +74,20 @@ def readable_document(
     ):
         raise HTTPException(status_code=404, detail="document not found")
     return document
+
+
+def _capture_link_gate(*, lock: bool) -> Callable[..., CaptureLink]:
+    def dependency(token: str, db: Session = Depends(get_db)) -> CaptureLink:
+        link = usable_capture_link(db, token, lock=lock)
+        # A maker who no longer files for the organisation cannot file through an older link either.
+        if link is None or not member_of(link.user, link.organisation_id):
+            raise HTTPException(status_code=404, detail="capture link not found")
+        return link
+
+    return dependency
+
+
+# The path's capture link while it is unexpired and unused; 404 otherwise, like a missing one.
+readable_capture_link = _capture_link_gate(lock=False)
+# The same, its row locked until the upload commits, so one link files one document.
+capture_link_for_upload = _capture_link_gate(lock=True)

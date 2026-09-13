@@ -92,7 +92,8 @@ def authenticate(db: Session, email: str, password: str) -> User | None:
     return user
 
 
-def _digest(token: str) -> str:
+def digest_token(token: str) -> str:
+    """The SHA-256 a session or capture link token is stored as."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
@@ -100,7 +101,7 @@ def open_session(db: Session, user: User) -> tuple[str, UserSession]:
     """Start a session for `user`; returns the token, which is not stored, and the session row."""
     token = secrets.token_urlsafe(32)
     session = UserSession(
-        token_sha256=_digest(token),
+        token_sha256=digest_token(token),
         user_id=user.id,
         expires_at=datetime.now(UTC) + timedelta(hours=SESSION_TTL_HOURS),
     )
@@ -115,7 +116,7 @@ def session_user(db: Session, token: str) -> User | None:
     session = (
         db.query(UserSession)
         .filter(
-            UserSession.token_sha256 == _digest(token),
+            UserSession.token_sha256 == digest_token(token),
             UserSession.expires_at > datetime.now(UTC),
         )
         .one_or_none()
@@ -125,4 +126,4 @@ def session_user(db: Session, token: str) -> User | None:
 
 def close_session(db: Session, token: str) -> None:
     """End the session with this token, if any."""
-    db.query(UserSession).filter_by(token_sha256=_digest(token)).delete()
+    db.query(UserSession).filter_by(token_sha256=digest_token(token)).delete()
