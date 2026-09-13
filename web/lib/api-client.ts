@@ -5,9 +5,12 @@
  * so the backend origin is configured once on the server and never reaches the browser.
  */
 import type {
+  AnswerableFacts,
+  ConfirmFactInput,
   DocumentDetail,
   DocumentSummary,
   Finding,
+  Measurement,
   OfficerDecision,
   OfficerDecisionInput,
   OperationCode,
@@ -15,6 +18,7 @@ import type {
   OrganisationInput,
   QueueItem,
   Rule,
+  SupplierFact,
   TejExport,
   TejExportDraft,
   TejExportRequest,
@@ -133,9 +137,24 @@ export const api = {
     return request(`${documentPath(id)}/export-draft`, { signal });
   },
 
+  /** GET /documents/{id}/answerable-facts: the supplier facts a person may confirm here (J4). */
+  getAnswerableFacts(id: string, signal?: AbortSignal): Promise<AnswerableFacts> {
+    return request(`${documentPath(id)}/answerable-facts`, { signal });
+  },
+
+  /** POST /documents/{id}/supplier-facts: records the answer and re-runs the document's rules. */
+  confirmSupplierFact(id: string, body: ConfirmFactInput): Promise<SupplierFact> {
+    return postJson(`${documentPath(id)}/supplier-facts`, body);
+  },
+
   /** POST /documents/{id}/export: builds the TEJ XML and validates it against the XSD. */
   exportDocument(id: string, body: TejExportRequest): Promise<TejExport> {
     return postJson(`${documentPath(id)}/export`, body);
+  },
+
+  /** GET /impact: counts from this deployment's own data, with the benefit derived from them. */
+  getImpact(signal?: AbortSignal): Promise<Measurement> {
+    return request("/impact", { signal });
   },
 
   /** GET /rules: the rule registry. */

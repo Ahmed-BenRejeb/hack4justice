@@ -18,6 +18,7 @@ const timeFormat = new Intl.DateTimeFormat(LOCALE, {
   timeZone: TIME_ZONE,
   hourCycle: "h23",
 });
+const dateFormat = new Intl.DateTimeFormat(LOCALE, { dateStyle: "short", timeZone: TIME_ZONE });
 const percentFormat = new Intl.NumberFormat(LOCALE, { style: "percent", maximumFractionDigits: 0 });
 
 const SIZE_UNITS = ["o", "Ko", "Mo", "Go"];
@@ -31,6 +32,12 @@ export function formatDateTime(iso: string): string {
 /** Formats a time of day, used for "last refreshed" indicators. */
 export function formatTime(date: Date): string {
   return timeFormat.format(date);
+}
+
+/** Formats a calendar date (ISO "2026-09-13"), for a confirmation or an expiry with no time of day. */
+export function formatDate(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : dateFormat.format(date);
 }
 
 /** Formats a 0-1 confidence as a whole percentage. */

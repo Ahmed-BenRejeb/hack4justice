@@ -841,6 +841,37 @@ A prior team project (`Backend-Dashboard-RH-Treso-24-25`, a NestJS/TypeORM treas
 **Why:** `CIRPPIS-ART52-I-A` and `CIRPPIS-ART52-I-A-CODE` both abstain naming `payment_category` when that fact is absent, from the same Article 52 citation; `CIRPPIS-ART55-I-CONTENU` and `CIRPPIS-ART55-I-NET` do the same for `amount_net_paid` from Article 55. Both pairs answer genuinely different questions (mention vs. code family; completeness vs. arithmetic) and each carries its own verified citation, so merging the rules themselves would blur two distinct compliance questions into one and is not a call to make without the citation review the root CLAUDE.md requires. Left as one card per finding, the two abstentions read as the same constat shown twice, which is what an officer flagged as a duplication bug. Grouping by visible outcome fixes the reading without touching rule logic, the registry, or the `Finding`/`Citation` tables.
 
 **Result:** `web/lib/findings.ts:groupFindings()` groups by `(status, missing_fact, decided_code, citation.article_ref, citation.verbatim_text)`; `FindingCard` takes a group and lists every contributing `rule_code`, rendering each finding's own `DecisionTrace` underneath one shared citation. The "Règles appliquées" tally in the result banner still counts every finding, ungrouped.
+## D-047 - Abstentions are answered against the supplier, and the rule re-decides
+
+**Date:** 2026-09-13
+
+**Decision:** J4, with B3 and B4. An abstention that names a supplier property becomes a question a person answers. `supplier_fact` (migration `d8f3b0c65e41`) stores the answer per organisation, supplier matricule and fact name, with who confirmed it, when, and an optional `valid_until`. `POST /documents/{id}/supplier-facts` records it and re-runs the document's rules; `GET /documents/{id}/answerable-facts` says what may be answered here. A confirmed fact overrides the model's answer, and `TraceStep.source` gains `person`, so the trace reads "confirmé par [nom] le [date]" (the source D-039 left for J4). The answer is kept against the supplier, so their next file does not ask again (J11).
+
+Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. The accepted values live in `app/supplier/facts.py`; the French question and its answer labels live in `web/lib/labels.ts`, keeping interface copy out of the backend (D-039).
+
+**Options considered:**
+- Storage: a supplier-scoped table (chosen); `extraction` rows with a `person` source, which is document-scoped; both at once.
+- Answerable facts: supplier properties only (chosen); any missing fact, including the transaction's category.
+- Re-evaluation: replace the document's findings (chosen); keep the abstention beside the new decision; version the findings.
+- "Je ne sais pas": records nothing (chosen); records an explicit unknown.
+
+**Why:** Chosen by the user for the storage question. A fiscal regime is a property of the supplier, not of one invoice, so keeping it against the supplier is both what B3 describes and what makes J11 possible; an `extraction` row would die with its document. The category is deliberately not answerable: one supplier invoices several categories, so remembering it against them would be wrong. Findings are replaced because a finding states the current outcome for its rule, and showing an abstention next to the decision that replaced it would say the rule reached both; the history belongs to the audit trail (A2), not built yet. An unknown is not a fact, so recording one would be the guess the design law forbids.
+
+**Result:** Verified end to end against a live server: an honoraires invoice abstains on the regime, answering it live turns the finding into `RS2_000002` with a three-step trace ending in the person's confirmation, and a second invoice from the same supplier never abstains. Answering needs an identified supplier: without one the endpoint answers 409 and the screen says why, since the answer would have nothing to attach to. Attestation upload is not built; `valid_until` is recorded and an expired fact stops applying.
+
+## D-048 - Rules declare which of their outcomes report an error, and the panel counts them
+
+**Date:** 2026-09-13
+
+**Decision:** J9. `GET /impact` returns counts computed from this database (files, decided and abstained findings, errors intercepted per rule, abstentions by missing fact, facts confirmed by people) and the D-016 benefit calculation derived from them. Each rule definition may declare `error_codes`, the decided codes that report a problem found (`rule.error_codes`, migration `f2a7d4e88b13`); three rules declare one, and the two that only propose or confirm declare none. The officer screen `/agent/mesures` shows the counts, then the calculation written out with each input labelled.
+
+**Options considered:**
+- Identifying an intercepted error: the rule declares its error codes (chosen); a naming convention over code names; a central mapping outside the rules.
+- The benefit inputs: documented constants returned with a `basis` of "estimate" (chosen); omit the hours figure; read them from the environment.
+
+**Why:** Only the rule's author knows which of its outcomes means a problem was found: `ART52_WITHHOLDING_PRESENT` and `ART52_WITHHOLDING_MISSING` are both decisions, and only one is an error. Inferring that from code names would put meaning in a spelling convention. The two multiplicands are not observed in this database and are not verified, so each is returned with its basis and shown as an estimate, per the estimates rule in `docs/facts.md`; the hours figure is returned beside the counts that produce it, never alone (D-016). No national projection is computed: its multiplicands are neither observed here nor verified.
+
+**Result:** Verified against a live server: three files, two errors intercepted (one `ART55_NET_INCOHERENT`, one `TEJ_MATRICULE_INVALID`), one abstention named, one fact confirmed by a person, and the derived figure shown with both inputs labelled "estimation". The panel states that it describes a demonstration set.
 
 ## Change log
 
@@ -879,3 +910,5 @@ A prior team project (`Backend-Dashboard-RH-Treso-24-25`, a NestJS/TypeORM treas
 | 2026-09-13 | team | Added D-045: fiscal ledger reframed as the rule engine's fact base, not a declaration product |
 | 2026-09-13 | team | Added D-046: fiscal fact layer merged, with masked extraction, provenance traces and optional VAT; branch decisions renumbered D-043 to D-045 |
 | 2026-09-13 | team | Added D-047: constats grouped by outcome when distinct rules share a precondition |
+| 2026-09-13 | team | Added D-047: abstentions answered against the supplier, rules re-decide, person source in the trace (J4, B3, B4, J11) |
+| 2026-09-13 | team | Added D-048: rules declare their error codes; impact panel counts them with the labelled benefit calculation (J9) |

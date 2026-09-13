@@ -51,8 +51,8 @@ export interface Rule extends Citation {
 /** A rule either reached a finding or abstained; an abstention is a correct outcome, not an error. */
 export type FindingStatus = "decided" | "abstained";
 
-/** Where a fact a rule used came from: read in the document, or supplied by the model. */
-export type TraceSource = "document" | "model";
+/** Where a fact a rule used came from: read in the document, supplied by the model, or confirmed by a person. */
+export type TraceSource = "document" | "model" | "person";
 
 /** One fact a rule used, in the order the rule used it (J1). */
 export interface TraceStep {
@@ -64,6 +64,70 @@ export interface TraceStep {
   confidence: number | null;
   /** The confidence the rule required, between 0 and 1. */
   threshold: number | null;
+  /** Who confirmed the fact, set when a person supplied it (J4). */
+  confirmed_by?: string | null;
+  /** ISO date of that confirmation. */
+  confirmed_at?: string | null;
+}
+
+/** GET /documents/{id}/answerable-facts: the supplier facts a person may confirm for this file. */
+export interface AnswerableFacts {
+  /** Null when the supplier could not be identified, so an answer has nothing to attach to. */
+  supplier_tax_id: string | null;
+  facts: { fact_name: string; values: string[] }[];
+}
+
+/** POST /documents/{id}/supplier-facts body. */
+export interface ConfirmFactInput {
+  fact_name: string;
+  value: string;
+  confirmed_by: string;
+  /** ISO date, when the answer rests on an attestation that expires. */
+  valid_until?: string | null;
+}
+
+/** One rule's outcomes over the measured dataset (J9). */
+export interface RuleCount {
+  rule_code: string;
+  article_ref: string;
+  decided: number;
+  abstained: number;
+  /** Decided findings whose code the rule itself declares as reporting a problem found. */
+  errors_intercepted: number;
+}
+
+/** One multiplicand of the benefit calculation, with the basis a screen must show (D-016). */
+export interface CalculationInput {
+  name: string;
+  value: number;
+  /** "estimate" until a person sources it; shown as such wherever the value appears. */
+  basis: string;
+}
+
+/** GET /impact: counts from this deployment's own data, and the benefit derived from them. */
+export interface Measurement {
+  documents: number;
+  documents_analysed: number;
+  findings_decided: number;
+  findings_abstained: number;
+  errors_intercepted: number;
+  facts_confirmed_by_people: number;
+  by_rule: RuleCount[];
+  abstentions_by_missing_fact: { fact_name: string; count: number }[];
+  inputs: CalculationInput[];
+  interventions_removed: number;
+  officer_hours_saved: number;
+}
+
+/** A fact a person confirmed about a supplier, kept for that supplier's later files (B3, J11). */
+export interface SupplierFact {
+  id: string;
+  supplier_tax_id: string;
+  fact_name: string;
+  value: string;
+  confirmed_by: string;
+  confirmed_at: string;
+  valid_until: string | null;
 }
 
 /** GET /documents/{id}/findings: one rule outcome with its rule code and citation resolved. */

@@ -172,6 +172,12 @@ class Rule(Base):
     verbatim_text: Mapped[str] = mapped_column(Text, nullable=False)
     url: Mapped[str] = mapped_column(String(500), nullable=False)
     logic_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Which of this rule's decided codes report a problem found, as the rule's author
+    # declares them: the impact panel counts errors intercepted, and only the rule
+    # knows which of its outcomes is one (J9, F1). A rule declaring none counts none.
+    error_codes: Mapped[list[str]] = mapped_column(
+        JSONB, server_default=text("'[]'::jsonb"), nullable=False
+    )
 
 
 class Finding(Base):
@@ -209,6 +215,45 @@ class Citation(Base):
         ForeignKey("finding.id"), nullable=False
     )
     rule_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rule.id"), nullable=False)
+
+
+class SupplierFact(Base):
+    """A fact about a supplier that a person confirmed, reused on that supplier's later files.
+
+    Supplier-scoped, not document-scoped (B3, J4, J11): a supplier's fiscal
+    regime is a property of the supplier, so confirming it once answers the
+    same question on every later invoice from them. Transaction facts (what a
+    given invoice is for) are deliberately not stored here, since one supplier
+    can invoice several categories.
+
+    Scoped to the filing organisation: a confirmation is that organisation's
+    own knowledge of its supplier, not a shared registry.
+    """
+
+    __tablename__ = "supplier_fact"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organisation.id"), nullable=False
+    )
+    supplier_tax_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    fact_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    confirmed_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    confirmed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # An attestation expires: past this date the fact stops applying and the rule abstains again.
+    valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organisation_id",
+            "supplier_tax_id",
+            "fact_name",
+            name="uq_supplier_fact_organisation_supplier_name",
+        ),
+    )
 
 
 class CounterpartyCheck(Base):

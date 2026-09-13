@@ -20,23 +20,36 @@ class TraceStep:
     """One fact a rule used, where it came from, and the value the rule read (J1).
 
     A model-supplied fact carries its confidence and the threshold the rule
-    required, so a reader sees why the rule accepted or refused it.
+    required, so a reader sees why the rule accepted or refused it. A fact a
+    person confirmed carries who confirmed it and when (J4).
     """
 
     fact: str
-    source: Literal["document", "model"]
+    source: Literal["document", "model", "person"]
     value: str | bool | None
     confidence: float | None = None
     threshold: float | None = None
+    confirmed_by: str | None = None
+    # ISO date, not a datetime: the trace is stored as JSON on the finding.
+    confirmed_at: str | None = None
+
+
+@dataclass(frozen=True)
+class PersonFact:
+    """A fact a person confirmed, as a rule's trace reports it (J4)."""
+
+    value: str
+    confirmed_by: str
+    confirmed_at: str
 
 
 class Facts(dict[str, str]):
-    """Fact values by name, remembering which facts the model supplies (J1, D-046).
+    """Fact values by name, remembering where each fact came from (J1, J4, D-046).
 
     Rules read it as the plain dict of values it is; `step()` turns one fact
     into its trace step, so a model-supplied fact is always traced with its
-    confidence and the threshold extraction applied, and no rule restates
-    where a fact came from.
+    confidence and the threshold extraction applied, a person-confirmed fact
+    with who confirmed it, and no rule restates where a fact came from.
     """
 
     def __init__(
@@ -44,15 +57,27 @@ class Facts(dict[str, str]):
         values: Mapping[str, str] | None = None,
         model_confidences: Mapping[str, float | None] | None = None,
         threshold: float | None = None,
+        person_facts: Mapping[str, PersonFact] | None = None,
     ) -> None:
         super().__init__(values or {})
         # Every fact the model is asked for: its confidence, or None when it was not established.
         self.model_confidences = dict(model_confidences or {})
         self.threshold = threshold
+        # Facts a person confirmed; these take precedence over a model answer.
+        self.person_facts = dict(person_facts or {})
 
     def step(self, name: str) -> TraceStep:
         """The trace step for one fact: its value (None when absent) and where it came from."""
         value = self.get(name) or None
+        confirmed = self.person_facts.get(name)
+        if confirmed is not None:
+            return TraceStep(
+                fact=name,
+                source="person",
+                value=value,
+                confirmed_by=confirmed.confirmed_by,
+                confirmed_at=confirmed.confirmed_at,
+            )
         if name in self.model_confidences:
             return TraceStep(
                 fact=name,

@@ -140,13 +140,17 @@ class CitationOut(BaseModel):
 
 
 class TraceStepOut(BaseModel):
-    """One fact a rule used: read in the document, or supplied by the model with a confidence."""
+    """One fact a rule used: read in the document, supplied by the model with a
+    confidence, or confirmed by a person (J4)."""
 
     fact: str
-    source: Literal["document", "model"]
+    source: Literal["document", "model", "person"]
     value: str | bool | None
     confidence: float | None
     threshold: float | None
+    confirmed_by: str | None = None
+    # ISO date; set with confirmed_by when a person supplied the fact.
+    confirmed_at: str | None = None
 
 
 class FindingOut(BaseModel):
