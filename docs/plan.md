@@ -1,6 +1,6 @@
 # Plan - Source of Truth
 
-This document is the source of truth for what we build and why, for Hack4Justice 2026 Challenge A and the pilot that follows it. The hackathon outcome is a 3-minute pitch and a live demo. Everything built serves one of the demo moments in section 6 or a feature listed in section 12, or it does not get built (`docs/decision-log.md` D-028).
+This document is the source of truth for what we build and why, for Hack4Justice 2026 Challenge A and the pilot that follows it. The hackathon outcome is a 3-minute pitch and a live demo. Everything built serves one of the demo moments in section 6 or a feature listed in section 12, or it does not get built (`docs/decision-log.md` D-030).
 
 ## 1. The problem
 
@@ -71,7 +71,7 @@ Full pipeline and data model: `docs/architecture.md` sections 3-4.
 
 **The click to the citation is the pitch.** It is what separates this from a model that guesses, and it is the condition for an administration to trust it.
 
-Only legal text a person has verified reaches a screen. Retrieved passages are filtered to the verified set, and a model-drafted explanation appears only after a person has approved it (`docs/decision-log.md` D-027).
+Only legal text a person has verified reaches a screen. Retrieved passages are filtered to the verified set, and a model-drafted explanation appears only after a person has approved it (`docs/decision-log.md` D-029).
 
 Design law, carried from the root `CLAUDE.md`: compliance judgement is deterministic code. The model extracts facts, explains, and drafts. It never decides whether a finding exists. Assisted rules are the one nuance - the model supplies a fact the document does not state, with a confidence score, and the deterministic rule judges from that fact. When the model cannot establish the fact, the rule escalates a specific question to a human. It never guesses (`docs/decision-log.md` D-004, D-005).
 
@@ -122,7 +122,7 @@ The slide shows the errors-prevented calculation and the derived hours figure to
 
 ## 8. Build phases and gates
 
-Phases are sequential. Do not start a phase until the previous gate is met. When a gate is at risk, cut from section 9, do not slip the gate. Phases 0 to 5 end at the pitch; phases 6 to 9 follow it (`docs/decision-log.md` D-028). Retrieval, verification and UI detail for each feature: `docs/feature-research.md`.
+Phases are sequential. Do not start a phase until the previous gate is met. When a gate is at risk, cut from section 9, do not slip the gate. Phases 0 to 5 end at the pitch; phases 6 to 9 follow it (`docs/decision-log.md` D-030). Retrieval, verification and UI detail for each feature: `docs/feature-research.md`.
 
 | Phase | Scope | Gate to advance |
 |---|---|---|
@@ -144,7 +144,7 @@ Risks:
 - the DGI doctrine update changing something we have not accounted for (must be checked, not assumed, before presenting)
 - OCR quality on scanned (not born-digital) documents
 - retrieval returning the wrong article for an edge-case code
-- verification throughput: every passage and explanation shown needs a person (D-027)
+- verification throughput: every passage and explanation shown needs a person (D-029)
 - partnerships (RNE, TunTrust) that the team does not control
 
 Cut list for phases 0 to 5, in order, if a gate is at risk:
@@ -162,7 +162,7 @@ Do not cut:
 - the citation click-through
 - the abstention path
 - the deterministic/assisted rule split
-- verified-only legal text on screen (D-027)
+- verified-only legal text on screen (D-029)
 
 These are the product's argument, not decoration.
 
@@ -180,8 +180,8 @@ From `docs/facts.md`, promote to `verified` before the pitch, or drop the claim:
 Also check, per `docs/feature-research.md` section 3:
 
 - What E-Sit-Fisc actually is, before the positioning line in section 2 is spoken.
-- Whether the anchor "article 62" is Article 62 of the 2014 finance law.
-- That every legal passage and explanation visible in the demo script is verified or approved (D-027).
+- Which article anchors the story: the IRPP/IS code's Article 62 does not match (D-027, candidates Article 52(I)(a) and Article 55(I)); Article 62 of the 2014 finance law is a further candidate.
+- That every legal passage and explanation visible in the demo script is verified or approved (D-029).
 
 ## 11. Q&A preparation
 
@@ -191,7 +191,7 @@ Also check, per `docs/feature-research.md` section 3:
 
 ## 12. Feature scope
 
-Every feature below is in scope (`docs/decision-log.md` D-028). Detail, evidence and design-law notes: `docs/feature-research.md` sections 4 to 6. Phases: section 8.
+Every feature below is in scope (`docs/decision-log.md` D-030). Detail, evidence and design-law notes: `docs/feature-research.md` sections 4 to 6. Phases: section 8.
 
 - **Pilot prerequisites:** A1 masking before provider calls, A2 audit trail, A3 identities and roles (then DigiGo and Mobile ID), A4 accountant delegation, A5 data protection readiness, A6 asynchronous pipeline.
 - **Rule coverage:** B1 field-level extraction, B2 TEJ code decisions, B3 supplier fact profile, B4 abstention resolution loop, B5 rule versioning by effective date, B6 retrieval-augmented legal context (the RAG plan, `docs/feature-research.md` section 5), B7 legal source watch.
@@ -216,4 +216,4 @@ Out of scope, with reasons in `docs/feature-research.md` section 7:
 |---|---|---|
 | 2026-09-12 | team | Regenerated plan from description-projet-v2.md, scoped to withholding-code decision plus export and counterparty check |
 | 2026-09-12 | team | Added Agency Benefit slide subsection to section 7, per D-016 |
-| 2026-09-13 | team | Scope extended to every researched feature: demo moments extended with a sixth, phases 6 to 9, cut list, before-presenting checks, feature scope section, per D-028; verified-only legal text on screen, per D-027 |
+| 2026-09-13 | team | Scope extended to every researched feature: demo moments extended with a sixth, phases 6 to 9, cut list, before-presenting checks, feature scope section, per D-030; verified-only legal text on screen, per D-029 |
