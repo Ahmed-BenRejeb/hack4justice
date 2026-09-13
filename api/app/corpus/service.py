@@ -3,11 +3,11 @@
 import hashlib
 import uuid
 
-from sqlalchemy import delete
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import delete, func
+from sqlalchemy.dialects.postgresql import insert, to_tsvector
 from sqlalchemy.orm import Session
 
-from app.config import CORPUS_CHUNK_MAX_TOKENS
+from app.config import CORPUS_CHUNK_MAX_TOKENS, CORPUS_TEXT_SEARCH_CONFIG
 from app.corpus.chunking import REF_SEPARATOR, Chunk, Page, chunk_pages
 from app.db.models import CorpusChunk, CorpusSource
 from app.providers.embeddings import count_tokens, embed
@@ -59,6 +59,9 @@ def index_source(db: Session, source: CorpusSource, pages: list[Page]) -> int:
                 "token_count": chunk.token_count,
                 "text": chunk.text,
                 "text_sha256": hashlib.sha256(chunk.text.encode()).hexdigest(),
+                "text_search": to_tsvector(
+                    CORPUS_TEXT_SEARCH_CONFIG, func.unaccent(chunk.text)
+                ),
                 "embedding": vector,
                 "url": source.url,
             }

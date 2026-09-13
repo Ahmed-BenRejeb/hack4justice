@@ -17,6 +17,15 @@ VERIFIED_PASSAGES_PATH_DEFAULT = "../corpus/verified-passages.json"
 # is split by sentence, leaving room for its heading path under a 512-token
 # model limit (docs/feature-research.md section 5.3).
 CORPUS_CHUNK_MAX_TOKENS = 450
+# Hybrid retrieval (docs/feature-research.md section 5.3, D-035). Each search
+# keeps its best RETRIEVAL_CANDIDATES chunks before reciprocal rank fusion with
+# constant RRF_K. RETRIEVAL_MIN_SIMILARITY drops embedding candidates an
+# unrelated query would otherwise return; 0.4 is provisional, measured on
+# calibration queries, to recalibrate on the evaluation question set.
+CORPUS_TEXT_SEARCH_CONFIG = "french"
+RETRIEVAL_CANDIDATES = 20
+RRF_K = 60
+RETRIEVAL_MIN_SIMILARITY = 0.4
 # Retrieval evaluation (docs/feature-research.md section 5.8): recall@5 on the
 # question set people wrote must reach the target before related texts and
 # legal search ship to the UI. 0.9 is the plan's proposal until the team fixes one.

@@ -28,6 +28,7 @@ def _clean_schema() -> None:
     """Recreate every table fresh for each test."""
     with engine.begin() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 

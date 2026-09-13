@@ -94,8 +94,8 @@ def evaluate(
             next(
                 (
                     rank
-                    for rank, chunk in enumerate(results, 1)
-                    if answers(chunk, question)
+                    for rank, hit in enumerate(results, 1)
+                    if answers(hit.chunk, question)
                 ),
                 None,
             )
