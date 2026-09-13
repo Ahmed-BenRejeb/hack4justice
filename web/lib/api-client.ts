@@ -7,6 +7,7 @@
 import type {
   AnswerableFacts,
   ConfirmFactInput,
+  CorpusSourceSummary,
   DocumentDetail,
   DocumentSummary,
   Finding,
@@ -16,12 +17,15 @@ import type {
   OperationCode,
   Organisation,
   OrganisationInput,
+  PassageDetail,
+  PassageHit,
   QueueItem,
   Rule,
   SupplierFact,
   TejExport,
   TejExportDraft,
   TejExportRequest,
+  VerificationQueueEntry,
 } from "./api-types";
 
 const BASE_PATH = "/api/v1";
@@ -160,5 +164,31 @@ export const api = {
   /** GET /rules: the rule registry. */
   listRules(signal?: AbortSignal): Promise<Rule[]> {
     return request("/rules", { signal });
+  },
+
+  /** GET /corpus/search: verified passages for a query, best first (J10). */
+  searchCorpus(query: string, signal?: AbortSignal): Promise<PassageHit[]> {
+    const params = new URLSearchParams({ q: query });
+    return request(`/corpus/search?${params}`, { signal });
+  },
+
+  /** GET /corpus/chunks/{id}: a verified passage, its neighbours, its article's outline and its source (J2). */
+  getPassage(chunkId: string, signal?: AbortSignal): Promise<PassageDetail> {
+    return request(`/corpus/chunks/${encodeURIComponent(chunkId)}`, { signal });
+  },
+
+  /** GET /corpus/sources: every indexed source with its provenance and verification counts. */
+  listCorpusSources(signal?: AbortSignal): Promise<CorpusSourceSummary[]> {
+    return request("/corpus/sources", { signal });
+  },
+
+  /** GET /corpus/verification-queue: unverified chunks by reference only, never their text. */
+  getVerificationQueue(signal?: AbortSignal): Promise<VerificationQueueEntry[]> {
+    return request("/corpus/verification-queue", { signal });
+  },
+
+  /** GET /findings/{id}/related: verified passages related to a finding's rule and missing fact. */
+  getRelatedPassages(findingId: string, signal?: AbortSignal): Promise<PassageHit[]> {
+    return request(`/findings/${encodeURIComponent(findingId)}/related`, { signal });
   },
 };
