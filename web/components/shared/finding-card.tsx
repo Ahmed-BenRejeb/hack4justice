@@ -12,6 +12,7 @@ import { fieldLabel } from "@/lib/labels";
 import { AnswerAbstention } from "./answer-abstention";
 import { Citation } from "./citation";
 import { DecisionTrace } from "./decision-trace";
+import { RelatedPassages } from "./related-passages";
 import { FindingStatusBadge } from "./status-badge";
 
 interface FindingCardProps {
@@ -85,6 +86,7 @@ export function FindingCard({ group, answering }: FindingCardProps): JSX.Element
           <DecisionTrace key={finding.id} finding={finding} />
         ))}
         <Citation citation={first.citation} />
+        <RelatedPassages findingId={first.id} />
       </div>
     </article>
   );
