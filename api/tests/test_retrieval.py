@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 
+from app.corpus.chunking import Page
 from app.corpus.retrieval import search
 from app.corpus.service import index_source
+from tests.fixtures.corpus import make_source
 
 SAMPLE_SOURCE = """
 Article 1
@@ -16,12 +18,7 @@ Dispositions relatives a l'immatriculation des vehicules automobiles.
 
 
 def test_search_returns_the_closest_chunk_first(db: Session) -> None:
-    index_source(
-        db,
-        source_id="fixture-code",
-        url="https://example.test/code",
-        text=SAMPLE_SOURCE,
-    )
+    index_source(db, make_source(), [Page(1, SAMPLE_SOURCE)])
     db.commit()
 
     results = search(
@@ -33,12 +30,7 @@ def test_search_returns_the_closest_chunk_first(db: Session) -> None:
 
 
 def test_search_respects_top_k(db: Session) -> None:
-    index_source(
-        db,
-        source_id="fixture-code",
-        url="https://example.test/code",
-        text=SAMPLE_SOURCE,
-    )
+    index_source(db, make_source(), [Page(1, SAMPLE_SOURCE)])
     db.commit()
 
     results = search(db, "droit du travail", top_k=2)

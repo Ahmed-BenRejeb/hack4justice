@@ -519,6 +519,23 @@ Two real articles in the same code do match the narrative:
 
 **Result:** `docs/plan.md` gains a demo moment 6, phases 6 to 9, an extended cut list and a feature scope section (section 12). The root `CLAUDE.md` build rule and source-of-truth list are updated. `docs/architecture.md` is updated as each feature lands, not in advance. The anchor article question (D-027) and the incidental findings in `docs/feature-research.md` section 3 are not features: they stay checks for a person before presenting. B2 builds on the RS2 proposal engine (D-028).
 
+---
+
+## D-031 - Corpus chunked by paragraph and item, read from the official PDF by page
+
+**Date:** 2026-09-13
+
+**Decision:** RAG steps 1 and 2 (`docs/feature-research.md` section 5.9). The corpus is indexed from the DGI PDF's page range, not from a text extract. Each article is split at line-start markers: paragraph (`I`, `II bis`), item (`a)`, `b bis)`, `1-`) and dashed item (`tiret N`). A piece over 450 tokens is split by sentence with one sentence of overlap. Each chunk stores its page, offsets, heading path and text hash, and belongs to a new `corpus_source` row carrying the PDF's sha256. The loader upserts on (source, article, paragraph, offset) and runs on compose start.
+
+**Options considered:**
+- Granularity: keep article chunks (only 2% of Article 52 embedded); paragraph and item, dashes included, as planned (chosen); also split at every blank-line paragraph inside an item.
+- Text input: keep `cirppis-retenues-a-la-source.txt`; read PDF pages directly (chosen).
+- Reload: delete and re-insert; upsert on a position key and delete what disappeared (chosen).
+
+**Why:** A citation is a paragraph, so the chunk is the unit a person cites and verifies. On the real Articles 52 to 55, this gives 78 chunks, median 91 tokens, none over 450 (measured). A text extract cannot say which page a paragraph is on, and the source reader opens the official PDF at that page. Upserting keeps chunk ids stable, so a link to a passage survives a reload. The finer blank-line split was not taken: it departs from the plan without a measured need. Marker detection is mechanical: a sentence that follows a dashed list joins the last dash (for example the amendment note after `Article 52, I, a), tiret 3`).
+
+**Result:** `app/corpus/chunking.py`, `service.py`, `load_corpus.py`, migration `5b8e1c4f9a02`, updated `corpus/sources/manifest.json`; the text extract is removed. Consequence for step 3: the `Article 52, I` lead-in chunk lies entirely inside the verified citation of `CIRPPIS-ART52-I-A`, but the `Article 52, I, a)` chunk also holds sentences the team has not verified ("Le taux de 10%(1) s'applique également...", "Ce taux est réduit à :"). It needs its own verification before it can be shown.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -539,3 +556,4 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-028: withholding-code proposal engine (RS2 family) |
 | 2026-09-13 | team | Added D-029: only verified legal text on screen, explanations approved by a person |
 | 2026-09-13 | team | Added D-030: plan scope includes every researched feature, phases 6 to 9 added |
+| 2026-09-13 | team | Added D-031: corpus chunked by paragraph from the official PDF, with page provenance |
