@@ -553,6 +553,24 @@ Two real articles in the same code do match the narrative:
 
 **Result:** `app/corpus/verification.py`, migration `7c2d9e3a41b5`, `VERIFIED_PASSAGES_PATH` (documented default), `docs/facts.md` row for the register. Phase 1 still needs a person to verify the passages the demo shows, starting with `Article 52, I, a)`.
 
+---
+
+## D-033 - Retrieval evaluation harness; recall target 0.9 until the team fixes one
+
+**Date:** 2026-09-13
+
+**Decision:** RAG step 4. `app/corpus/evaluation.py` reads `corpus/eval/questions.json`, a list of French questions each naming the expected article and paragraph and its author. It reports recall@5, mean reciprocal rank and verified coverage over the whole corpus, as a CLI and as a pytest against real embeddings and the real database. A chunk answers a question at the expected paragraph or inside it. The recall target is 0.9, a documented default in `app/config.py`.
+
+**Options considered:**
+- Who writes the question set: the team (chosen); a model drafts it for the team to rewrite.
+- Matching: exact paragraph only; the expected paragraph or any item inside it (chosen).
+- Recall target: 0.9 as the plan proposes (chosen as the default); wait for the team before setting any.
+- Missing question set: fail the suite; skip the real-set test with a named reason and have the CLI report the target not met (chosen).
+
+**Why:** The user chose to have the team write the set: a model-written set would grade retrieval on the model's own idea of the law. Item-level matching lets a writer cite at the level a person naturally cites ("Article 52, I, a)") while chunks are finer. A skipped test with a reason keeps the suite green without hiding the gate: the CLI exit code and the skip reason both say it is not met.
+
+**Result:** No question set exists yet, so the phase 1 recall gate is not met. The harness is tested on a fictitious source. The team can change the target in `app/config.py` by recording a new decision.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -575,3 +593,4 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-030: plan scope includes every researched feature, phases 6 to 9 added |
 | 2026-09-13 | team | Added D-031: corpus chunked by paragraph from the official PDF, with page provenance |
 | 2026-09-13 | team | Added D-032: verified passage register applied on every corpus load |
+| 2026-09-13 | team | Added D-033: retrieval evaluation harness, recall target 0.9 until the team fixes one |
