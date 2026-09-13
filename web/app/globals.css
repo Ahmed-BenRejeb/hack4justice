@@ -120,8 +120,8 @@
   --card-foreground: oklch(0.185 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.185 0 0);
-  /* #5EA832, the brand accent: CTAs, links, focus, checkmarks. Never a chart series. */
-  --primary: oklch(0.633 0.149 134);
+  /* #101f33, the Chahed navy: CTAs, links, focus, checkmarks. Never a chart series. */
+  --primary: #101f33;
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.973 0 0);
   --secondary-foreground: oklch(0.26 0 0);
@@ -132,7 +132,7 @@
   --destructive: oklch(0.55 0.2 27);
   --border: oklch(0.922 0 0);
   --input: oklch(0.88 0 0);
-  --ring: oklch(0.633 0.149 134);
+  --ring: #101f33;
 
   /* #EEF7E6, the accent tint behind badges and checkmark rows. */
   --accent-light: oklch(0.966 0.023 132);
