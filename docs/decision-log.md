@@ -731,6 +731,31 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 
 **Result:** A wrong matricule or an unbalanced amount is refused with its reason on its field, and nothing is stored. The arithmetic checks cite no article: they are internal consistency checks on the declaration's own amounts, not compliance findings.
 
+## D-042 - Deterministic masking before every model call, shown beside the original text
+
+**Date:** 2026-09-13
+
+**Decision:** A1 with J5.
+- **Masking:** `app/extraction/masking.py` replaces identifiers with typed placeholders that stay the same for the same value (`[MATRICULE_1]`, `[EMAIL_1]`, `[NOM_1]`). Fixed-format identifiers are found by pattern: e-mail, Tunisian IBAN and RIB, matricule fiscal with or without its suffix, telephone in +216 form or after a label, CIN after its label, and bare 8-digit numbers. Names are found by exact match against the filing organisation's name.
+- **Storage:** upload stores the masked copy as a `masked_text` extraction. The mapping back to the values is never stored.
+- **Rules:** both assisted rules send only `masked_text` to the model, and abstain on `masked_text` without it rather than send the original.
+- **Provider guard:** `openrouter.py` refuses, unsent, any message in which a fixed-format pattern still matches, naming the kind but never the value.
+- **Screen:** the file review shows the text read beside "Ce qui quitte le poste", with placeholders marked and the ceiling stated.
+
+**Options considered:**
+- Detection: patterns and known names, no dependency (chosen); a local named-entity model, a new dependency of several hundred megabytes; the hosted model, which would send the text before masking it.
+- Enforcement: masking at extraction plus a guard at the provider boundary (chosen); masking inside the provider, which cannot know the organisation's name.
+- Mapping: not stored (chosen); stored for re-identification, which would keep a second copy of every identifier.
+
+**Why:** A named-entity model would add a large dependency and still miss names, while a hosted one would defeat the purpose. Patterns are testable and explainable to an auditor. The guard makes the rule "only masked text leaves" hold even for a future caller that forgets to mask. The original text is already stored locally, so a reverse mapping adds exposure and no capability.
+
+**Result:** The ceiling is stated on screen and in the module:
+- A person or company name the system does not hold is not masked, for example a supplier's name on the invoice.
+- A street address is not masked.
+- An 8-digit phone number written in groups without a label is not masked.
+
+The phase 2 gate ("the text sent to the model contains no personal identifier") is therefore met for fixed-format identifiers and the filer's name only. Supplier names need B3 (known suppliers) or a decision on a local entity model. Bare 8-digit runs are masked as `[NUMERO_n]` whatever they are, so an 8-digit amount written without separators is hidden from the model too.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -762,3 +787,4 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 | 2026-09-13 | team | Added D-039: decision trace returned by rules, stored on the finding, shown under the answer |
 | 2026-09-13 | team | Added D-040: officer queue rows name their missing facts, with a filter by missing fact |
 | 2026-09-13 | team | Added D-041: refused export values explained on their fields; VAT emitted and arithmetic checked |
+| 2026-09-13 | team | Added D-042: deterministic masking before every model call, provider guard, masked text shown beside the original |

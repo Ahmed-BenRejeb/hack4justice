@@ -1,8 +1,14 @@
+from app.extraction.masking import mask
 from app.rules.cirppis_art52_honoraires import (
     CONFIDENCE_THRESHOLD,
     decide_article_52_withholding_mention,
 )
 from app.rules.engine import Abstention, Decision, TraceStep
+
+
+def _facts(text: str) -> dict[str, str]:
+    return {"full_text": text, "masked_text": mask(text)}
+
 
 HONORAIRES_INVOICE_WITH_WITHHOLDING = """
 FACTURE N. 2026-0342
@@ -29,7 +35,7 @@ Quantite: 40 unites.
 
 def test_decides_withholding_present_when_category_and_keyword_both_found() -> None:
     outcome = decide_article_52_withholding_mention(
-        {"full_text": HONORAIRES_INVOICE_WITH_WITHHOLDING}
+        _facts(HONORAIRES_INVOICE_WITH_WITHHOLDING)
     )
 
     assert isinstance(outcome, Decision)
@@ -41,7 +47,7 @@ def test_decides_withholding_present_when_category_and_keyword_both_found() -> N
 
 def test_decides_withholding_missing_when_category_found_but_no_keyword() -> None:
     outcome = decide_article_52_withholding_mention(
-        {"full_text": HONORAIRES_INVOICE_WITHOUT_WITHHOLDING}
+        _facts(HONORAIRES_INVOICE_WITHOUT_WITHHOLDING)
     )
 
     assert isinstance(outcome, Decision)
@@ -59,12 +65,22 @@ def test_decides_withholding_missing_when_category_found_but_no_keyword() -> Non
 
 
 def test_abstains_when_document_does_not_describe_a_covered_category() -> None:
-    outcome = decide_article_52_withholding_mention({"full_text": UNRELATED_DOCUMENT})
+    outcome = decide_article_52_withholding_mention(_facts(UNRELATED_DOCUMENT))
 
     assert isinstance(outcome, Abstention)
     assert outcome.missing_fact == "article_52_category"
     # The trace stops at the fact the rule could not establish.
     assert [step.fact for step in outcome.trace] == ["full_text", "article_52_category"]
+
+
+def test_abstains_without_masked_text_before_any_model_call() -> None:
+    outcome = decide_article_52_withholding_mention(
+        {"full_text": HONORAIRES_INVOICE_WITHOUT_WITHHOLDING}
+    )
+
+    assert isinstance(outcome, Abstention)
+    assert outcome.missing_fact == "masked_text"
+    assert [step.fact for step in outcome.trace] == ["full_text"]
 
 
 def test_abstains_when_full_text_is_missing() -> None:

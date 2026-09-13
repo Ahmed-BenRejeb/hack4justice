@@ -25,7 +25,8 @@ WITHHOLDING_KEYWORD = "retenue"
 def decide_article_52_withholding_mention(facts: dict[str, str]) -> RuleOutcome:
     """Decide whether a covered payment is missing any mention of withholding.
 
-    Facts required: "full_text" (the document's extracted text). Asks the
+    Facts required: "full_text" (the document's extracted text) and
+    "masked_text" (its masked copy, the only text the model sees, A1). Asks the
     model whether the text describes an Article 52 category; abstains if it
     cannot tell. If it can, checks deterministically (no model call) whether
     the text also mentions withholding at all. Every outcome carries the
@@ -35,8 +36,11 @@ def decide_article_52_withholding_mention(facts: dict[str, str]) -> RuleOutcome:
     text_step = TraceStep(fact="full_text", source="document", value=bool(full_text))
     if not full_text:
         return Abstention(missing_fact="full_text", trace=(text_step,))
+    masked_text = facts.get("masked_text", "")
+    if not masked_text:
+        return Abstention(missing_fact="masked_text", trace=(text_step,))
 
-    category = extract_fact(context=full_text, question=CATEGORY_QUESTION)
+    category = extract_fact(context=masked_text, question=CATEGORY_QUESTION)
     category_step = TraceStep(
         fact="article_52_category",
         source="model",

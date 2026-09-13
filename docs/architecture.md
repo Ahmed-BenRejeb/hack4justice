@@ -103,7 +103,7 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 |---|---|---|
 | `organisation` | id, name, tax id, role assignments | An MSME or the administration side |
 | `document` | id, organisation_id, uploaded_by, filename, storage_ref, status, created_at | The raw uploaded file; `filename` is the name as uploaded, `storage_ref` where the bytes live |
-| `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), extracted_at | One row per structured field pulled from the document |
+| `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), extracted_at | One row per structured field pulled from the document; `full_text` and its `masked_text` copy, the only text a model receives (A1, D-042) |
 | `corpus_source` | id (the manifest source id), title, edition, publisher, url, sha256, language, page_count, loaded_at | An official document the corpus is indexed from; provenance shown next to its text (D-031) |
 | `corpus_chunk` | id, source_id, article_ref, paragraph_ref, heading_path, page, char_start, char_end, token_count, text, text_sha256, text_search (tsvector generated with the accent-folding `chahed_french` configuration, GIN index), embedding (pgvector), url, verification_status ("unverified"/"verified"), verified_by, verified_on | Paragraph- or item-level legal text, embedded; unique on (source_id, article_ref, paragraph_ref, char_start) so re-indexing updates in place (D-031). Verification comes from `corpus/verified-passages.json` on every load; unverified text never leaves the API (D-029, D-032) |
 | `rule` | id, code, citation_source, article_ref, verbatim_text, url, logic_ref | The rule registry entry; `logic_ref` points to the deterministic code that evaluates it |
@@ -170,3 +170,4 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | Data model and API: `finding.trace`, the decision trace (D-039) |
 | 2026-09-13 | team | API: queue rows name their missing facts (D-040) |
 | 2026-09-13 | team | API: export takes VAT and places refused values on request fields (D-041) |
+| 2026-09-13 | team | Data model: `masked_text` extraction, the only text sent to a model (D-042) |
