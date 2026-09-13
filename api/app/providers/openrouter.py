@@ -98,7 +98,8 @@ def extract_fact(
         return AssistedFact(
             value=parsed.get("value"), confidence=float(parsed.get("confidence", 0))
         )
-    except (json.JSONDecodeError, TypeError, ValueError) as error:
+    # AttributeError: valid JSON that is not an object (a list, a string) has no .get.
+    except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as error:
         raise OpenRouterError(
             f"model did not return valid JSON: {content!r}"
         ) from error

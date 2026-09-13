@@ -37,6 +37,21 @@ def test_extract_fact_abstains_when_context_lacks_the_answer() -> None:
     assert fact.confidence < 0.5
 
 
+def test_extract_fact_raises_when_the_model_returns_json_that_is_not_an_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Observed live: the model occasionally answers a bare JSON value instead of
+    # the requested object, which must surface as the provider's own error.
+    monkeypatch.setattr(
+        openrouter,
+        "_post",
+        lambda payload: {"choices": [{"message": {"content": '["honoraires"]'}}]},
+    )
+
+    with pytest.raises(openrouter.OpenRouterError):
+        openrouter.extract_fact(context="Facture d'honoraires.", question="Catégorie ?")
+
+
 def test_complete_raises_on_an_invalid_model_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
