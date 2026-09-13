@@ -58,6 +58,8 @@ def test_evaluate_records_the_trace_the_rule_returned(db: Session) -> None:
     db.commit()
     db.refresh(finding)
 
+    # A document fact carries no confidence and no confirmation: those belong to a
+    # model-supplied and a person-confirmed fact respectively.
     assert finding.trace == [
         {
             "fact": "status",
@@ -65,6 +67,8 @@ def test_evaluate_records_the_trace_the_rule_returned(db: Session) -> None:
             "value": "known",
             "confidence": None,
             "threshold": None,
+            "confirmed_by": None,
+            "confirmed_at": None,
         }
     ]
 
