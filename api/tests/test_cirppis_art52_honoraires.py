@@ -26,7 +26,10 @@ Quantite: 40 unites.
 
 def test_decides_withholding_present_when_category_and_keyword_both_found() -> None:
     outcome = decide_article_52_withholding_mention(
-        {"full_text": HONORAIRES_INVOICE_WITH_WITHHOLDING}
+        {
+            "full_text": HONORAIRES_INVOICE_WITH_WITHHOLDING,
+            "payment_category": "honoraires",
+        }
     )
 
     assert isinstance(outcome, Decision)
@@ -35,18 +38,30 @@ def test_decides_withholding_present_when_category_and_keyword_both_found() -> N
 
 def test_decides_withholding_missing_when_category_found_but_no_keyword() -> None:
     outcome = decide_article_52_withholding_mention(
-        {"full_text": HONORAIRES_INVOICE_WITHOUT_WITHHOLDING}
+        {
+            "full_text": HONORAIRES_INVOICE_WITHOUT_WITHHOLDING,
+            "payment_category": "honoraires",
+        }
     )
 
     assert isinstance(outcome, Decision)
     assert outcome.code == "ART52_WITHHOLDING_MISSING"
 
 
-def test_abstains_when_document_does_not_describe_a_covered_category() -> None:
+def test_abstains_when_category_is_not_a_covered_one() -> None:
+    outcome = decide_article_52_withholding_mention(
+        {"full_text": UNRELATED_DOCUMENT, "payment_category": "vente de biens"}
+    )
+
+    assert isinstance(outcome, Abstention)
+    assert outcome.missing_fact == "payment_category"
+
+
+def test_abstains_when_payment_category_is_absent() -> None:
     outcome = decide_article_52_withholding_mention({"full_text": UNRELATED_DOCUMENT})
 
     assert isinstance(outcome, Abstention)
-    assert outcome.missing_fact == "article_52_category"
+    assert outcome.missing_fact == "payment_category"
 
 
 def test_abstains_when_full_text_is_missing() -> None:

@@ -31,31 +31,54 @@ Montant: 1 500.000 TND
 
 
 def test_proposes_rs2_000001_for_honoraires_under_forfait_regime() -> None:
-    outcome = propose_withholding_code({"full_text": HONORAIRES_FORFAIT})
+    outcome = propose_withholding_code(
+        {
+            "full_text": HONORAIRES_FORFAIT,
+            "payment_category": "honoraires",
+            "beneficiary_fiscal_regime": "forfait",
+        }
+    )
 
     assert isinstance(outcome, Decision)
     assert outcome.code == "RS2_000001"
 
 
 def test_proposes_rs2_000002_for_honoraires_under_regime_reel() -> None:
-    outcome = propose_withholding_code({"full_text": HONORAIRES_REEL})
+    outcome = propose_withholding_code(
+        {
+            "full_text": HONORAIRES_REEL,
+            "payment_category": "honoraires",
+            "beneficiary_fiscal_regime": "reel",
+        }
+    )
 
     assert isinstance(outcome, Decision)
     assert outcome.code == "RS2_000002"
 
 
 def test_abstains_when_fiscal_regime_is_not_stated() -> None:
-    outcome = propose_withholding_code({"full_text": HONORAIRES_REGIME_UNSTATED})
+    outcome = propose_withholding_code(
+        {"full_text": HONORAIRES_REGIME_UNSTATED, "payment_category": "honoraires"}
+    )
 
     assert isinstance(outcome, Abstention)
     assert outcome.missing_fact == "beneficiary_fiscal_regime"
 
 
 def test_abstains_for_a_category_outside_this_narrow_scope() -> None:
+    outcome = propose_withholding_code(
+        {"full_text": RENT_INVOICE, "payment_category": "loyer"}
+    )
+
+    assert isinstance(outcome, Abstention)
+    assert outcome.missing_fact == "payment_category"
+
+
+def test_abstains_when_payment_category_is_absent() -> None:
     outcome = propose_withholding_code({"full_text": RENT_INVOICE})
 
     assert isinstance(outcome, Abstention)
-    assert outcome.missing_fact == "withholding_code_category"
+    assert outcome.missing_fact == "payment_category"
 
 
 def test_abstains_when_full_text_is_missing() -> None:

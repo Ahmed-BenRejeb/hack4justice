@@ -1,0 +1,8 @@
+{
+  "code": "TEJ-MATRICULE-FISCAL",
+  "citation_source": "Schéma XSD DGI TEJDeclarationRS_v1.0.xsd (Direction Générale des Impôts, jibaya.tn)",
+  "article_ref": "TypeMatriculeFiscal / Identifiant (TEJDeclarationRS_v1.0.xsd)",
+  "verbatim_text": "Matricule fiscal sous la forme 7 chiffres concaténés avec une lettre alphabétique. <xs:pattern value=\"\\d{7}[A-Z]\"/>",
+  "url": "https://jibaya.tn/wp-content/uploads/2024/05/plateforme-TEJ-shemas-xsd.zip",
+  "logic_ref": "app.rules.tej_matricule_format.decide_matricule_fiscal_format"
+}
