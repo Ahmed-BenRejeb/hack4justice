@@ -42,4 +42,16 @@ jobs:
       - name: Smoke test
         env:
           SITE_ADDRESS: ${{ steps.site.outputs.address }}
-        run: curl -sf "https://${SITE_ADDRESS}/api/v1/health"
+        run: |
+          # `up -d` returns once containers start, not once api has run
+          # migrations, loaded rules/corpus and uvicorn is serving; only
+          # db has a healthcheck in docker-compose.prod.yml. Poll instead
+          # of checking once.
+          for i in $(seq 1 30); do
+            if curl -sf "https://${SITE_ADDRESS}/api/v1/health"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "api never became healthy after 5 minutes" >&2
+          exit 1
