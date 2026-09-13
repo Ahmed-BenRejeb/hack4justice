@@ -5,6 +5,7 @@
 
 const FIELD_LABELS = new Map<string, string>([
   ["full_text", "Texte intégral du document"],
+  ["masked_text", "Texte masqué transmis au modèle"],
   ["supplier_name", "Fournisseur"],
   ["supplier_tax_id", "Matricule fiscal du fournisseur"],
   ["client_name", "Client"],
