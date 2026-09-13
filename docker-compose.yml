@@ -30,6 +30,7 @@ services:
     command: >
       sh -c "uv run --no-dev alembic upgrade head &&
              uv run --no-dev python -m app.rules.load_rules &&
+             uv run --no-dev python -m app.corpus.load_corpus &&
              uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   web:
