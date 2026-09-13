@@ -84,3 +84,4 @@ Against `docs/design.md` section 8, on a normal-DPI display: reduced motion on, 
 |---|---|---|
 | 2026-09-13 | team | Initial front-end plan: design direction (D-050), the legal source surface, KPI charts for both roles, chart tokens, polish pass |
 | 2026-09-13 | team | Section 3.1 done: search, passage reader, related passages under a finding, admin verification queue (D-052) |
+| 2026-09-13 | team | Sections 3.2 and 3.3 done: KPI charts for both roles on recharts directly, neutral chart ramp (D-053) |

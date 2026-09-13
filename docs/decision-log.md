@@ -922,6 +922,21 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** With the corpus register nearly empty of verified entries (1 of 78 chunks today), the reader's 404 branch reads as "ce passage n'est pas encore vérifié" rather than a generic error (D-029's binding constraint, made calm rather than alarming per the plan's explicit instruction); `related-passages.tsx` renders nothing while loading, on error, or with zero hits, so it never flashes into view only to disappear. `docs/design.md` section 7 gains the two new routes; `web/CLAUDE.md` and the root `CLAUDE.md` repository map record `components/corpus/` and `components/admin/`.
 
+## D-053 - KPI charts built on recharts directly, not vendored Tremor Raw source; neutral chart ramp added
+
+**Date:** 2026-09-13
+
+**Decision:** Implement `docs/frontend-plan.md` section 3.2 (KPI charts for both roles) and 3.3 (chart tokens) together, since a chart cannot be built compliantly without the tokens it draws with. Depend on `recharts` directly and write two small local wrappers, `components/shared/simple-bar-chart.tsx` (single-series, neutral tone) and `status-bar-chart.tsx` (decided against abstained, status tones), rather than vendoring Tremor Raw's own `BarChart`. Added `--chart-1` (light and dark) as the neutral chart ramp, one step for now, extended only when a real chart needs a second series. Officer `/agent/mesures` gained three charts (decided against abstained; errors intercepted, aggregated by article since two rules can share a citation, D-052's same reasoning; facts most often missing). MSME `/entreprise` gained a "Mes chiffres" section, organisation-scoped via `GET /impact?organisation_id=`, with tiles for its own file counts and errors intercepted before filing, plus the one chart the plan calls out as actionable there: which facts it keeps failing to supply. No benefit calculation on the MSME side (D-016 still holds: that figure argues to the administration, not the business).
+
+**Options considered:**
+- Vendor Tremor Raw's `BarChart` component verbatim, per D-050's literal wording.
+- Depend on `recharts` directly and write minimal, token-driven wrappers (chosen).
+- Skip charts, ship the existing tiles and tables from `docs/decision-log.md` D-048 unchanged.
+
+**Why:** Fetched Tremor Raw's actual `BarChart` source (`raw.tremor.so`) before writing anything, per the root CLAUDE.md rule to verify against the real thing rather than a doc snippet from memory. It hardcodes a Tailwind `gray-*`/`blue-*` palette disconnected from this repo's OKLCH token file, and its legend-slider and click-to-filter interactions need `@remixicon/react` (a second icon library beside `lucide-react`) plus two more vendored utility files, all in service of features (multi-series legends, per-category colours) none of these charts use: every chart here is single-series except the one two-bar status comparison. Copying it verbatim would mean either shipping colours `docs/design.md` section 2 forbids (arbitrary hues per category, a fixed grayscale instead of our tokens) or reskinning most of the component's internals, at which point it is no longer "adopting Tremor," it is maintaining a fork of it. D-050's actual point, recorded in its own words, was "writing them from scratch would be work without argument": `recharts` is the exact engine Tremor wraps, so depending on it directly still avoids hand-rolling SVG chart rendering, while every colour stays sourced from the token file as the binding design doc requires.
+
+**Result:** `recharts` added as a real dependency (`pnpm add recharts`, lockfile updated). `lib/charts.ts` holds the only data shaping (aggregation by article, field labelling), unit-tested per `docs/frontend-plan.md` section 4; the chart components themselves are eye-verified against light and dark mode, screenshotted against live data. `docs/design.md` section 2 records the ramp rule. This is a correction to D-050's literal instruction, not a reversal of its reasoning; if a future screen genuinely needs Tremor's fuller feature set (multi-series legends, clickable filtering), that is a fresh decision, not an extension of this one.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -964,3 +979,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-050: front end stays on shadcn, Tremor for charts only, no block library; front-end plan added |
 | 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
 | 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
+| 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |

@@ -29,6 +29,7 @@ Local rules for the Next.js app. Repo-wide rules live in the root CLAUDE.md and 
 - `components/ui/` holds shadcn primitives (radix-nova). Local edits to a primitive, such as the static `Skeleton`, carry a comment and must survive a re-add.
 - The legal source surface (`components/corpus/`, routes `/textes` and `/textes/[chunkId]`, D-052) reads only `GET /corpus/*` and `GET /findings/{id}/related`, which already refuse unverified text (D-029). A chunk id that 404s reads as "not yet verified", not as a system error: today almost every indexed chunk is unverified, so that is the normal case, not the exception. Never add client-side logic that infers or labels an unverified passage from anything else in the response.
 - `components/shared/related-passages.tsx` renders nothing while its fetch is loading, on error, or with no hits, so it never flashes into view only to disappear; it is a supplementary pointer into the corpus, never a substitute for a finding's own citation.
+- Charts are `recharts` directly, wrapped by `components/shared/simple-bar-chart.tsx` (neutral tone, single series) and `status-bar-chart.tsx` (decided/abstained, status tones), not vendored Tremor Raw source (D-053). A chart reporting decided/abstained/flagged uses that status token; every other chart uses `--chart-1` (`app/globals.css`), never a raw colour. Data shaping (aggregation, labelling) lives in `lib/charts.ts`, tested; the chart components themselves are verified by eye, per `docs/frontend-plan.md` section 4.
 
 ## Change Log
 
@@ -38,3 +39,4 @@ Local rules for the Next.js app. Repo-wide rules live in the root CLAUDE.md and 
 | 2026-09-12 | team | Integrated with api/: contract mirrors Pydantic models, OFFICER_ID via server page, Docker image (D-024) |
 | 2026-09-13 | team | Abstentions answered in place with the person named in the trace (D-047); impact panel at /agent/mesures (D-048) |
 | 2026-09-13 | team | Legal source surface: search, passage reader, related passages, corpus verification queue (D-052) |
+| 2026-09-13 | team | KPI charts on recharts directly, neutral chart ramp; MSME "Mes chiffres" section (D-053) |
