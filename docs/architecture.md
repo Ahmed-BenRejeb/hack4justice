@@ -125,7 +125,7 @@ REST, versioned under `/api/v1`:
 - `GET /documents/{id}` - status, filename, organisation, extraction results, officer decision, export
 - `GET /documents/{id}/findings` - findings with their rule code, decision trace and resolved citation
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
-- `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name and finding counts
+- `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name, finding counts and the distinct missing facts their abstentions name
 - `POST /officer/decisions` - validate or flag a document (`officer_id`, `action`, `note`)
 - `POST /documents/{id}/export` - build and validate the TEJ export from caller-supplied declaration fields (only after validation)
 - `GET /export/operation-codes` - the withholding codes the TEJ schema accepts, read from `schemas/tej/`
@@ -168,3 +168,4 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | Data model: `corpus_chunk.text_search` for hybrid retrieval (D-035) |
 | 2026-09-13 | team | API surface: corpus search, passage, sources, verification queue and related-text endpoints; `text_search` generated with an accent-folding configuration (D-036) |
 | 2026-09-13 | team | Data model and API: `finding.trace`, the decision trace (D-039) |
+| 2026-09-13 | team | API: queue rows name their missing facts (D-040) |

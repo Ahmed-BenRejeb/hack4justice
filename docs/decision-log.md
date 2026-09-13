@@ -692,6 +692,20 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 
 **Result:** The `person` source ("confirmé par une personne") is not added yet; it lands with J4. The unregistered RS2 proposal engine (D-028) returns no trace until it is registered.
 
+## D-040 - The officer queue names each file's missing facts and filters by them
+
+**Date:** 2026-09-13
+
+**Decision:** J8. `GET /officer/queue` rows gain `missing_facts`: the distinct facts the file's abstentions name, sorted. Each queue row shows them under the outcome counts ("Information manquante : ..."), with their French labels. A select beside the outcome tabs narrows the queue to files missing one fact, and the tab counts follow it.
+
+**Options considered:**
+- Where the names come from: a list on the queue row (chosen); a request per row for its findings.
+- Filter: a native select over the facts present in the queue, combined with the existing tabs (chosen); one tab per fact, which grows without bound as rules are added.
+
+**Why:** One request for the whole list keeps the queue poll cheap. A native select is already a local primitive, and it keeps keyboard and screen-reader behaviour from the platform. A fact stays selectable after the last file naming it leaves the queue, so a poll never silently resets the officer's filter. Sorting and filtering by rule, organisation and age (the rest of F3) wait for phase 8.
+
+**Result:** Demo moment 4 shows the missing fact on the arriving row. The labels are neutral text; only the count badges carry status colour.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -721,3 +735,4 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 | 2026-09-13 | team | Added D-037: verified-only search ranks verified passages; short full-text query terms dropped |
 | 2026-09-13 | team | Added D-038: gate-independent features (J1, J8, J7 with C3, A1 with J5) proceed while the recall gate stays open |
 | 2026-09-13 | team | Added D-039: decision trace returned by rules, stored on the finding, shown under the answer |
+| 2026-09-13 | team | Added D-040: officer queue rows name their missing facts, with a filter by missing fact |
