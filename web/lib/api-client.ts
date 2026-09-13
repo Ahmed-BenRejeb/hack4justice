@@ -6,6 +6,9 @@
  */
 import type {
   AnswerableFacts,
+  CaptureInvite,
+  CaptureLink,
+  CapturedDocument,
   ConfirmFactInput,
   CorpusSourceSummary,
   DocumentDetail,
@@ -88,6 +91,14 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 const documentPath = (id: string): string => `/documents/${encodeURIComponent(id)}`;
+const capturePath = (token: string): string => `/capture/${encodeURIComponent(token)}`;
+
+/** A multipart body with one `file` part per file; several are the pages of one paper document (G3). */
+function filesForm(files: File[]): FormData {
+  const form = new FormData();
+  for (const file of files) form.append("file", file);
+  return form;
+}
 
 /** The backend operations the UI uses, one method per endpoint. */
 export const api = {
@@ -97,10 +108,23 @@ export const api = {
    * the photographed pages of one paper document, which the backend files as one PDF (G3).
    */
   uploadDocument(files: File[], organisationId: string): Promise<DocumentSummary> {
-    const form = new FormData();
-    for (const file of files) form.append("file", file);
     const query = new URLSearchParams({ organisation_id: organisationId });
-    return request(`/documents?${query}`, { method: "POST", body: form });
+    return request(`/documents?${query}`, { method: "POST", body: filesForm(files) });
+  },
+
+  /** GET /capture/links/{id}: a phone capture link the signed-in user made, with the document filed through it once there is one. */
+  getCaptureLink(id: string, signal?: AbortSignal): Promise<CaptureLink> {
+    return request(`/capture/links/${encodeURIComponent(id)}`, { signal });
+  },
+
+  /** GET /capture/{token}: the organisation a capture link files for; 404 once it is used or expired. Needs no session. */
+  getCaptureInvite(token: string, signal?: AbortSignal): Promise<CaptureInvite> {
+    return request(capturePath(token), { signal });
+  },
+
+  /** POST /capture/{token}/documents: a phone's photos, filed as one document for the person who made the link. */
+  sendCapturedPhotos(token: string, files: File[]): Promise<CapturedDocument> {
+    return request(`${capturePath(token)}/documents`, { method: "POST", body: filesForm(files) });
   },
 
   /** GET /documents/{id}: status, organisation, extraction results, decision and export. */

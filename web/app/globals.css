@@ -35,6 +35,10 @@
 
   --color-chart-1: var(--chart-1);
 
+  /* The capture QR code stays dark on light in both themes: phone cameras do not reliably read an inverted code. */
+  --color-qr-paper: oklch(1 0 0);
+  --color-qr-ink: oklch(0.22 0.02 256);
+
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;

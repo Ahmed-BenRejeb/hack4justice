@@ -188,6 +188,31 @@ export interface DocumentSummary {
   created_at: string;
 }
 
+/** GET /capture/links/{id}: a phone capture link the signed-in user made (G3, D-056). */
+export interface CaptureLink {
+  id: string;
+  expires_at: string;
+  /** Set once the phone has filed a document through the link, which also ends it. */
+  document_id: string | null;
+}
+
+/** POST /capture/links: a new link. The token is returned only here; the backend keeps its hash. */
+export interface CaptureLinkCreated extends CaptureLink {
+  token: string;
+}
+
+/** GET /capture/{token}: what the phone shows before taking photos. */
+export interface CaptureInvite {
+  organisation_name: string;
+  expires_at: string;
+}
+
+/** POST /capture/{token}/documents: the document filed from the phone. */
+export interface CapturedDocument {
+  filename: string;
+  status: string;
+}
+
 /** GET /documents/{id}: the document and everything the pipeline has produced for it so far. */
 export interface DocumentDetail extends DocumentSummary {
   organisation: Organisation;

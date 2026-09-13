@@ -15,14 +15,26 @@ function requireEnv(name: string): string {
   return value;
 }
 
-/** Origin of the Python backend, without a trailing slash and without the /api/v1 prefix. */
-export function getApiBaseUrl(): string {
-  const raw = requireEnv("API_BASE_URL");
-  // Reject malformed values here so the proxy never builds a relative or garbage URL.
+/** Reads a required absolute URL without its trailing slash, so no caller builds a relative or garbage URL. */
+function requireUrl(name: string): string {
+  const raw = requireEnv(name);
   if (!URL.canParse(raw)) {
-    throw new Error("Invalid environment variable: API_BASE_URL is not an absolute URL");
+    throw new Error(`Invalid environment variable: ${name} is not an absolute URL`);
   }
   return raw.replace(/\/+$/, "");
+}
+
+/** Origin of the Python backend, without a trailing slash and without the /api/v1 prefix. */
+export function getApiBaseUrl(): string {
+  return requireUrl("API_BASE_URL");
+}
+
+/**
+ * Origin a phone reaches this app at, encoded in the capture QR code (G3, D-056). Not the laptop's
+ * own address: a laptop that opened the app on localhost is not reachable from a phone.
+ */
+export function getPublicWebUrl(): string {
+  return requireUrl("PUBLIC_WEB_URL");
 }
 
 /** Whether this is a production build, set by Next.js itself; not an identity value. */

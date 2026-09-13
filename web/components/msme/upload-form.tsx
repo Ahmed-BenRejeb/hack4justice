@@ -3,59 +3,57 @@
 /**
  * Upload of a payment file for one of the signed-in user's organisations. The backend records the
  * user as its filer, reads the document and applies the rules before answering, then the review opens.
- * On a phone, a paper document can be photographed page by page and filed as one document (G3).
+ * A paper document can be photographed page by page (G3): with this device's camera on a touch
+ * screen, or with a phone that scans the QR code a laptop shows (D-056). Photos are reduced first.
  */
 import { useId, useRef, useState, type DragEvent, type FormEvent, type JSX } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightIcon, CameraIcon, FileTextIcon, UploadIcon } from "lucide-react";
+import { ArrowRightIcon, UploadIcon } from "lucide-react";
 import { cn } from "cn";
 import { ErrorNotice } from "@/components/shared/api-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api-client";
 import type { Organisation } from "@/lib/api-types";
-import { formatFileSize } from "@/lib/format";
 import { OrganisationPicker } from "./organisation-picker";
+import { PhoneLinkPanel } from "./phone-link-panel";
+import { CameraButton, FileList, IMAGE_TYPES, isImage, usePhotoReduction } from "./photo-pages";
 
-// The content types api/app/extraction/ocr.py can read. Only images combine into one document.
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/tiff"];
+// The content types api/app/extraction/ocr.py can read.
 const ACCEPTED_TYPES = ["application/pdf", ...IMAGE_TYPES];
 
-const isImage = (file: File): boolean => IMAGE_TYPES.includes(file.type);
-
-/** The organisation picker when the user files for several, then the file form. */
+/** The organisation picker when the user files for several, the file form, then the phone QR code. */
 export function UploadForm({ organisations }: { organisations: Organisation[] }): JSX.Element {
   const router = useRouter();
   const inputId = useId();
   const typeErrorId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
   // An MSME user files for exactly one organisation, so there is nothing to choose.
   const [organisationId, setOrganisationId] = useState(organisations.length === 1 ? organisations[0].id : "");
   // One chosen file, or the photographed pages of one paper document in the order they were taken.
   const [files, setFiles] = useState<File[]>([]);
+  const { preparing, prepare } = usePhotoReduction();
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasTypeError, setHasTypeError] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  function choose(candidate: File | undefined): void {
+  async function choose(candidate: File | undefined): Promise<void> {
     if (!candidate) return;
     setError(null);
     const accepted = ACCEPTED_TYPES.includes(candidate.type);
     setHasTypeError(!accepted);
-    setFiles(accepted ? [candidate] : []);
+    setFiles(accepted ? [await prepare(candidate)] : []);
   }
 
   /** A photo joins the pages already taken, or replaces a PDF chosen before it. */
-  function addPhoto(candidate: File | undefined): void {
-    // Reset so the next capture fires a change event even if the browser reuses the name.
-    if (cameraRef.current) cameraRef.current.value = "";
-    if (!candidate) return;
+  async function addPhoto(candidate: File): Promise<void> {
     setError(null);
     const accepted = isImage(candidate);
     setHasTypeError(!accepted);
-    if (accepted) setFiles((current) => (current.every(isImage) ? [...current, candidate] : [candidate]));
+    if (!accepted) return;
+    const photo = await prepare(candidate);
+    setFiles((current) => (current.every(isImage) ? [...current, photo] : [photo]));
   }
 
   function remove(index: number): void {
@@ -66,7 +64,7 @@ export function UploadForm({ organisations }: { organisations: Organisation[] })
   function onDrop(event: DragEvent<HTMLLabelElement>): void {
     event.preventDefault();
     setIsDragging(false);
-    choose(event.dataTransfer.files[0]);
+    void choose(event.dataTransfer.files[0]);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -84,8 +82,7 @@ export function UploadForm({ organisations }: { organisations: Organisation[] })
     }
   }
 
-  const canSubmit = files.length > 0 && Boolean(organisationId) && !isSubmitting;
-  const isPaged = files.length > 1;
+  const canSubmit = files.length > 0 && preparing === 0 && Boolean(organisationId) && !isSubmitting;
 
   return (
     <div className="space-y-4">
@@ -136,33 +133,17 @@ export function UploadForm({ organisations }: { organisations: Organisation[] })
                 accept={ACCEPTED_TYPES.join(",")}
                 className="sr-only"
                 aria-describedby={hasTypeError ? typeErrorId : undefined}
-                onChange={(event) => choose(event.target.files?.[0])}
+                onChange={(event) => void choose(event.target.files?.[0])}
               />
             </label>
 
             {/* Touch screens only: that is where a camera sits behind the file input. */}
             <div className="pointer-fine:hidden">
-              <input
-                ref={cameraRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="sr-only"
-                tabIndex={-1}
-                aria-hidden
-                onChange={(event) => addPhoto(event.target.files?.[0])}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full"
+              <CameraButton
+                hasPages={files.length > 0 && files.every(isImage)}
                 disabled={isSubmitting}
-                onClick={() => cameraRef.current?.click()}
-              >
-                <CameraIcon data-icon="inline-start" aria-hidden />
-                {files.length > 0 && files.every(isImage) ? "Photographier la page suivante" : "Photographier le document"}
-              </Button>
+                onPhoto={(photo) => void addPhoto(photo)}
+              />
             </div>
 
             {hasTypeError && (
@@ -171,38 +152,7 @@ export function UploadForm({ organisations }: { organisations: Organisation[] })
               </p>
             )}
 
-            {files.length > 0 && (
-              <ul className="space-y-2">
-                {files.map((item, index) => (
-                  <li
-                    key={`${index}-${item.name}-${item.lastModified}`}
-                    className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
-                  >
-                    <FileTextIcon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{isPaged ? `Page ${index + 1}` : item.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatFileSize(item.size)}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => remove(index)}
-                      disabled={isSubmitting}
-                      aria-label={isPaged ? `Retirer la page ${index + 1}` : undefined}
-                    >
-                      Retirer
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {isPaged && (
-              <p className="text-xs text-muted-foreground">
-                Les {files.length} pages seront analysées comme un seul document.
-              </p>
-            )}
+            <FileList files={files} disabled={isSubmitting} onRemove={remove} />
 
             {error !== null && <ErrorNotice error={error} />}
 
@@ -211,13 +161,20 @@ export function UploadForm({ organisations }: { organisations: Organisation[] })
                 <p className="text-xs text-muted-foreground">Choisissez d’abord une organisation.</p>
               )}
               <Button type="submit" size="lg" disabled={!canSubmit}>
-                {isSubmitting ? "Lecture et analyse…" : "Analyser le dossier"}
-                {!isSubmitting && <ArrowRightIcon data-icon="inline-end" aria-hidden />}
+                {isSubmitting ? "Lecture et analyse…" : preparing > 0 ? "Préparation des photos…" : "Analyser le dossier"}
+                {!isSubmitting && preparing === 0 && <ArrowRightIcon data-icon="inline-end" aria-hidden />}
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      {/* Fine pointers only: a laptop hands the camera work to a phone, a phone already has one. */}
+      {organisationId && (
+        <div className="pointer-coarse:hidden">
+          <PhoneLinkPanel key={organisationId} organisationId={organisationId} />
+        </div>
+      )}
     </div>
   );
 }
