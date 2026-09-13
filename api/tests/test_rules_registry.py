@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.orm import Session
 
+from app.rules.engine import _load_logic
 from app.rules.load_rules import main as load_rules_main
 from app.rules.registry import (
     InvalidRuleDefinition,
@@ -11,6 +12,8 @@ from app.rules.registry import (
     parse_rule_definition,
     upsert_rule,
 )
+
+REPOSITORY_RULES_DIR = Path(__file__).resolve().parents[2] / "rules"
 
 VALID_RULE = {
     "code": "TEST-001",
@@ -20,6 +23,16 @@ VALID_RULE = {
     "url": "https://example.test/fixture-article-0",
     "logic_ref": "app.rules.fixtures.test_001",
 }
+
+
+def test_every_repository_rule_loads_and_its_logic_resolves() -> None:
+    """A rule file that fails here would be rejected or crash at evaluation time."""
+    paths = sorted(REPOSITORY_RULES_DIR.glob("*.json"))
+    assert paths
+
+    for path in paths:
+        definition = load_rule_file(path)
+        assert callable(_load_logic(definition.logic_ref)), path.name
 
 
 def test_parse_rule_definition_accepts_complete_citation() -> None:

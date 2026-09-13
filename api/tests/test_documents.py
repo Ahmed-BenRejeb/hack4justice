@@ -3,7 +3,7 @@ import io
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import Organisation, Rule
+from app.db.models import Document, Export, OfficerDecision, Organisation, Rule
 from app.main import app
 from tests.conftest import make_born_digital_pdf
 
@@ -49,15 +49,50 @@ def test_upload_document_persists_and_extracts_it(db: Session) -> None:
     assert response.status_code == 201
     body = response.json()
     assert body["organisation_id"] == str(organisation.id)
+    assert body["filename"] == "certificat.pdf"
     assert body["status"] == "extracted"
     assert body["storage_ref"].endswith(".pdf")
 
     detail = client.get(f"/api/v1/documents/{body['id']}")
     assert detail.status_code == 200
-    extractions = detail.json()["extractions"]
+    detail_body = detail.json()
+    assert detail_body["organisation"]["name"] == "Atelier Ben Salah"
+    assert detail_body["officer_decision"] is None
+    assert detail_body["export"] is None
+    extractions = detail_body["extractions"]
     assert len(extractions) == 1
     assert extractions[0]["field_name"] == "full_text"
     assert "article 62" in extractions[0]["value"]
+
+
+def test_document_detail_includes_decision_and_export(db: Session) -> None:
+    organisation = _make_organisation(db)
+    document = Document(
+        organisation_id=organisation.id,
+        uploaded_by="accountant@example.tn",
+        filename="certificat.pdf",
+        storage_ref="fixture.pdf",
+        status="validated",
+    )
+    db.add(document)
+    db.flush()
+    db.add(
+        OfficerDecision(
+            document_id=document.id,
+            officer_id="officer@dgi.tn",
+            action="validated",
+            note="ok",
+        )
+    )
+    db.add(Export(document_id=document.id, xml_ref="decl.xml", xsd_validated=True))
+    db.commit()
+
+    body = client.get(f"/api/v1/documents/{document.id}").json()
+
+    assert body["officer_decision"]["action"] == "validated"
+    assert body["officer_decision"]["note"] == "ok"
+    assert body["export"]["xml_ref"] == "decl.xml"
+    assert body["export"]["xsd_validated"] is True
 
 
 def test_upload_document_unsupported_type_marks_extraction_failed(db: Session) -> None:
@@ -131,6 +166,7 @@ def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
 
     assert len(findings) == 1
     assert findings[0]["status"] == "abstained"
+    assert findings[0]["rule_code"] == "TEST-ABSTAIN"
     assert findings[0]["missing_fact"] == "status"
     assert findings[0]["citation"]["article_ref"] == "Art. 0"
 
@@ -163,5 +199,6 @@ def test_upload_evaluates_registered_rules_and_decides_when_fact_present(
 
     assert len(findings) == 1
     assert findings[0]["status"] == "decided"
+    assert findings[0]["rule_code"] == "TEST-DECIDE"
     assert findings[0]["decided_code"] == "TEST-B"
     assert findings[0]["citation"]["verbatim_text"] == "Ceci est un texte de test."

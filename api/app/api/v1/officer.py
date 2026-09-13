@@ -11,35 +11,62 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, OfficerDecision
+from app.db.models import Document, Finding, OfficerDecision
 from app.db.session import get_db
 
 router = APIRouter(prefix="/officer", tags=["officer"])
 
 
 class QueuedDocumentOut(BaseModel):
+    """One file awaiting review, with what an officer needs to scan the list."""
+
     id: uuid.UUID
     organisation_id: uuid.UUID
+    organisation_name: str
     uploaded_by: str
+    filename: str
     status: str
     created_at: datetime
-
-    model_config = {"from_attributes": True}
+    decided_count: int
+    abstained_count: int
 
 
 @router.get("/queue", response_model=list[QueuedDocumentOut])
-def get_queue(db: Session = Depends(get_db)) -> list[Document]:
-    """Extracted documents that do not yet have an officer decision."""
+def get_queue(db: Session = Depends(get_db)) -> list[QueuedDocumentOut]:
+    """Extracted documents that do not yet have an officer decision, oldest first."""
     decided_document_ids = db.query(OfficerDecision.document_id)
-    return (
+    documents = (
         db.query(Document)
         .filter(Document.status == "extracted")
         .filter(~Document.id.in_(decided_document_ids))
         .order_by(Document.created_at)
         .all()
     )
+    finding_counts = {
+        (document_id, status): count
+        for document_id, status, count in db.query(
+            Finding.document_id, Finding.status, func.count()
+        )
+        .filter(Finding.document_id.in_([document.id for document in documents]))
+        .group_by(Finding.document_id, Finding.status)
+    }
+    return [
+        QueuedDocumentOut(
+            id=document.id,
+            organisation_id=document.organisation_id,
+            organisation_name=document.organisation.name,
+            uploaded_by=document.uploaded_by,
+            filename=document.filename,
+            status=document.status,
+            created_at=document.created_at,
+            decided_count=finding_counts.get((document.id, "decided"), 0),
+            abstained_count=finding_counts.get((document.id, "abstained"), 0),
+        )
+        for document in documents
+    ]
 
 
 class DecisionIn(BaseModel):

@@ -8,7 +8,9 @@ what any specific article says.
 import re
 from dataclasses import dataclass
 
-ARTICLE_HEADING = re.compile(r"(?m)^\s*(Article\s+\d+\w*)\s*\.?\s*-?\s*$")
+# Heading styles seen in real editions of the same code: "Article 52.-" (the
+# 2024 printer's copy) and "ARTICLE 52 :" (the DGI's 2026 edition).
+ARTICLE_HEADING = re.compile(r"(?mi)^\s*Article\s+(\d+\w*)\s*[.:]?\s*-?\s*$")
 
 
 @dataclass(frozen=True)
@@ -34,5 +36,5 @@ def chunk_by_article(source_text: str) -> list[Chunk]:
         )
         body = source_text[start:end].strip()
         if body:
-            chunks.append(Chunk(article_ref=heading.group(1), text=body))
+            chunks.append(Chunk(article_ref=f"Article {heading.group(1)}", text=body))
     return chunks

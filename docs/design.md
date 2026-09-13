@@ -12,19 +12,21 @@ Colour carries status and nothing else. The three status colours never appear as
 
 | Token | Meaning | Notes |
 |---|---|---|
-| `--status-decided` | A rule reached a finding | Distinct from any brand or neutral colour |
-| `--status-abstained` | A rule could not decide, a fact is missing | Never rendered as an error/danger colour - abstention is a correct outcome, not a failure |
-| `--status-flagged` | An officer flagged a file | Reserved for officer actions only |
+| `--status-decided` | A rule reached a finding | Green; distinct from any brand or neutral colour |
+| `--status-abstained` | A rule could not decide, a fact is missing | Ochre; never rendered as an error/danger colour - abstention is a correct outcome, not a failure |
+| `--status-flagged` | An officer flagged a file | Magenta; reserved for officer actions only |
 
-Neutral, surface, and text tokens are defined in the token file (`web/lib/tokens.css` or equivalent, to be created in phase 5) and used everywhere; no component sets a colour value directly.
+The token file is `web/app/globals.css`. It holds a light and a dark set of cool administrative neutrals, the three status tokens, and one ink-blue accent (`--primary`) reserved for interaction: links, primary buttons, focus. System errors (a backend that cannot be reached) use `--destructive`, which is not a status colour. No component sets a colour value directly.
 
 ## 3. Typography
 
-A single type family for both roles' interfaces. French interface copy uses accented characters throughout; the chosen family must have full Latin Extended coverage. Exact family and scale to be fixed in phase 5 alongside the token file; until then, components use shadcn defaults rather than inventing ad hoc values.
+IBM Plex Sans (Latin and Latin Extended subsets) for all interface text in both roles; IBM Plex Mono for withholding codes, identifiers, and file references. Both are self-hosted at build time through `next/font`, so no font request leaves the workstation at runtime. Components use the shadcn type scale (`text-sm` body in dense views, `text-2xl` page titles) rather than ad hoc sizes.
 
 ## 4. Layout
 
-Officer queue: list-first, dense, scannable - an officer works many files. MSME upload/review: single-file focus, one document's findings at a time, generous spacing - an MSME owner sees one file, not a queue. Both share the same component primitives from `web/components/ui/`.
+Officer queue: list-first, dense, scannable - an officer works many files; the whole row opens the file. MSME upload/review: single-file focus, one document's findings at a time, generous spacing - an MSME owner sees one file, not a queue. Both share the same component primitives from `web/components/ui/`.
+
+File review (both roles) is answer first (D-023, D-024): a result banner states the proposed code, the missing facts and the number of rules applied before any detail. The main column holds the cited findings, then the extracted text; once a file is validated, the TEJ declaration form leads the officer's main column. A side rail holds the officer's decision, the export result and progress as a vertical step list. Below the `lg` breakpoint the rail follows the main column.
 
 ## 5. Motion
 
@@ -41,7 +43,7 @@ Every other transition responds directly to something the user did: expanding a 
 ### Forbidden
 
 - Motion as decoration: no animation that does not answer a specific state change or a specific user action.
-- Looping or ambient animation of any kind.
+- Looping or ambient animation of any kind, including pulsing loading skeletons and spinners: loading states are static.
 - Motion that delays a user from reading or acting (no animation the user must wait out before the next control is usable).
 - Colour used decoratively (contradicts section 2).
 
@@ -51,13 +53,15 @@ Interface copy is French. Code, identifiers, comments, docs, and commit messages
 
 ## 7. Screens
 
-To be specified in detail during phase 5 (see `docs/plan.md` section 8), against the demo moments in `docs/plan.md` section 6:
+Specified against the demo moments in `docs/plan.md` section 6. First implementation in `web/`:
 
-- MSME upload and extraction review
-- Finding with citation (expandable to verbatim article text and source URL)
-- Abstention with named missing fact
-- Officer queue (list) and officer file review (validate/flag)
-- Export confirmation (TEJ XML produced, XSD-validated)
+| Screen | Route |
+|---|---|
+| MSME upload | `/entreprise` |
+| MSME extraction review, findings with citation, abstention with named missing fact | `/entreprise/dossiers/[id]` |
+| Officer queue (list) | `/agent` |
+| Officer file review (validate/flag) and export confirmation (TEJ XML produced, XSD-validated) | `/agent/dossiers/[id]` |
+| Admin rule registry (read-only) | `/admin` |
 
 ## 8. Quality floor
 
@@ -68,3 +72,6 @@ Every screen above must be legible and usable with the reduced-motion preference
 | Date | Author | What changed |
 |---|---|---|
 | 2026-09-12 | team | Regenerated design doc from description-projet-v2.md scope; typography/token specifics deferred to phase 5 |
+| 2026-09-12 | team | Fixed token file location, status hues, IBM Plex typography; static loading states; screen-to-route table (D-022) |
+| 2026-09-12 | team | Section 4: answer-first file review with a side rail, clickable queue rows (D-023) |
+| 2026-09-12 | team | Section 4: review adapted to the real backend, RNE removed, TEJ form placement (D-024) |

@@ -17,9 +17,11 @@ RUN uv sync --frozen --no-install-project --no-dev
 COPY api/ .
 COPY schemas/ /schemas/
 COPY corpus/sources/ /corpus-sources/
+COPY rules/ /rules/
 
 ENV SCHEMAS_DIR=/schemas
 ENV CORPUS_SOURCES_DIR=/corpus-sources
+ENV RULES_DIR=/rules
 
 RUN uv sync --frozen --no-dev
 

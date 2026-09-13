@@ -353,14 +353,110 @@ Running it surfaced a real bug: `app/corpus/chunking.py`'s heading regex only ma
 
 ---
 
-## D-022 - Article 62 does not match the anchor case; real candidates found
+## D-022 - Web UI: client-side data through a thin proxy, fixed tokens, assumed response shapes
+
+**Date:** 2026-09-12
+
+**Decision:** Build the `web/` UI against the backend contract only, with no mock data in the repository. The browser calls `/api/v1/*` on the Next.js app; one catch-all route handler forwards to `API_BASE_URL`; screens load and poll their data client-side. Typography is IBM Plex Sans and Plex Mono, and the token file is `web/app/globals.css`. Where `docs/architecture.md` section 5 does not fix a response shape, the UI assumes the following (defined in `web/lib/api-types.ts`):
+- `GET /documents/{id}` returns `id, filename, status, uploaded_at, extractions[], counterparty_check | null, officer_decision | null, export | null`.
+- `GET /documents/{id}/findings` returns findings with their `rule` embedded (code, source, article, verbatim text, url, logic ref).
+- `GET /officer/queue` returns rows of `document_id, filename, organisation_name, submitted_at, status, decided_count, abstained_count, counterparty_registered | null`.
+- `POST /documents` takes the multipart field `file` and returns the document; `POST /officer/decisions` takes `document_id, action, note`.
+- Document `status` is free text. The UI labels known values and derives pipeline progress from the presence of each stage's output, never from the status string.
+
+**Options considered:**
+- A typed client plus a mock backend inside `web/` for demos before the API exists.
+- A real client only, built against the architecture contract.
+- Static fixtures imported directly by components.
+- Server components fetching the backend directly, instead of client-side polling through a proxy.
+
+**Why:** A mock in the repository would be thrown away and could drift from the backend; the user chose the real client only. Client-side polling is what demo moments 1 and 4 need (fields populating live, a file arriving in the queue). A single proxy keeps the backend origin in the one server-side configuration module (D-014). Presence-based progress stays correct whatever status vocabulary the backend settles on. IBM Plex covers Latin Extended and reads as a sober administrative face.
+
+**Result:** Screens for all three roles on branch `feat/web-ui`, with the admin registry read-only so cut list item 1 stays cheap. The backend confirms or corrects the shapes above, and `web/lib/api-types.ts` changes with any correction. `docs/design.md` sections 2, 3, 5 and 7 updated.
+
+---
+
+## D-023 - Answer-first file review with a side rail
+
+**Date:** 2026-09-12
+
+**Decision:** Both file review screens (MSME and officer) lead with a result banner: proposed code, number of missing facts, extracted fields, and RNE status. The main column holds the cited findings, then the extracted fields. A side rail holds the officer's decision and export (officer), progress as a vertical step list, and the RNE check. The separate "already checked" card is replaced by the banner. The extraction table marks only assisted facts, with a visible legend instead of a tooltip.
+
+**Options considered:**
+- Answer first with a side rail.
+- A result banner followed by tabs (Constats, Informations, Fournisseur, Suite).
+- A single column, reordered, with extracted fields collapsed by default.
+
+**Why:** The first version put the answer below a long extraction table and repeated the same fact in several places. Tabs would hide content the presenter must show during the demo. A rail keeps every element visible while cutting the scroll length, and it puts the officer's one action next to the evidence.
+
+**Result:** `components/shared/result-banner.tsx`, `review-layout.tsx` and `file-header.tsx` added; `prequalification-summary.tsx` removed; unused shadcn primitives (dialog, sheet, progress, separator, tooltip) removed. `docs/design.md` section 4 updated.
+
+---
+
+## D-024 - Web and api integration: backend is the contract, minimal extensions
+
+**Date:** 2026-09-12
+
+**Decision:** Merge `feat/web-ui` into `docs/v2-scope-and-architecture` and make the UI work against the real backend. The backend's Pydantic models are the contract; `web/lib/api-types.ts` mirrors them and replaces the shapes D-022 assumed. The backend gains only what the screens need:
+- `document.filename` (migration `a3f9c2d17b64`, backfilled from `storage_ref` for older rows).
+- `GET /documents/{id}` returns the organisation, the officer decision and the latest export; findings carry their `rule_code`.
+- `GET /officer/queue` rows carry filename, organisation name, and decided and abstained counts.
+- `GET` and `POST /organisations`, so the upload screen can pick or create the organisation a file is filed for.
+- `GET /export/operation-codes`, read from the real TEJ schema, so the export form offers exactly the codes the XSD accepts.
+
+On the web side: an organisation picker and the uploader's e-mail feed `POST /documents`; `officer_id` comes from `OFFICER_ID` in `web/.env` until officer sign-in exists; after validation the officer fills the TEJ declaration in a form (amounts typed in dinars, sent in millimes as the schema requires) and refused exports list every XSD error; the RNE check is removed from the screens because no counterparty endpoint exists (D-020); the extracted text is shown as a text block because extraction records a single `full_text` field. `docker compose up` now also builds and runs `web`.
+
+**Options considered:**
+- Adapt the UI to the backend as it stood, with no backend change, losing filenames, decision history and queue counts.
+- Extend the backend minimally, each change tested.
+- For identity: a seeded demo organisation with ids in env, or an organisations endpoint with a picker.
+- For export: an officer form, or leaving export out of the UI.
+- For running: web in Docker Compose, or `pnpm dev` beside the compose backend.
+
+**Why:** Chosen by the user in each case. The extensions are read models and one small write (organisations): none moves compliance judgement out of the rules engine, and none infers a declaration value. Deriving the code list from the XSD keeps the form and the validator on one source.
+
+**Result:** Backend tests added for every extension. `docs/architecture.md` sections 4 and 5, `api/CLAUDE.md`, `web/CLAUDE.md`, `docs/design.md` section 4 and `README.md` updated.
+
+## D-025 - Configurable host port for the compose database
+
+**Date:** 2026-09-13
+
+**Decision:** `docker-compose.yml` publishes the database on `${CHAHED_DB_PORT:-5432}`. A developer whose machine already runs Postgres on 5432 sets `CHAHED_DB_PORT` in a git-ignored root `.env` and uses the same port in `api/.env`'s `DATABASE_URL`.
+
+**Options considered:**
+- A configurable host port with the current default.
+- Move the tracked mapping to a non-standard port for everyone.
+- No repo change: stop the local Postgres before working on Chahed.
+
+**Why:** Chosen by the user. Teammates without a clash see no change, and the personal port stays out of tracked files. The host port is a local convenience, not process configuration: inside compose, `api` reaches `db:5432` regardless.
+
+**Result:** `docker compose up` starts on a machine with a local Postgres on 5432. `api/CLAUDE.md` local setup updated.
+
+## D-026 - First registered rule: Article 52(I)(a), cited from the DGI's 2026 edition
+
+**Date:** 2026-09-13
+
+**Decision:** Register `rules/cirppis-art52-i-a.json` (code `CIRPPIS-ART52-I-A`, logic `app.rules.cirppis_art52_honoraires.decide_article_52_withholding_mention`), citing Article 52, paragraphe I, a) of the Code de l'IRPP et de l'IS, 2026 edition, from the DGI's own portal (`https://jibaya.tn/wp-content/uploads/2026/03/11.pdf`, PDF page 84). The citation was promoted to `verified` in `docs/facts.md` after a person on the team checked the verbatim text against that page. `corpus/sources/` now holds the same 2026 edition in place of the 2024 copy from `alliance-tunisie.com`, so the indexed text and the citation come from one document. The chunker accepts the 2026 edition's `ARTICLE N :` heading style. In Docker, `rules/` is copied into the api image and `load_rules` runs on every start.
+
+**Options considered:**
+- Sign-off: a person reviews the evidence and the verification is recorded; stage the rule unregistered; hand over the evidence only.
+- Source: the DGI 2026 edition for rule and corpus; for the rule only; keep the 2024 private-host copy.
+- Loading: automatic in the compose command; manual CLI.
+
+**Why:** Chosen by the user. The DGI portal is the tax authority's own publication and the most recent edition; the 2024 copy was a private re-host, two editions behind. The verbatim text was extracted from the 2026 PDF and compared with the DGI 2025 edition (identical) and the 2024 copy (same words, different footnote marker, one missing "du"), but the `verified` status rests on the person's check, not on those extractions. `load_rules` upserts by code, so running it on every start is safe.
+
+**Result:** The registry holds one rule. Verified in the compose stack through the web proxy: an honoraires note without any withholding mention yields `ART52_WITHHOLDING_MISSING`, one mentioning a retenue yields `ART52_WITHHOLDING_PRESENT`, and a delivery note yields an abstention on `article_52_category`, each with the Article 52(I)(a) citation. Every upload now makes one live OpenRouter call. The 10% rate in the cited text (footnote (1): applies to amounts paid from 1 January 2021) is not asserted by the rule and not verified for a slide. `api/CLAUDE.md`, `corpus/sources/SOURCE.md` and `docs/facts.md` updated; api suite 74 passed.
+
+---
+
+## D-027 - Article 62 does not match the anchor case; real candidates found
 
 **Date:** 2026-09-13
 
 **Decision:** `docs/facts.md` already flagged D-002's anchor citation ("Article 62 ... exact text pending") as unverified. Now that the Code de l'IRPP et de l'IS is fully available (D-021), checked it directly: **the real Article 62 in this code governs bookkeeping/accounting record obligations (who must keep formal accounts), not withholding certificates or code selection.** It does not match the anchor case ("a prestataire unpaid because the wrong withholding code was selected on the certificate").
 
 Two real articles in the same code do match the narrative:
-- **Article 52(I)(a)** sets the rates and payment categories (honoraires, commissions, courtages, loyers) that determine which withholding code applies. This is what `app/rules/cirppis_art52_honoraires.py` and `app/rules/withholding_code_proposal.py` are grounded in.
+- **Article 52(I)(a)** sets the rates and payment categories (honoraires, commissions, courtages, loyers) that determine which withholding code applies. This is what `app/rules/cirppis_art52_honoraires.py` (now the registered rule, D-026) and `app/rules/withholding_code_proposal.py` (D-028) are grounded in.
 - **Article 55(I)** requires the debtor to deliver a "certificat de retenue" to the beneficiary at each payment, naming its required fields (identity, gross amount, withholding amount, net amount), and states it is issued "a travers une plateforme electronique mise en place par le ministere des finances" (added by decret-loi n. 2021-21, 2021-12-28) - this is almost certainly a direct reference to the TEJ platform itself.
 
 **Options considered:**
@@ -369,15 +465,15 @@ Two real articles in the same code do match the narrative:
 
 **Why:** `docs/facts.md`'s own rule: "no fact on a slide or on screen that is not in docs/facts.md with status verified. Article numbers are checked by a person against the official source, never recalled from memory." "62" was never checked against the official source by anyone; it appears to have been a placeholder. Finding this now, before it reaches a slide, is exactly what the facts register is for.
 
-**Result:** No file citing "Article 62" as a real rule exists yet (the fixture fixtures/test data using "article 62" is fixture-only, not a real citation, and is unaffected). `docs/facts.md`'s Article 62 row is updated with this finding. `docs/plan.md` section 2's anchor case still names "Article 62"; changing the pitch narrative's anchor citation is the team's call, not something to rewrite unilaterally. Candidate replacement: Article 55(I) for the certificate-delivery obligation, Article 52(I)(a) for the code-selection mechanism, both `to verify` pending a person confirming the verbatim text and the platform reference.
+**Result:** No file citing "Article 62" as a real rule exists (D-026 registered Article 52(I)(a) instead). `docs/facts.md`'s Article 62 row is updated with this finding. `docs/plan.md` section 2's anchor case still names "Article 62"; changing the pitch narrative's anchor citation is the team's call, not something to rewrite unilaterally. Candidate replacement: Article 55(I) for the certificate-delivery obligation, Article 52(I)(a) for the code-selection mechanism (already registered per D-026).
 
 ---
 
-## D-023 - Withholding-code proposal engine (RS2 family)
+## D-028 - Withholding-code proposal engine (RS2 family)
 
 **Date:** 2026-09-13
 
-**Decision:** Built `app/rules/withholding_code_proposal.py`, docs/plan.md section 2's stated "technical core": given a document's text, propose which of the real 36 TEJ withholding codes (D-019) applies. Scoped narrowly to the honoraires/commissions/courtages family (RS2_000001 vs RS2_000002, distinguished by the beneficiary's fiscal regime, forfait d'assiette vs regime reel), the same family Article 52(I)(a) and the Article 62 investigation (D-022) both point to. Any other category (loyers, capitaux mobiliers, cessions, and so on) abstains by name; none of those are modeled yet.
+**Decision:** Built `app/rules/withholding_code_proposal.py`, docs/plan.md section 2's stated "technical core": given a document's text, propose which of the real 36 TEJ withholding codes (D-019) applies. Scoped narrowly to the honoraires/commissions/courtages family (RS2_000001 vs RS2_000002, distinguished by the beneficiary's fiscal regime, forfait d'assiette vs regime reel), the same family Article 52(I)(a) and the Article 62 investigation (D-027) both point to. Any other category (loyers, capitaux mobiliers, cessions, and so on) abstains by name; none of those are modeled yet.
 
 **Options considered:**
 - Attempt to cover all 36 codes now, for a more complete demo.
@@ -385,7 +481,7 @@ Two real articles in the same code do match the narrative:
 
 **Why:** The other code families involve legally distinct, more complex conditions (residency, establishment, capital gains treatment) that were not part of this session's sourced text and would risk exactly the kind of guessed legal content the root CLAUDE.md rule forbids. A correct narrow proposal with honest abstentions elsewhere demonstrates the mechanism (demo moment 2: "the proposed withholding code appears with its citation") without overclaiming coverage.
 
-**Result:** `app/rules/withholding_code_proposal.py` and its tests (tested live against the real model). Not yet a registered rule, same as D-022's other candidates: needs a human-verified citation before entering `rules/`.
+**Result:** `app/rules/withholding_code_proposal.py` and its tests (tested live against the real model). Not yet a registered rule: needs a human-verified citation before entering `rules/`, same as D-026 provided for Article 52(I)(a).
 
 ## Change log
 
@@ -398,5 +494,10 @@ Two real articles in the same code do match the narrative:
 | 2026-09-12 | team | Added D-019: found and added the real DGI TEJ XSD schema to schemas/ |
 | 2026-09-12 | team | Added D-020: RNE re-checked, reachable now but account-gated, not network-gated |
 | 2026-09-12 | team | Added D-021: sourced real legal text into corpus/sources/, fixed a real chunking bug |
-| 2026-09-13 | team | Added D-022: Article 62 does not match the anchor case; found real candidates |
-| 2026-09-13 | team | Added D-023: withholding-code proposal engine (RS2 family) |
+| 2026-09-12 | team | Added D-022: web UI data flow, tokens and typography, assumed response shapes |
+| 2026-09-12 | team | Added D-023: answer-first file review with a side rail |
+| 2026-09-12 | team | Added D-024: web and api integration, minimal backend extensions |
+| 2026-09-13 | team | Added D-025: configurable host port for the compose database |
+| 2026-09-13 | team | Added D-026: first registered rule, Article 52(I)(a) cited from the DGI 2026 edition |
+| 2026-09-13 | team | Added D-027: Article 62 does not match the anchor case; found real candidates |
+| 2026-09-13 | team | Added D-028: withholding-code proposal engine (RS2 family) |

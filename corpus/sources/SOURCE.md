@@ -1,20 +1,19 @@
 # Provenance
 
-Downloaded 2026-09-12 from `https://alliance-tunisie.com/wp-content/uploads/2024/06/CODE-IRPP-IS-2024.pdf`, a copy of the Code de l'impot sur le revenu des personnes physiques et de l'impot sur les societes (Code de l'IRPP et de l'IS), watermarked "Imprimerie Officielle de la Republique Tunisienne" throughout (the government's own official printer, the authoritative publisher of Tunisian law). Found via a web search for the code's article on retenues a la source (withholding at source), cross-referenced against `jurisitetunisie.com` and `profiscal.com`, both of which independently describe Article 52 the same way.
+Downloaded 2026-09-13 from `https://jibaya.tn/wp-content/uploads/2026/03/11.pdf`, linked from `https://jibaya.tn/docs/code-de-lirpp-et-is-2026/`: the Code de l'impot sur le revenu des personnes physiques et de l'impot sur les societes (Code de l'IRPP et de l'IS), 2026 edition, published by the Direction Generale des Impots on its own portal (the same site `schemas/tej/` comes from). PDF created 2026-03-02, 125 pages, sha256 `49f6e72cb4d6066a3f3723c2d9de091bd552fe94008f72dec182b1b61ceb4b7f`.
 
-This is real, current text (amendments through Loi de Finances 2024, per the footnoted amendment history within the articles themselves), not a synthetic placeholder and not a paraphrase. It has not been promoted to `verified` in `docs/facts.md`: per the root CLAUDE.md rule, that promotion is a human step (checking the file against the official source, confirming it is the current, non-superseded version) that a model performing the download cannot substitute for.
+It replaces the 2024 copy previously held here, downloaded from `alliance-tunisie.com` (a private re-host), per D-026. Article 52, paragraphe I, a) was compared across that copy, the DGI 2025 edition (`https://jibaya.tn/wp-content/uploads/2025/07/code-IS-et-IRPP-francais-1.pdf`) and this one: identical in 2025 and 2026; the 2024 copy differs only in its footnote marker and one missing "du".
 
 ## Files
 
-- `CODE-IRPP-IS-2024.pdf` - the source PDF, byte-for-byte as downloaded. Kept for audit; never read by application code.
-- `cirppis-retenues-a-la-source.txt` - Articles 52 through 55 ("2. Retenues a la source"), extracted from the PDF with `pypdf` (the same extraction path `app/extraction/ocr.py` uses for born-digital PDFs). This is what `app/corpus/load_corpus.py` actually indexes.
+- `code-irpp-is-2026.pdf` - the source PDF, byte-for-byte as downloaded. Kept for audit; never read by application code.
+- `cirppis-retenues-a-la-source.txt` - Articles 52 through 55 ("2. RETENUES A LA SOURCE", PDF pages 84 to 99, cut before "ARTICLE 56"), extracted with `pypdf` (the same extraction path `app/extraction/ocr.py` uses for born-digital PDFs). This is what `app/corpus/load_corpus.py` indexes.
 - `manifest.json` - lists each source file with its `source_id` and source `url`, consumed by `load_corpus.py`.
 
 ## Known extraction artifacts
 
-`pypdf` text extraction preserves the PDF's own page furniture inline (for example "Imprimerie Officielle de la Republique Tunisienne" and a page number appear mid-paragraph at page breaks) and occasionally emits ligature/spacing quirks (double spaces, curly quotes). These are left as extracted, not manually cleaned, the same way OCR output elsewhere in this pipeline is not silently rewritten. They do not change the legal content, only its literal-text fidelity for embedding/retrieval quality.
+`pypdf` keeps page numbers and footnotes inline at page breaks, inserts stray spaces inside amendment references (for example "Art 69 -1 LF 2004 -90"), and keeps curly apostrophes. These are left as extracted, not cleaned, the same way OCR output elsewhere in this pipeline is not silently rewritten. They change literal-text fidelity for retrieval, not legal content. Rule citations do not come from this file: each `rules/*.json` carries its own verbatim text, checked against the PDF.
 
-## What this resolves, pending human check
+## Verification status
 
-- `corpus/sources/` had no real content; this is the first real legal text in the corpus. `app/corpus/chunking.py`'s heading regex only matched a bare "Article N" heading; the real code uses "Article N.-" (a literal period-hyphen suffix), which is the standard heading style for Tunisian codified law, not a one-off formatting quirk of this PDF. The regex was widened accordingly; see the decision log.
-- Article 52's withholding rates, and their exact conditions and exceptions, are complex and have been amended many times since 1989 (each amendment cited inline in the text itself). No compliance rule has been written against this text yet: doing so accurately is a legal-content decision, not an engineering one, and is deliberately left for a scoped follow-up rather than guessed at while sourcing the text.
+Article 52, paragraphe I, a) is `verified` in `docs/facts.md` (checked by team, 2026-09-13) and grounds rule `CIRPPIS-ART52-I-A`. Everything else in Articles 52 to 55, every rate included, is not verified and must not be stated on screen or on a slide.

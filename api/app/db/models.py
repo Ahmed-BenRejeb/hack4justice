@@ -45,6 +45,7 @@ class Document(Base):
         ForeignKey("organisation.id"), nullable=False
     )
     uploaded_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    filename: Mapped[str] = mapped_column(String(500), nullable=False)
     storage_ref: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

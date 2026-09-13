@@ -16,10 +16,12 @@ from sqlalchemy.orm import Session
 from app.db.models import Document, Export, OfficerDecision
 from app.db.session import get_db
 from app.export import tej
+from app.export.codes import operation_codes
 from app.export.xsd import SchemaValidationError
 from app.storage import save_upload
 
 router = APIRouter(prefix="/documents", tags=["export"])
+codes_router = APIRouter(prefix="/export", tags=["export"])
 
 
 class BeneficiaireIn(BaseModel):
@@ -68,6 +70,11 @@ class ExportOut(BaseModel):
     validated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class OperationCodeOut(BaseModel):
+    code: str
+    description: str
 
 
 def _to_tej_certificat(certificat: CertificatIn) -> tej.Certificat:
@@ -124,3 +131,12 @@ def export_document(
     db.commit()
     db.refresh(export)
     return export
+
+
+@codes_router.get("/operation-codes", response_model=list[OperationCodeOut])
+def list_operation_codes() -> list[OperationCodeOut]:
+    """The withholding operation codes the TEJ schema accepts, with the DGI's description of each."""
+    return [
+        OperationCodeOut(code=entry.code, description=entry.description)
+        for entry in operation_codes()
+    ]
