@@ -656,6 +656,27 @@ Three departures from the plan:
 
 **Result:** `app/corpus/retrieval.py`. Tests cover a verified paragraph outranked by 25 unverified items, and the terms of a sample query.
 
+## D-038 - Gate-independent features proceed while the phase 1 recall gate stays open
+
+**Date:** 2026-09-13
+
+**Decision:** The phase 1 gate is not met: the recall target cannot be measured until team members write `corpus/eval/questions.json` (D-033). Work continues on features whose code depends neither on retrieval quality nor on hero documents, in this order, each on its own branch from `docs/v2-scope-and-architecture` and merged back into it:
+1. J1 decision trace
+2. J8 queue naming missing facts
+3. J7 schema errors on the field, with C3 export arithmetic
+4. A1 masking before provider calls, with the J5 masked text view
+
+The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
+
+**Options considered:**
+- Build gate-independent features and log the exception (chosen).
+- Waive the gate and follow plan order, generating fictitious hero invoices.
+- Stop feature work until the question set exists.
+
+**Why:** Chosen by the user. The recall gate protects features that show retrieved text; none of these four shows retrieved text or needs a measured retrieval score. Every one is in the pitch's Must or Strong tier (`docs/feature-research.md` section 6.3), so building them now shortens the path to the demo without weakening what the gate guards.
+
+**Result:** The phase 1 gate is still open and still reported as not met. The question set remains person time for the team.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -683,3 +704,4 @@ Three departures from the plan:
 | 2026-09-13 | team | Added D-035: hybrid retrieval, full-text and vector search fused by reciprocal rank |
 | 2026-09-13 | team | Added D-036: corpus endpoints serve verified passages only; accent-folding configuration, citation left out by text |
 | 2026-09-13 | team | Added D-037: verified-only search ranks verified passages; short full-text query terms dropped |
+| 2026-09-13 | team | Added D-038: gate-independent features (J1, J8, J7 with C3, A1 with J5) proceed while the recall gate stays open |
