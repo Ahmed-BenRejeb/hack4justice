@@ -677,6 +677,21 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 
 **Result:** The phase 1 gate is still open and still reported as not met. The question set remains person time for the team.
 
+## D-039 - Decision trace: rules return the facts they used, stored on the finding
+
+**Date:** 2026-09-13
+
+**Decision:** J1. `Decision` and `Abstention` carry a `trace`: the facts the rule used, in order, each with its source (`document` or `model`), its value, and for a model fact the confidence and the threshold the rule required. The engine stores it as `finding.trace` (JSONB, migration `c1e7a3f5b920`), and `GET /documents/{id}/findings` returns it. The Article 52, I, a) rule returns three steps: text available, category (model), mention of "retenue". An abstention's trace stops at the fact the rule could not establish. The finding card shows it collapsed as "Pourquoi ce code ?" or "Pourquoi aucun code ?", with a last line stating what the rule decided, and missing facts now show their French label instead of the identifier.
+
+**Options considered:**
+- Where the trace lives: a JSON column on `finding` (chosen); a `finding_step` table; recomputing it on read, which would call the model again.
+- Value shape: typed values, with booleans shown as "oui"/"non" and null as "non établi" (chosen); French sentences written by the rule, which would put interface copy in the backend.
+- Display: collapsed under the answer (chosen); always open.
+
+**Why:** The trace is read with its finding and never queried on its own, so a table adds a join for nothing. Recomputing would not reproduce what the rule saw, since the model answer can change between calls. French copy stays in `web/lib`. Collapsed keeps the answer first (D-023). Nothing is inferred for findings recorded before the column existed: they keep an empty trace, and the card shows no trace for them.
+
+**Result:** The `person` source ("confirmé par une personne") is not added yet; it lands with J4. The unregistered RS2 proposal engine (D-028) returns no trace until it is registered.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -705,3 +720,4 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 | 2026-09-13 | team | Added D-036: corpus endpoints serve verified passages only; accent-folding configuration, citation left out by text |
 | 2026-09-13 | team | Added D-037: verified-only search ranks verified passages; short full-text query terms dropped |
 | 2026-09-13 | team | Added D-038: gate-independent features (J1, J8, J7 with C3, A1 with J5) proceed while the recall gate stays open |
+| 2026-09-13 | team | Added D-039: decision trace returned by rules, stored on the finding, shown under the answer |
