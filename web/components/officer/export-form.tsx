@@ -1,26 +1,33 @@
 "use client";
 
 /**
- * The TEJ declaration for a validated file. Field-level extraction does not exist yet, so the
- * officer enters every value the DGI schema requires; the backend builds the XML and validates
- * it against the real XSD before anything leaves the system. Nothing here is computed or guessed.
+ * The TEJ declaration for a validated file. Values the extraction pipeline could read off the
+ * document arrive pre-filled (marked "Pré-rempli"); everything else, and every pre-filled value
+ * too, stays editable, and the officer supplies and owns the whole payload before it is built
+ * into an XML file and validated against the real XSD (D-008).
  */
 import { useId, useState, type ChangeEvent, type FormEvent, type JSX, type ReactNode } from "react";
 import { FileCodeIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { ErrorNotice } from "@/components/shared/api-state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { api } from "@/lib/api-client";
-import type { DocumentDetail } from "@/lib/api-types";
-import { buildExportRequest, initialTejFormValues, type TejFormValues } from "@/lib/tej";
+import type { DocumentDetail, TejExportDraft } from "@/lib/api-types";
+import {
+  applyExportDraft,
+  buildExportRequest,
+  initialTejFormValues,
+  type TejFormTextKey,
+  type TejFormValues,
+} from "@/lib/tej";
 import { useResource } from "@/lib/use-resource";
 
-type TextKey = { [K in keyof TejFormValues]: TejFormValues[K] extends string ? K : never }[keyof TejFormValues];
 type FlagKey = { [K in keyof TejFormValues]: TejFormValues[K] extends boolean ? K : never }[keyof TejFormValues];
 
 // Matricule fiscal format from TypeMatriculeFiscal in the TEJ schema.
@@ -31,17 +38,27 @@ function Field({
   label,
   hint,
   className,
+  prefilled,
   children,
 }: {
   label: string;
   hint?: string;
   className?: string;
+  /** Set when this value came from the document rather than being typed by the officer. */
+  prefilled?: boolean;
   children: (id: string) => ReactNode;
 }): JSX.Element {
   const id = useId();
   return (
     <div className={cn("space-y-2", className)}>
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Label htmlFor={id}>{label}</Label>
+        {prefilled && (
+          <Badge variant="secondary" className="text-[10px]">
+            Pré-rempli
+          </Badge>
+        )}
+      </div>
       {children(id)}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
@@ -71,14 +88,35 @@ export function ExportForm({ document, onExported }: ExportFormProps): JSX.Eleme
   const [values, setValues] = useState<TejFormValues>(() =>
     initialTejFormValues(document.organisation.tax_id, new Date()),
   );
+  const [prefilledKeys, setPrefilledKeys] = useState<Set<TejFormTextKey>>(new Set());
+  // Tracks which draft has already been merged into `values`, so a fresh draft (a new document,
+  // never a poll: this resource is fetched once per document id) is applied exactly once, without
+  // an effect (React: adjusting state during render, not setState inside useEffect).
+  const [appliedDraft, setAppliedDraft] = useState<TejExportDraft | null>(null);
   const codes = useResource("operation-codes", (signal) => api.listOperationCodes(signal));
+  const draft = useResource(`export-draft:${document.id}`, (signal) => api.getExportDraft(document.id, signal));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const text = (key: TextKey) => ({
+  if (draft.data && draft.data !== appliedDraft) {
+    const applied = applyExportDraft(values, draft.data);
+    setAppliedDraft(draft.data);
+    setValues(applied.values);
+    setPrefilledKeys(applied.prefilledKeys);
+  }
+
+  const text = (key: TejFormTextKey) => ({
     value: values[key],
-    onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setValues((current) => ({ ...current, [key]: event.target.value })),
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const value = event.target.value;
+      setValues((current) => ({ ...current, [key]: value }));
+      setPrefilledKeys((current) => {
+        if (!current.has(key)) return current;
+        const next = new Set(current);
+        next.delete(key);
+        return next;
+      });
+    },
   });
   const flag = (key: FlagKey) => ({
     checked: values[key],
@@ -125,7 +163,11 @@ export function ExportForm({ document, onExported }: ExportFormProps): JSX.Eleme
                 </NativeSelect>
               )}
             </Field>
-            <Field label="Matricule fiscal du déclarant" hint={MATRICULE_HINT}>
+            <Field
+              label="Matricule fiscal du déclarant"
+              hint={MATRICULE_HINT}
+              prefilled={prefilledKeys.has("declarantMatricule")}
+            >
               {(id) => (
                 <Input id={id} required pattern={MATRICULE_PATTERN} className="font-mono" {...text("declarantMatricule")} />
               )}
@@ -141,10 +183,14 @@ export function ExportForm({ document, onExported }: ExportFormProps): JSX.Eleme
           </Fieldset>
 
           <Fieldset legend="Bénéficiaire">
-            <Field label="Nom ou raison sociale">
+            <Field label="Nom ou raison sociale" prefilled={prefilledKeys.has("beneficiaryName")}>
               {(id) => <Input id={id} required {...text("beneficiaryName")} />}
             </Field>
-            <Field label="Matricule fiscal" hint={MATRICULE_HINT}>
+            <Field
+              label="Matricule fiscal"
+              hint={MATRICULE_HINT}
+              prefilled={prefilledKeys.has("beneficiaryMatricule")}
+            >
               {(id) => (
                 <Input id={id} required pattern={MATRICULE_PATTERN} className="font-mono" {...text("beneficiaryMatricule")} />
               )}
@@ -157,7 +203,9 @@ export function ExportForm({ document, onExported }: ExportFormProps): JSX.Eleme
                 </NativeSelect>
               )}
             </Field>
-            <Field label="Adresse">{(id) => <Input id={id} required {...text("beneficiaryAddress")} />}</Field>
+            <Field label="Adresse" prefilled={prefilledKeys.has("beneficiaryAddress")}>
+              {(id) => <Input id={id} required {...text("beneficiaryAddress")} />}
+            </Field>
             <Field label="Adresse e-mail">
               {(id) => <Input id={id} type="email" required {...text("beneficiaryEmail")} />}
             </Field>
@@ -174,10 +222,15 @@ export function ExportForm({ document, onExported }: ExportFormProps): JSX.Eleme
             <Field label="Date de paiement">
               {(id) => <Input id={id} type="date" required {...text("paymentDate")} />}
             </Field>
-            <Field label="Référence du certificat">
+            <Field label="Référence du certificat" prefilled={prefilledKeys.has("reference")}>
               {(id) => <Input id={id} required {...text("reference")} />}
             </Field>
-            <Field label="Code d’opération" className="sm:col-span-2" hint={selectedCode?.description}>
+            <Field
+              label="Code d’opération"
+              className="sm:col-span-2"
+              hint={selectedCode?.description}
+              prefilled={prefilledKeys.has("code")}
+            >
               {(id) =>
                 codes.data === undefined && !codes.isLoading ? (
                   <ErrorNotice error={codes.error} onRetry={codes.reload} />
@@ -195,26 +248,33 @@ export function ExportForm({ document, onExported }: ExportFormProps): JSX.Eleme
                 )
               }
             </Field>
-            <Field label="Année de facturation">
+            <Field label="Année de facturation" prefilled={prefilledKeys.has("invoiceYear")}>
               {(id) => (
                 <Input id={id} required inputMode="numeric" pattern="20\d{2}" {...text("invoiceYear")} />
               )}
             </Field>
-            <Field label="Taux de retenue (%)">
+            <Field label="Taux de retenue (%)" prefilled={prefilledKeys.has("rate")}>
               {(id) => (
                 <Input id={id} type="number" required min="0" max="100" step="0.01" {...text("rate")} />
               )}
             </Field>
-            <Field label="Montant hors taxes (TND)">
+            <Field label="Montant hors taxes (TND)" prefilled={prefilledKeys.has("amountExclTax")}>
               {(id) => <Input id={id} type="number" required min="0" step="0.001" {...text("amountExclTax")} />}
             </Field>
-            <Field label="Montant TTC (TND)">
+            <Field
+              label="Montant TVA (TND)"
+              hint="Laisser vide si aucune TVA n’est déclarée"
+              prefilled={prefilledKeys.has("amountVat")}
+            >
+              {(id) => <Input id={id} type="number" min="0" step="0.001" {...text("amountVat")} />}
+            </Field>
+            <Field label="Montant TTC (TND)" prefilled={prefilledKeys.has("amountInclTax")}>
               {(id) => <Input id={id} type="number" required min="0" step="0.001" {...text("amountInclTax")} />}
             </Field>
-            <Field label="Montant retenu (TND)">
+            <Field label="Montant retenu (TND)" prefilled={prefilledKeys.has("amountWithheld")}>
               {(id) => <Input id={id} type="number" required min="0" step="0.001" {...text("amountWithheld")} />}
             </Field>
-            <Field label="Montant net servi (TND)">
+            <Field label="Montant net servi (TND)" prefilled={prefilledKeys.has("amountNetPaid")}>
               {(id) => <Input id={id} type="number" required min="0" step="0.001" {...text("amountNetPaid")} />}
             </Field>
             <label className="flex items-center gap-2 text-sm">

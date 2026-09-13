@@ -2,6 +2,7 @@
 import type { JSX } from "react";
 import { cn } from "cn";
 import type { Finding } from "@/lib/api-types";
+import { fieldLabel } from "@/lib/labels";
 import { Citation } from "./citation";
 import { FindingStatusBadge } from "./status-badge";
 
@@ -39,7 +40,9 @@ export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
           <h3 id={titleId} className="text-sm text-muted-foreground">
             Information manquante
           </h3>
-          <p className="mt-1 text-base font-medium">{finding.missing_fact}</p>
+          <p className="mt-1 text-base font-medium">
+            {finding.missing_fact && fieldLabel(finding.missing_fact)}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Aucun code n’est proposé tant que ce fait n’est pas établi.
           </p>

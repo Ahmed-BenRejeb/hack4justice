@@ -7,11 +7,20 @@ const FIELD_LABELS = new Map<string, string>([
   ["full_text", "Texte intégral du document"],
   ["supplier_name", "Fournisseur"],
   ["supplier_tax_id", "Matricule fiscal du fournisseur"],
+  ["supplier_address", "Adresse du fournisseur"],
   ["client_name", "Client"],
   ["client_tax_id", "Matricule fiscal du client"],
   ["service_description", "Objet de la prestation"],
   ["invoice_date", "Date de facture"],
+  ["invoice_reference", "Référence de la facture"],
   ["amount_excl_tax", "Montant hors taxes"],
+  ["amount_vat", "Montant de la TVA"],
+  ["amount_incl_tax", "Montant TTC"],
+  ["withholding_rate", "Taux de retenue à la source"],
+  ["withholding_amount", "Montant de la retenue"],
+  ["amount_net_paid", "Montant net payé"],
+  ["payment_category", "Catégorie du paiement"],
+  ["beneficiary_fiscal_regime", "Régime fiscal du bénéficiaire"],
 ]);
 
 // The statuses api/ writes: upload and extraction (documents.py), then the officer's action (officer.py).

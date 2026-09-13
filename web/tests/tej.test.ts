@@ -2,12 +2,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  applyExportDraft,
   buildExportRequest,
   dinarsToMillimes,
   formatRate,
   initialTejFormValues,
   toTejDate,
 } from "../lib/tej.ts";
+import type { TejExportDraft } from "../lib/api-types.ts";
 
 test("dates, amounts and rates convert to the schema's formats", () => {
   assert.equal(toTejDate("2026-03-15"), "15/03/2026");
@@ -82,4 +84,83 @@ test("buildExportRequest produces the body the export endpoint expects", () => {
       },
     ],
   });
+});
+
+test("buildExportRequest omits montant_tva when amountVat is blank, includes it otherwise", () => {
+  const withoutVat = buildExportRequest({
+    ...initialTejFormValues("1234567A", new Date(2026, 2, 15)),
+    beneficiaryMatricule: "7654321B",
+    reference: "CERT-001",
+    code: "RS7_000001",
+    rate: "1.5",
+    amountExclTax: "1000",
+    amountInclTax: "1190",
+    amountWithheld: "15",
+    amountNetPaid: "1175",
+  });
+  assert.equal("montant_tva" in withoutVat.certificats[0].operations[0], false);
+
+  const withVat = buildExportRequest({
+    ...initialTejFormValues("1234567A", new Date(2026, 2, 15)),
+    beneficiaryMatricule: "7654321B",
+    reference: "CERT-001",
+    code: "RS7_000001",
+    rate: "1.5",
+    amountExclTax: "1000",
+    amountVat: "190",
+    amountInclTax: "1190",
+    amountWithheld: "15",
+    amountNetPaid: "1175",
+  });
+  assert.equal(withVat.certificats[0].operations[0].montant_tva, 190_000);
+});
+
+test("applyExportDraft fills only the fields the draft carries, and reports which ones", () => {
+  const base = initialTejFormValues("1234567A", new Date(2026, 2, 15));
+  const draft: TejExportDraft = {
+    values: {
+      declarant_matricule_fiscal: "1234567A",
+      beneficiary_name: "Karim Jlassi",
+      beneficiary_matricule_fiscal: "7654321B",
+      beneficiary_address: null,
+      invoice_year: "2026",
+      code: null,
+      rate: null,
+      amount_excl_tax: "1000.0",
+      amount_vat: null,
+      amount_incl_tax: "1190.0",
+      amount_withheld: null,
+      amount_net_paid: null,
+      reference: null,
+    },
+    derived_fields: [
+      "declarant_matricule_fiscal",
+      "beneficiary_name",
+      "beneficiary_matricule_fiscal",
+      "invoice_year",
+      "amount_excl_tax",
+      "amount_incl_tax",
+    ],
+  };
+
+  const { values, prefilledKeys } = applyExportDraft(base, draft);
+
+  assert.equal(values.beneficiaryName, "Karim Jlassi");
+  assert.equal(values.beneficiaryMatricule, "7654321B");
+  assert.equal(values.amountExclTax, "1000.0");
+  assert.equal(values.amountInclTax, "1190.0");
+  // Untouched: the draft carried null for these.
+  assert.equal(values.beneficiaryAddress, "");
+  assert.equal(values.code, "");
+  assert.deepEqual(
+    [...prefilledKeys].sort(),
+    [
+      "amountExclTax",
+      "amountInclTax",
+      "beneficiaryMatricule",
+      "beneficiaryName",
+      "declarantMatricule",
+      "invoiceYear",
+    ].sort(),
+  );
 });
