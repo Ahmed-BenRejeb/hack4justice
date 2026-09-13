@@ -14,3 +14,10 @@ fixtures/generated/
 
 .DS_Store
 *.log
+
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+api/data/

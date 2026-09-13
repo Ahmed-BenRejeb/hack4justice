@@ -1,39 +1,50 @@
 # Chahed
 
-Regulatory compliance for Tunisian MSMEs, and a verification desk for the administration.
+Every error a business makes costs the administration more than it costs the business.
 
-A business uploads the documents it already holds. Chahed reads them, checks them against Tunisian fiscal and registry law with every conclusion tied to a cited article, verifies the counterparties against the RNE, and produces a pre-qualified file plus a TEJ withholding export that validates against the DGI's published schema. A public officer receives the file with every automated check already performed and every conclusion replayable.
+Chahed reads the payment documents a Tunisian MSME already holds, selects the correct withholding-tax (retenue à la source) code with a citation to the exact governing article, tells the business honestly when it cannot decide instead of guessing, verifies the counterparty against the RNE, and hands a public officer a pre-qualified file plus a TEJ export validated against the DGI's published schema.
 
 Built for Hack4Justice 2026, Challenge A.
 
 ## Why it exists
 
-Article 62 of the 2014 Finance Law conditions every public payment of 1,000 DT TTC or above on an attestation that the supplier has filed its due declarations. Assembling that file is manual on both sides. The DGI's e-sit-fisc tells a public body whether a supplier filed. It does not tell anyone whether the file itself is complete and correct, and the business cannot use it. Chahed is the missing half.
+The majority of Tunisian MSMEs have no in-house accountant. They make fiscal errors out of confusion, not fraud, and each one triggers a chain of downstream work at the administration far more expensive than the original mistake. Chahed intercepts the error before it is filed, for the one case that requires real judgement rather than a form fill: choosing the correct withholding code.
+
+Full narrative and scope boundary: `docs/plan.md`.
 
 ## Documentation
 
-| Document | What it covers |
-|---|---|
-| [docs/plan.md](docs/plan.md) | Scope, roles, phases and gates. Source of truth. |
-| [docs/design.md](docs/design.md) | Visual system, motion, screen specs. Binding. |
-| [docs/facts.md](docs/facts.md) | Every fact we may state publicly, with verification status. |
-| [docs/decision-log.md](docs/decision-log.md) | Every significant decision, dated. |
-| [CLAUDE.md](CLAUDE.md) | Working rules for this repository. |
+- `docs/plan.md` - what and why, scope, roles, pipeline, phases and gates, the Q&A prep
+- `docs/architecture.md` - repository layout, pipeline, data model, API surface, provider and configuration boundaries
+- `docs/design.md` - visual system, motion rules, screen specs
+- `docs/facts.md` - every fact stated on stage, with verification status
+- `docs/decision-log.md` - every significant decision, dated
+
+Read the `CLAUDE.md` inside a directory before working there; local rules live locally.
+
+## Repository map
+
+```
+docs/         plan, architecture, design, facts, decision log
+corpus/       raw legal texts and article-level chunks
+rules/        rule registry definitions with verbatim citations
+schemas/      DGI TEJ XSD files and the validation harness
+fixtures/     demo documents (hero/) and background files (generated/)
+seed/         scripts that generate the demo dataset
+web/          Next.js application (TypeScript, App Router, shadcn/ui)
+api/          Python backend (FastAPI): extraction, corpus retrieval, rules, counterparty, export
+```
 
 ## Getting started
 
-```
-cp .env.example .env    # then fill every value; there are no defaults
-npm install
-npm run dev
-```
+The whole stack runs with Docker Compose: PostgreSQL with pgvector, the FastAPI backend (`api/`) and the Next.js front end (`web/`).
 
-Copying `.env.example` to `.env` and filling it must produce a working run. If a variable is missing the process fails loudly and names it.
+1. `cp api/.env.example api/.env` and fill `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID`. `DATABASE_URL` is set by `docker-compose.yml`.
+2. `cp web/.env.example web/.env` and fill `OFFICER_ID`. `API_BASE_URL` is set by `docker-compose.yml`.
+3. `docker compose up --build`, then open http://localhost:3000.
+
+To work on one side without Docker, follow the local setup in `api/CLAUDE.md` or `web/CLAUDE.md`.
 
 ## Design law
 
-Compliance judgement is deterministic code. The model extracts facts, explains, and drafts text. It never decides whether a finding exists.
-
-Assisted rules are the one nuance: the model supplies a fact the documents do not state, with a confidence, and the deterministic rule judges from that fact. When it cannot establish the fact, the rule escalates a specific question to a human rather than guessing.
-
-No finding without a citation. No fact on a slide that is not verified in docs/facts.md.
+Compliance judgement is deterministic code. The model extracts facts, explains, and drafts. It never decides whether a finding exists. No finding without a citation: source, article number, verbatim text, and URL. See `docs/plan.md` section 4 and the root `CLAUDE.md`.
