@@ -242,6 +242,8 @@ def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
             "value": None,
             "confidence": None,
             "threshold": None,
+            "confirmed_by": None,
+            "confirmed_at": None,
         }
     ]
     assert findings[0]["citation"]["article_ref"] == "Art. 0"

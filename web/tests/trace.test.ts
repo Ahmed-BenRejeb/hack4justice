@@ -32,3 +32,22 @@ test("describeTraceStep says a fact the model could not establish was requested,
   assert.equal(line.value, "non établi");
   assert.match(line.origin, /^demandé au modèle, seuil 50\s%$/u);
 });
+
+test("describeTraceStep names the person who confirmed a fact, and when", () => {
+  const line = describeTraceStep({
+    ...step,
+    fact: "beneficiary_fiscal_regime",
+    source: "person",
+    value: "reel",
+    confirmed_by: "owner@example.tn",
+    confirmed_at: "2026-09-13",
+  });
+  assert.equal(line.label, "Régime fiscal du bénéficiaire");
+  assert.equal(line.value, "reel");
+  assert.equal(line.origin, "confirmé par owner@example.tn le 13/09/2026");
+});
+
+test("describeTraceStep falls back to the generic person label without a name", () => {
+  const line = describeTraceStep({ ...step, fact: "beneficiary_fiscal_regime", source: "person", value: "reel" });
+  assert.equal(line.origin, "confirmé par une personne");
+});

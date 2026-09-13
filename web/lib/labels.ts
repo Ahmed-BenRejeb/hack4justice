@@ -35,6 +35,32 @@ const DOCUMENT_STATUS_LABELS = new Map<string, string>([
   ["flagged", "Signalé"],
 ]);
 
+/**
+ * The question a person answers to resolve an abstention, and the label of each value the
+ * backend accepts (J4). A fact with no entry here is not asked on screen, even if the backend
+ * would accept it: an unlabelled question would put its wording in the backend, which holds no
+ * interface copy (D-039).
+ */
+const FACT_QUESTIONS = new Map<string, { question: string; options: Map<string, string> }>([
+  [
+    "beneficiary_fiscal_regime",
+    {
+      question: "Le fournisseur est-il soumis à l’impôt selon le régime réel ?",
+      options: new Map([
+        ["reel", "Oui, régime réel"],
+        ["forfait", "Non, forfait d’assiette"],
+      ]),
+    },
+  ],
+]);
+
+/** The question and answer labels for a fact, or null when it is not asked on screen. */
+export function factQuestion(
+  factName: string,
+): { question: string; options: Map<string, string> } | null {
+  return FACT_QUESTIONS.get(factName) ?? null;
+}
+
 /** Turns `some_identifier` into "Some identifier". */
 function readable(identifier: string): string {
   const words = identifier.replace(/[_-]+/g, " ").trim();

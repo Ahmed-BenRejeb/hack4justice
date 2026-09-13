@@ -51,7 +51,10 @@ def test_completeness_abstains_naming_the_first_missing_element() -> None:
 
     assert isinstance(outcome, Abstention)
     assert outcome.missing_fact == "supplier_address"
-    assert [step.fact for step in outcome.trace] == ["supplier_name", "supplier_address"]
+    assert [step.fact for step in outcome.trace] == [
+        "supplier_name",
+        "supplier_address",
+    ]
     assert outcome.trace[-1].value is None
 
 

@@ -1,14 +1,26 @@
 /** One rule outcome: the proposed code with its citation, or an abstention naming the missing fact. */
 import type { JSX } from "react";
 import { cn } from "cn";
-import type { Finding } from "@/lib/api-types";
+import type { AnswerableFacts, Finding } from "@/lib/api-types";
 import { fieldLabel } from "@/lib/labels";
+import { AnswerAbstention } from "./answer-abstention";
 import { Citation } from "./citation";
 import { DecisionTrace } from "./decision-trace";
 import { FindingStatusBadge } from "./status-badge";
 
+interface FindingCardProps {
+  finding: Finding;
+  /** Set where a person may answer an abstention on the spot (J4); omitted elsewhere. */
+  answering?: {
+    documentId: string;
+    answerable: AnswerableFacts;
+    answeredBy: string;
+    onAnswered: () => void;
+  };
+}
+
 /** Status and rule on one line, then the code or the missing fact, then how the rule got there, then the citation. */
-export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
+export function FindingCard({ finding, answering }: FindingCardProps): JSX.Element {
   const decided = finding.status === "decided";
   const titleId = `finding-${finding.id}`;
 
@@ -45,6 +57,17 @@ export function FindingCard({ finding }: { finding: Finding }): JSX.Element {
           <p className="mt-1 text-sm text-muted-foreground">
             Aucun code n’est proposé tant que ce fait n’est pas établi.
           </p>
+          {answering && finding.missing_fact && (
+            <div className="mt-3">
+              <AnswerAbstention
+                documentId={answering.documentId}
+                missingFact={finding.missing_fact}
+                answerable={answering.answerable}
+                answeredBy={answering.answeredBy}
+                onAnswered={answering.onAnswered}
+              />
+            </div>
+          )}
         </div>
       )}
 
