@@ -7,6 +7,7 @@ labelled an estimate on screen (`docs/facts.md`, estimates rule; D-016).
 """
 
 import uuid
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.auth.deps import current_user, member_of
 from app.db.models import User
 from app.db.session import get_db
+from app.impact.activity import activity
 from app.impact.measurement import measure
 
 router = APIRouter(prefix="/impact", tags=["impact"])
@@ -63,21 +65,62 @@ class MeasurementOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.get("", response_model=MeasurementOut)
-def get_impact(
-    organisation_id: uuid.UUID | None = None,
-    user: User = Depends(current_user),
-    db: Session = Depends(get_db),
-) -> MeasurementOut:
-    """Counts observed in this deployment, and the benefit figures derived from them.
+def _check_scope(user: User, organisation_id: uuid.UUID | None) -> None:
+    """An officer reads the whole deployment or any one organisation; a filer only one of their own.
 
-    An officer measures the whole deployment or any one organisation. A filer
-    measures only one of their own organisations, for the MSME "Mes chiffres"
-    section (D-053); the deployment-wide figures stay the administration's.
+    The deployment-wide figures stay the administration's (D-053).
     """
     if not (
         user.role == "officer"
         or (organisation_id is not None and member_of(user, organisation_id))
     ):
         raise HTTPException(status_code=403, detail="this role may not use this route")
+
+
+@router.get("", response_model=MeasurementOut)
+def get_impact(
+    organisation_id: uuid.UUID | None = None,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> MeasurementOut:
+    """Counts observed in this deployment, and the benefit figures derived from them."""
+    _check_scope(user, organisation_id)
     return MeasurementOut.model_validate(measure(db, organisation_id))
+
+
+class DayCountOut(BaseModel):
+    day: date
+    count: int
+
+    model_config = {"from_attributes": True}
+
+
+class RecentDocumentOut(BaseModel):
+    id: uuid.UUID
+    organisation_id: uuid.UUID
+    organisation_name: str
+    filename: str
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ActivityOut(BaseModel):
+    documents_by_status: dict[str, int]
+    documents_by_day: list[DayCountOut]
+    documents_exported: int
+    recent_documents: list[RecentDocumentOut]
+
+    model_config = {"from_attributes": True}
+
+
+@router.get("/activity", response_model=ActivityOut)
+def get_activity(
+    organisation_id: uuid.UUID | None = None,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> ActivityOut:
+    """Files by status and by Tunisian day, exported files and the latest files, for the dashboards."""
+    _check_scope(user, organisation_id)
+    return ActivityOut.model_validate(activity(db, organisation_id))
