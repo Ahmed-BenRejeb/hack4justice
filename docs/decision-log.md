@@ -1076,6 +1076,22 @@ Fixing the network was rejected because it is machine-specific and would leave t
 
 **Result:** `.github/workflows/deploy.yml` added; `docs/deploy.md` gained section 6 (one-time runner registration) and a note under "Notes and limitations" that the instance is now expected to stay running between rehearsals rather than being destroyed after each one.
 
+## D-062 - A navigation column with a dashboard per space, page guides and a brochure home page, in the D-058 style
+
+**Date:** 2026-09-13
+
+**Decision:** Every space opens on a dashboard beside a navigation column: `/entreprise` (upload moved to `/entreprise/deposer`), `/agent` (queue moved to `/agent/dossiers`, measures unchanged), `/admin` (registry at `/admin/regles`, corpus verification at `/admin/corpus`). The dashboards read a new `GET /impact/activity` (files by status, files per day over 14 days in Tunisian time, files with a schema-valid export, the 8 latest files) behind the `GET /impact` gate, plus the existing queue, impact, rules and corpus endpoints. Every screen carries a "Mode d’emploi" guide under its title, closed by default on the file reviews and the passage reader so the answer stays first. The home page becomes a brochure of services, method, steps and audiences in the D-058 style: serif headings, the green accent, the announcement badge with its pulsing dot, the crosshatch on the method section. A new `--inverse` token set, `DESIGN.md`'s "Dark / Inverted" ground, carries the navigation column and the brochure's closing call. The logo is a placeholder, `web/public/logo.svg`, whose path is set once in `web/components/shared/logo.tsx`.
+
+**Options considered:**
+- A Chahed navy and brick palette (built first on `feat/web-redesign`, before D-058 reached the shared branch), or D-058's green SaaS palette and fonts (chosen when the branches were merged).
+- Dashboards from the existing endpoints only, or a new backend endpoint for per-day counts and the latest files (chosen).
+- A navigation column with the dashboard first (chosen), or the existing top header with a row of tabs per space.
+- Page guidance on screen (chosen), a written specification per page in this repository, or both.
+
+**Why:** The team asked for a statistics view in every space, a public presentation of the product and easier screens. The two palettes arrived on two branches at once; shipping both would be two visual systems, so the structure was kept and restyled in D-058's palette. The design law is kept: status colours report status only, ambient motion stays the badge dot on `/`, the queue arrival stays the one orchestrated moment (the officer dashboard lists waiting files without it), and the brochure states only what the product does and texts marked `verified` in `docs/facts.md`, with no figure, client count or testimonial.
+
+**Result:** `web/components/shared/app-shell.tsx` replaces `app-header.tsx`, and with it D-058's scroll-lift header; the root layout draws no frame and each screen family renders its own `<main id="contenu">`. `web/components/msme/organisation-impact.tsx` is folded into `msme-dashboard.tsx`. `app/impact/activity.py` counts days in the database's time zone rules (`timezone('Africa/Tunis', ...)`), so the container needs no tzdata. The web image now copies `public/`. The upload screen's data note was corrected: field extraction does send masked text to the language model (D-042). Not built: the real logo, and a label for a source other than its id on the admin chart.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1126,3 +1142,4 @@ Fixing the network was rejected because it is machine-specific and would leave t
 | 2026-09-13 | team | Added D-059: fonts ship as @fontsource npm packages so the image build never contacts fonts.gstatic.com |
 | 2026-09-13 | team | Added D-060: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |
 | 2026-09-13 | team | Added D-061: continuous deployment to main via a self-hosted runner on the demo instance |
+| 2026-09-13 | team | Added D-062: navigation column with a dashboard per space, `GET /impact/activity`, page guides, brochure home page, in the D-058 style |

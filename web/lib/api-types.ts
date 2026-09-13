@@ -149,6 +149,27 @@ export interface Measurement {
   officer_hours_saved: number;
 }
 
+/** One of the latest files, as a dashboard lists it. */
+export interface RecentDocument {
+  id: string;
+  organisation_id: string;
+  organisation_name: string;
+  filename: string;
+  status: string;
+  created_at: string;
+}
+
+/** GET /impact/activity: files by status and by Tunisian day, exported files, the latest files (F1). */
+export interface Activity {
+  /** Keyed by document status; a status no file has is absent. */
+  documents_by_status: Record<string, number>;
+  /** A fixed window, oldest first, ISO dates, a day without a filing counted as zero. */
+  documents_by_day: { day: string; count: number }[];
+  /** Files with at least one schema-valid TEJ export. */
+  documents_exported: number;
+  recent_documents: RecentDocument[];
+}
+
 /** A fact a person confirmed about a supplier, kept for that supplier's later files (B3, J11). */
 export interface SupplierFact {
   id: string;

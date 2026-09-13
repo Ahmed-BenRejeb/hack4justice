@@ -4,6 +4,7 @@
 import type { JSX } from "react";
 import { ClipboardCheckIcon, ExternalLinkIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock } from "@/components/shared/api-state";
+import { PageGuide } from "@/components/shared/page-guide";
 import { PageHeader } from "@/components/shared/page-header";
 import { SimpleBarChart } from "@/components/shared/simple-bar-chart";
 import { api } from "@/lib/api-client";
@@ -18,10 +19,18 @@ export function VerificationQueue(): JSX.Element {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
+        eyebrow="Administration"
         title="Vérification du corpus"
-        description="Chaque référence doit être comparée au texte officiel par une personne avant qu’un passage puisse être cité ou trouvé (D-029, D-032). Le système ne montre jamais un texte non vérifié, ici ou ailleurs."
+        description="Chaque référence doit être comparée au texte officiel par une personne avant qu’un passage puisse être cité ou trouvé. Le système ne montre jamais un texte non vérifié, ici ou ailleurs."
+      />
+      <PageGuide
+        steps={[
+          "Chaque ligne désigne un passage indexé que personne n’a encore vérifié ; son texte n’est volontairement pas affiché.",
+          "« Vérifier sur la source » ouvre la page officielle où lire ce passage.",
+          "La vérification s’enregistre hors de l’application, dans le registre des passages vérifiés, avec le nom de la personne et la date.",
+        ]}
       />
 
       {isLoading ? (

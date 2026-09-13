@@ -3,16 +3,16 @@ import type { JSX } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-/** Plain explanation and a way back home. */
+/** Plain explanation and a way back home. The root layout draws no frame, so this is its own `<main>`. */
 export default function NotFound(): JSX.Element {
   return (
-    <div className="mx-auto max-w-xl px-4 py-24 text-center">
+    <main id="contenu" tabIndex={-1} className="mx-auto max-w-xl px-4 py-24 text-center outline-none">
       <p className="text-sm font-medium text-muted-foreground">Erreur 404</p>
       <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight">Page introuvable</h1>
       <p className="mt-2 text-muted-foreground">L’adresse demandée ne correspond à aucune page.</p>
       <Button asChild className="mt-6">
         <Link href="/">Retour à l’accueil</Link>
       </Button>
-    </div>
+    </main>
   );
 }

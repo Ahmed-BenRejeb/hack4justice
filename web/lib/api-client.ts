@@ -5,6 +5,7 @@
  * so the backend origin is configured once on the server and never reaches the browser.
  */
 import type {
+  Activity,
   AnswerableFacts,
   CaptureInvite,
   CaptureLink,
@@ -182,6 +183,12 @@ export const api = {
   getImpact(organisationId?: string, signal?: AbortSignal): Promise<Measurement> {
     const query = organisationId ? `?${new URLSearchParams({ organisation_id: organisationId })}` : "";
     return request(`/impact${query}`, { signal });
+  },
+
+  /** GET /impact/activity: files by status and by day, exported files and the latest files. Same scoping as getImpact. */
+  getActivity(organisationId?: string, signal?: AbortSignal): Promise<Activity> {
+    const query = organisationId ? `?${new URLSearchParams({ organisation_id: organisationId })}` : "";
+    return request(`/impact/activity${query}`, { signal });
   },
 
   /** GET /rules: the rule registry. */

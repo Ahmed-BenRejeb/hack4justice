@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export default async function CapturePage({ params }: PageProps<"/capture/[token]">): Promise<JSX.Element> {
   const { token } = await params;
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-8">
+    <main id="contenu" tabIndex={-1} className="mx-auto w-full max-w-md px-4 py-8 outline-none">
       <PhoneCapture token={token} />
-    </div>
+    </main>
   );
 }
