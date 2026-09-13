@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, OfficerDecision, Organisation
+from app.db.models import Document, Export, OfficerDecision, Organisation
 from app.main import app
 
 client = TestClient(app)
@@ -29,6 +29,8 @@ VALID_PAYLOAD = {
                     "annee_facturation": "2026",
                     "montant_ht": 1000000,
                     "taux_rs": "1.50",
+                    "taux_tva": "19.00",
+                    "montant_tva": 190000,
                     "montant_ttc": 1190000,
                     "montant_rs": 15000,
                     "montant_net_servi": 1175000,
@@ -98,26 +100,64 @@ def test_export_rejects_a_document_without_validated_decision(db: Session) -> No
     assert response.status_code == 409
 
 
-def test_export_rejects_an_invalid_withholding_code(db: Session) -> None:
-    document = _make_validated_document(db)
-    bad_payload = {
+def _with_operation(**changes: object) -> dict:
+    certificat = VALID_PAYLOAD["certificats"][0]
+    return {
         **VALID_PAYLOAD,
         "certificats": [
             {
-                **VALID_PAYLOAD["certificats"][0],
-                "operations": [
-                    {
-                        **VALID_PAYLOAD["certificats"][0]["operations"][0],
-                        "code": "NOT-A-REAL-CODE",
-                    }
-                ],
+                **certificat,
+                "operations": [{**certificat["operations"][0], **changes}],
             }
         ],
     }
 
-    response = client.post(f"/api/v1/documents/{document.id}/export", json=bad_payload)
+
+def test_export_rejects_an_invalid_withholding_code_on_its_field(db: Session) -> None:
+    document = _make_validated_document(db)
+
+    response = client.post(
+        f"/api/v1/documents/{document.id}/export",
+        json=_with_operation(code="NOT-A-REAL-CODE"),
+    )
 
     assert response.status_code == 422
+    [error] = response.json()["detail"]
+    assert error["loc"] == ["body", "certificats", 0, "operations", 0, "code"]
+    assert error["type"] == "xsd.SCHEMAV_CVC_ENUMERATION_VALID"
+    assert "NOT-A-REAL-CODE" in error["msg"]
+
+
+def test_export_refuses_amounts_that_do_not_add_up_and_stores_nothing(
+    db: Session,
+) -> None:
+    document = _make_validated_document(db)
+
+    response = client.post(
+        f"/api/v1/documents/{document.id}/export",
+        json=_with_operation(montant_ttc=1200000),
+    )
+
+    assert response.status_code == 422
+    assert [(e["loc"][-1], e["type"]) for e in response.json()["detail"]] == [
+        ("montant_ttc", "arithmetic.ht_plus_tva"),
+        ("montant_net_servi", "arithmetic.rs_plus_net"),
+    ]
+    assert db.query(Export).filter_by(document_id=document.id).count() == 0
+
+
+def test_export_reports_schema_and_arithmetic_errors_together(db: Session) -> None:
+    document = _make_validated_document(db)
+    payload = _with_operation(montant_net_servi=1)
+    payload["declarant_matricule_fiscal"] = "12"
+
+    response = client.post(f"/api/v1/documents/{document.id}/export", json=payload)
+
+    assert response.status_code == 422
+    assert [e["loc"][1:] for e in response.json()["detail"]] == [
+        ["declarant_matricule_fiscal"],
+        ["certificats", 0, "operations", 0, "montant_net_servi"],
+    ]
 
 
 def test_export_unknown_document_returns_404() -> None:

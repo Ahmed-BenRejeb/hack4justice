@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   buildExportRequest,
   dinarsToMillimes,
+  exportFieldErrors,
   formatRate,
   initialTejFormValues,
   toTejDate,
@@ -41,7 +42,9 @@ test("buildExportRequest produces the body the export endpoint expects", () => {
     reference: "CERT-001",
     code: "RS7_000001",
     rate: "1.5",
+    vatRate: "19",
     amountExclTax: "1000",
+    amountVat: "190",
     amountInclTax: "1190",
     amountWithheld: "15",
     amountNetPaid: "1175",
@@ -72,6 +75,8 @@ test("buildExportRequest produces the body the export endpoint expects", () => {
             annee_facturation: "2026",
             montant_ht: 1_000_000,
             taux_rs: "1.50",
+            taux_tva: "19.00",
+            montant_tva: 190_000,
             montant_ttc: 1_190_000,
             montant_rs: 15_000,
             montant_net_servi: 1_175_000,
@@ -82,4 +87,47 @@ test("buildExportRequest produces the body the export endpoint expects", () => {
       },
     ],
   });
+});
+
+const operationLoc = ["body", "certificats", 0, "operations", 0];
+
+test("exportFieldErrors states schema, arithmetic and request errors in French on their fields", () => {
+  const { fields, unplaced } = exportFieldErrors({
+    detail: [
+      {
+        loc: ["body", "certificats", 0, "beneficiaire", "matricule_fiscal"],
+        msg: "Element 'Identifiant': [facet 'pattern'] ...",
+        type: "xsd.SCHEMAV_CVC_PATTERN_VALID",
+      },
+      { loc: ["body", "mois_depot"], msg: "...", type: "xsd.SCHEMAV_CVC_ENUMERATION_VALID" },
+      { loc: [...operationLoc, "montant_ttc"], msg: "...", type: "arithmetic.ht_plus_tva" },
+      { loc: [...operationLoc, "montant_ht"], msg: "Input should be a valid integer", type: "int_type" },
+      { loc: ["body", "certificats", 0, "beneficiaire", "adresse"], msg: "...", type: "missing" },
+    ],
+  });
+
+  assert.deepEqual(unplaced, []);
+  assert.equal(
+    fields.beneficiaryMatricule,
+    "Le matricule fiscal doit comporter 7 chiffres suivis d’une lettre majuscule (schéma TEJ).",
+  );
+  assert.match(fields.period ?? "", /entre 2000 et 2099/u);
+  assert.equal(fields.amountInclTax, "Le montant TTC doit être égal au montant hors taxes augmenté du montant de TVA.");
+  assert.match(fields.amountExclTax ?? "", /nombre de dinars/u);
+  assert.equal(fields.beneficiaryAddress, "Valeur manquante ou invalide.");
+});
+
+test("exportFieldErrors keeps a field's first error and lists errors no field matches", () => {
+  const { fields, unplaced } = exportFieldErrors({
+    detail: [
+      { loc: [...operationLoc, "montant_ttc"], msg: "...", type: "arithmetic.ht_plus_tva" },
+      { loc: [...operationLoc, "montant_ttc"], msg: "...", type: "xsd.SCHEMAV_CVC_DATATYPE_VALID_1_2_1" },
+      { loc: ["body"], msg: "Element 'Operation': Missing child element(s).", type: "xsd.SCHEMAV_ELEMENT_CONTENT" },
+    ],
+  });
+
+  assert.match(fields.amountInclTax ?? "", /hors taxes/u);
+  assert.deepEqual(unplaced, ["Element 'Operation': Missing child element(s)."]);
+  assert.deepEqual(exportFieldErrors({ detail: "document not found" }), { fields: {}, unplaced: [] });
+  assert.deepEqual(exportFieldErrors(null), { fields: {}, unplaced: [] });
 });

@@ -28,8 +28,11 @@ export interface TejFormValues {
   invoiceYear: string;
   /** Percentage, such as "1.5". */
   rate: string;
+  /** Percentage, such as "19". */
+  vatRate: string;
   /** Dinars, such as "1000.500". */
   amountExclTax: string;
+  amountVat: string;
   amountInclTax: string;
   amountWithheld: string;
   amountNetPaid: string;
@@ -60,7 +63,9 @@ export function initialTejFormValues(declarantTaxId: string, today: Date): TejFo
     code: "",
     invoiceYear: year,
     rate: "",
+    vatRate: "",
     amountExclTax: "",
+    amountVat: "",
     amountInclTax: "",
     amountWithheld: "",
     amountNetPaid: "",
@@ -87,6 +92,100 @@ export function formatRate(rate: string): string {
 
 function category(value: string): TaxpayerCategory {
   return value === "PP" ? "PP" : "PM";
+}
+
+/** A refused export, read for the form: one French message per field, and the messages no field matches. */
+export interface ExportFieldErrors {
+  fields: Partial<Record<keyof TejFormValues, string>>;
+  unplaced: string[];
+}
+
+// Request body paths (api/app/api/v1/export.py) with list indexes dropped: the form holds one
+// certificate with one operation.
+const FIELD_BY_PATH = new Map<string, keyof TejFormValues>([
+  ["declarant_matricule_fiscal", "declarantMatricule"],
+  ["declarant_categorie", "declarantCategorie"],
+  ["annee_depot", "period"],
+  ["mois_depot", "period"],
+  ["acte_depot", "acteDepot"],
+  ["certificats.beneficiaire.matricule_fiscal", "beneficiaryMatricule"],
+  ["certificats.beneficiaire.categorie", "beneficiaryCategorie"],
+  ["certificats.beneficiaire.nom_ou_raison_sociale", "beneficiaryName"],
+  ["certificats.beneficiaire.adresse", "beneficiaryAddress"],
+  ["certificats.beneficiaire.email", "beneficiaryEmail"],
+  ["certificats.beneficiaire.telephone", "beneficiaryPhone"],
+  ["certificats.beneficiaire.resident", "beneficiaryResident"],
+  ["certificats.date_payement", "paymentDate"],
+  ["certificats.reference", "reference"],
+  ["certificats.operations.code", "code"],
+  ["certificats.operations.annee_facturation", "invoiceYear"],
+  ["certificats.operations.montant_ht", "amountExclTax"],
+  ["certificats.operations.taux_rs", "rate"],
+  ["certificats.operations.taux_tva", "vatRate"],
+  ["certificats.operations.montant_tva", "amountVat"],
+  ["certificats.operations.montant_ttc", "amountInclTax"],
+  ["certificats.operations.montant_rs", "amountWithheld"],
+  ["certificats.operations.montant_net_servi", "amountNetPaid"],
+  ["certificats.operations.cnpc", "cnpc"],
+  ["certificats.operations.p_charge", "pCharge"],
+]);
+
+const MATRICULE_MESSAGE = "Le matricule fiscal doit comporter 7 chiffres suivis d’une lettre majuscule (schéma TEJ).";
+const RATE_MESSAGE = "Le taux doit être compris entre 0 et 100, avec au plus deux décimales (schéma TEJ).";
+const AMOUNT_MESSAGE = "Le montant doit être un nombre de dinars, avec au plus trois décimales.";
+
+// Each message restates the constraint schemas/tej/TEJDeclarationRS_v1.0.xsd sets on that value.
+const FIELD_MESSAGES: Partial<Record<keyof TejFormValues, string>> = {
+  declarantMatricule: MATRICULE_MESSAGE,
+  beneficiaryMatricule: MATRICULE_MESSAGE,
+  period: "La période doit être un mois d’une année comprise entre 2000 et 2099 (schéma TEJ).",
+  invoiceYear: "L’année de facturation doit être comprise entre 2000 et 2099 (schéma TEJ).",
+  paymentDate: "La date de paiement doit être une date du calendrier, au format JJ/MM/AAAA (schéma TEJ).",
+  beneficiaryEmail: "L’adresse e-mail n’a pas le format admis par le schéma TEJ.",
+  code: "Ce code ne figure pas dans la liste des codes d’opération du schéma TEJ.",
+  rate: RATE_MESSAGE,
+  vatRate: RATE_MESSAGE,
+  amountExclTax: AMOUNT_MESSAGE,
+  amountVat: AMOUNT_MESSAGE,
+  amountInclTax: AMOUNT_MESSAGE,
+  amountWithheld: AMOUNT_MESSAGE,
+  amountNetPaid: AMOUNT_MESSAGE,
+};
+
+// The sums api/app/export/field_errors.py checks, which the schema cannot (C3).
+const ARITHMETIC_MESSAGES = new Map<string, string>([
+  ["arithmetic.ht_plus_tva", "Le montant TTC doit être égal au montant hors taxes augmenté du montant de TVA."],
+  ["arithmetic.rs_plus_net", "Le montant retenu et le montant net servi doivent totaliser le montant TTC."],
+]);
+
+function fieldMessage(field: keyof TejFormValues, type: string): string {
+  const arithmetic = ARITHMETIC_MESSAGES.get(type);
+  if (arithmetic) return arithmetic;
+  if (FIELD_MESSAGES[field]) return FIELD_MESSAGES[field];
+  return type.startsWith("xsd.") ? "Valeur refusée par le schéma TEJ." : "Valeur manquante ou invalide.";
+}
+
+/**
+ * Places each error of a refused export (FastAPI's `{loc, msg, type}` detail, for request validation,
+ * schema and arithmetic alike) on its form field. A field shows its first error only.
+ */
+export function exportFieldErrors(body: unknown): ExportFieldErrors {
+  const result: ExportFieldErrors = { fields: {}, unplaced: [] };
+  const detail = typeof body === "object" && body !== null && "detail" in body ? body.detail : null;
+  if (!Array.isArray(detail)) return result;
+
+  for (const item of detail) {
+    if (typeof item !== "object" || item === null) continue;
+    const { loc, msg, type } = item as { loc?: unknown; msg?: unknown; type?: unknown };
+    const path = Array.isArray(loc) ? loc.filter((part) => typeof part === "string" && part !== "body").join(".") : "";
+    const field = FIELD_BY_PATH.get(path);
+    if (field === undefined) {
+      result.unplaced.push(String(msg));
+    } else {
+      result.fields[field] ??= fieldMessage(field, typeof type === "string" ? type : "");
+    }
+  }
+  return result;
 }
 
 /** The export request for one certificate with one operation, the case the form covers. */
@@ -117,6 +216,8 @@ export function buildExportRequest(values: TejFormValues): TejExportRequest {
             annee_facturation: values.invoiceYear.trim(),
             montant_ht: dinarsToMillimes(values.amountExclTax),
             taux_rs: formatRate(values.rate),
+            taux_tva: formatRate(values.vatRate),
+            montant_tva: dinarsToMillimes(values.amountVat),
             montant_ttc: dinarsToMillimes(values.amountInclTax),
             montant_rs: dinarsToMillimes(values.amountWithheld),
             montant_net_servi: dinarsToMillimes(values.amountNetPaid),

@@ -245,6 +245,8 @@ export interface TejOperationInput {
   annee_facturation: string;
   montant_ht: number;
   taux_rs: string;
+  taux_tva: string;
+  montant_tva: number;
   montant_ttc: number;
   montant_rs: number;
   montant_net_servi: number;
