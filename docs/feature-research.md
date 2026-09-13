@@ -270,6 +270,7 @@ Grouped by theme. Each feature states why (with evidence), how it respects the d
 **G3. Phone capture** - S
 - What: `<input type="file" accept="image/*" capture>` on the upload screen, so a paper invoice is photographed and sent to the existing OCR path.
 - Why: MSMEs without an accountant often hold paper. It is native HTML with no new dependency.
+- Built (D-055): a multi-page document is photographed page by page and filed as one PDF; photos are turned upright from their EXIF tag before OCR.
 
 ---
 

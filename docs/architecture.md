@@ -140,7 +140,7 @@ REST, versioned under `/api/v1`. Every endpoint but health, sign-up and sign-in 
 - `POST /auth/login` - opens a session: `{token, expires_at, user}`; 401 with one message for a wrong email or password
 - `POST /auth/logout` [any] - ends the calling session
 - `GET /auth/me` [any] - the user, their role and the organisations they file for
-- `POST /documents?organisation_id=` [msme, accountant] - multipart upload for one of the user's organisations, recorded as uploaded by them; extraction and rule evaluation run before it returns
+- `POST /documents?organisation_id=` [msme, accountant] - multipart upload for one of the user's organisations, recorded as uploaded by them; extraction and rule evaluation run before it returns. Several `file` parts are phone photos of one paper document, stored and read as one PDF; 422 when one is not a readable image or there are more than 20 (G3, D-055)
 - `GET /documents/{id}` [officer, members of its organisation] - status, filename, organisation, extraction results, officer decision, export
 - `GET /documents/{id}/findings` [officer, members of its organisation] - findings with their rule code, decision trace and resolved citation
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)

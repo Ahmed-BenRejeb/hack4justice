@@ -955,6 +955,22 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` and `GET /impact` without sign-in: that section now takes the signed-in user's organisations, and `GET /impact` admits a filer who names one of their own organisations, while the deployment-wide figures stay officer-only.
 
+## D-055 - Phone capture built ahead of its phase: several photos filed as one PDF, local OCR
+
+**Date:** 2026-09-13
+
+**Decision:** Build G3 now, although `docs/plan.md` section 8 places it in phase 8. On a touch screen the MSME upload screen offers "Photographier le document": a native `<input type="file" accept="image/*" capture="environment">` opens the camera, each photo joins the pages already taken, and the pages are sent as repeated `file` parts of the existing `POST /documents`. With more than one part the backend turns each photo upright from its EXIF orientation tag, reduces it to 3000 px on its long side, and saves the pages as one PDF (`app/extraction/photos.py`, Pillow), named after the first photo; that PDF is stored and read by the existing scanned-PDF OCR path. A single image upload gets the same upright-and-reduce step before OCR. OCR stays local Tesseract.
+
+**Options considered:**
+- Same device (chosen), or a QR handoff where a desktop page shows a code and the phone uploads to it (a pairing token table, new endpoints, desktop polling and a QR library).
+- Several photos as one document (chosen), or one photo per document.
+- Combining on the backend with Pillow (chosen), or in the browser (a PDF library, a new dependency).
+- Local Tesseract (chosen), or a vision model through OpenRouter, which would send an unmasked image and break D-013.
+
+**Why:** The team asked for phone capture now. MSMEs without an accountant hold paper, and the native input needs no dependency and no new endpoint. One PDF keeps one filing as one document for the rules, the queue and the export. Phones store orientation as a tag rather than rotating the pixels, and Tesseract ignores the tag, so a sideways photo read as noise.
+
+**Result:** `POST /documents` accepts one or more `file` parts; the single-file contract is unchanged. Several parts that are not all readable images, or more than 20, answer 422 and store nothing; an unreadable single image now ends as `extraction_failed` instead of a 500. Tests cover page order through OCR, a sideways EXIF photo, the refusals, and the multi-photo upload. The camera button is hidden on fine pointers (`pointer-fine:hidden`), so a desktop sees the drop zone only. Not built: client-side reduction before upload (full-size photos cross the network), reordering pages, a QR handoff. Photo OCR quality on real invoices is not measured yet (`docs/plan.md` section 9 risk).
+
 ## Change log
 
 | Date | Author | What changed |
@@ -999,3 +1015,4 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 | 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
 | 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
+| 2026-09-13 | team | Added D-055: phone capture (G3) built ahead of phase 8, several photos filed as one PDF, local OCR |
