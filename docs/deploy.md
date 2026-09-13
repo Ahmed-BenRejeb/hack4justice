@@ -230,6 +230,34 @@ Re-provisioning a fresh instance from scratch (after a `terraform destroy`)
 still starts with steps 1-4 above once (rsync included); redo this section
 afterward instead of relying on manual rsync/compose for ongoing deploys.
 
+## 7. Custom domain (optional)
+
+To serve the site at a real hostname instead of the sslip.io address (e.g.
+`chahed.<yourdomain>`), point DNS at the instance and switch `SITE_ADDRESS`
+to that hostname instead of deriving it from the instance's own IP (D-063).
+
+1. In your DNS provider (this project uses Cloudflare): add an `A` record,
+   name `chahed` (or whichever subdomain), value the instance's current
+   public IP (`terraform -chdir=deploy/terraform output -raw public_ip`).
+   Set it **DNS only** (grey cloud), not proxied: Caddy needs to see the
+   real client connection on port 80 to complete the Let's Encrypt HTTP-01
+   challenge itself, the same way it already does for the sslip.io address.
+2. In GitHub: Settings > Secrets and variables > Actions > Variables > New
+   repository variable, name `SITE_ADDRESS`, value the full hostname (e.g.
+   `chahed.example.com`). The workflow reads this instead of computing an
+   address from the instance's IP, and fails loudly, naming the variable,
+   if it is unset (root CLAUDE.md's configuration rule: an identity-bearing
+   value gets no default).
+3. Push to `main` (or re-run the workflow). Caddy requests a fresh
+   certificate for the new hostname on first request; give it a few seconds
+   after the deploy step completes before the smoke test's first attempt
+   succeeds.
+
+There is still no Elastic IP (D-051, kept on purpose). If the instance is
+ever stopped and started (not just rebooted: that keeps the same IP), its
+public IP changes and the Cloudflare `A` record must be updated by hand
+before the site resolves again.
+
 ## Notes and limitations
 
 - No Elastic IP: intentional, to avoid a resource that can outlive the

@@ -25,23 +25,21 @@ jobs:
           cp /opt/chahed/env/api.env api/.env
           cp /opt/chahed/env/web.env web/.env
 
-      - name: Resolve this instance's sslip.io address
-        id: site
+      - name: Require SITE_ADDRESS
         run: |
-          token=$(curl -sf -X PUT "http://169.254.169.254/latest/api/token" \
-            -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-          ip=$(curl -sf -H "X-aws-ec2-metadata-token: $token" \
-            http://169.254.169.254/latest/meta-data/public-ipv4)
-          echo "address=$(echo "$ip" | tr '.' '-').sslip.io" >> "$GITHUB_OUTPUT"
+          if [ -z "${{ vars.SITE_ADDRESS }}" ]; then
+            echo "::error::Repository variable SITE_ADDRESS is not set (Settings > Secrets and variables > Actions > Variables). See docs/deploy.md section 7." >&2
+            exit 1
+          fi
 
       - name: Deploy stack
         env:
-          SITE_ADDRESS: ${{ steps.site.outputs.address }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
         run: docker compose -f deploy/docker-compose.prod.yml up -d --build
 
       - name: Smoke test
         env:
-          SITE_ADDRESS: ${{ steps.site.outputs.address }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
         run: |
           # `up -d` returns once containers start, not once api has run
           # migrations, loaded rules/corpus and uvicorn is serving; only

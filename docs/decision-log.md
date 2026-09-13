@@ -1092,6 +1092,21 @@ Fixing the network was rejected because it is machine-specific and would leave t
 
 **Result:** `web/components/shared/app-shell.tsx` replaces `app-header.tsx`, and with it D-058's scroll-lift header; the root layout draws no frame and each screen family renders its own `<main id="contenu">`. `web/components/msme/organisation-impact.tsx` is folded into `msme-dashboard.tsx`. `app/impact/activity.py` counts days in the database's time zone rules (`timezone('Africa/Tunis', ...)`), so the container needs no tzdata. The web image now copies `public/`. The upload screen's data note was corrected: field extraction does send masked text to the language model (D-042). Not built: the real logo, and a label for a source other than its id on the admin chart.
 
+## D-063 - Custom domain via Cloudflare DNS, SITE_ADDRESS fixed instead of IP-derived
+
+**Date:** 2026-09-13
+
+**Decision:** The demo site is reachable at a real subdomain (`chahed.<domain>`, Cloudflare-managed, DNS-only/grey-cloud so Caddy's own HTTP-01 challenge still terminates on the instance) instead of only the `sslip.io` address derived from the instance's public IP. `.github/workflows/deploy.yml` now reads `SITE_ADDRESS` from a fixed GitHub Actions repository variable and fails loudly naming the variable if it is unset, rather than resolving it from EC2 instance metadata on every run; `deploy/Caddyfile`'s comment was generalised to match, since Caddy's automatic HTTPS already worked for any hostname and needed no code change.
+
+**Options considered:**
+- Fixed hostname via a GitHub Actions repository variable, DNS-only Cloudflare record (chosen).
+- Cloudflare proxied (orange-cloud) in front of the instance, terminating TLS at Cloudflare's edge.
+- Allocate an Elastic IP at the same time, so the DNS record never needs updating even across a stop/start.
+
+**Why:** A repository variable keeps the config rule intact (an identity-bearing value gets no default, fails loudly if missing) without adding a secret for a non-sensitive hostname. DNS-only was chosen over Cloudflare's proxy so the existing Let's Encrypt HTTP-01 flow keeps working unchanged, with no second TLS layer or origin-cert story to build under a hackathon timeline. An Elastic IP was declined for now: D-051's no-Elastic-IP stance holds as long as the instance is only rebooted, not stopped/started, and the team would rather accept "update the Cloudflare record by hand if that ever happens" than add a resource whose only job is avoiding a manual DNS edit.
+
+**Result:** `docs/deploy.md` section 7 documents the Cloudflare record and the GitHub repository variable; `Notes and limitations` now names the DNS record as a second thing that goes stale if the instance is ever stopped and started, alongside the sslip.io hostname and certificate it already listed.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1143,3 +1158,4 @@ Fixing the network was rejected because it is machine-specific and would leave t
 | 2026-09-13 | team | Added D-060: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |
 | 2026-09-13 | team | Added D-061: continuous deployment to main via a self-hosted runner on the demo instance |
 | 2026-09-13 | team | Added D-062: navigation column with a dashboard per space, `GET /impact/activity`, page guides, brochure home page, in the D-058 style |
+| 2026-09-13 | team | Added D-063: custom domain via Cloudflare, SITE_ADDRESS fixed as a repo variable |

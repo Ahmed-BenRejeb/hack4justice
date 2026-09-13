@@ -1,7 +1,9 @@
-# SITE_ADDRESS is the sslip.io hostname from `terraform output site_url`
-# (scheme stripped), e.g. 3-120-45-6.sslip.io. Caddy obtains and renews the
-# Let's Encrypt certificate for it automatically over the HTTP-01 challenge
-# on port 80, then serves HTTPS on 443.
+# SITE_ADDRESS is the hostname this deploy answers to: either the sslip.io
+# hostname from `terraform output site_url` (scheme stripped), e.g.
+# 3-120-45-6.sslip.io, or a real DNS name pointed at the instance (see
+# docs/deploy.md section 7, D-063). Caddy obtains and renews the Let's
+# Encrypt certificate for it automatically over the HTTP-01 challenge on
+# port 80, then serves HTTPS on 443.
 {$SITE_ADDRESS} {
 	reverse_proxy web:3000
 }
