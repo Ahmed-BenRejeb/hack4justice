@@ -2,6 +2,8 @@
 
 from fastapi import FastAPI
 
+from app.api.v1.corpus import findings_router as corpus_findings_router
+from app.api.v1.corpus import router as corpus_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.export import codes_router as export_codes_router
 from app.api.v1.export import router as export_router
@@ -23,6 +25,8 @@ def create_app() -> FastAPI:
     app.include_router(officer_router, prefix="/api/v1")
     app.include_router(export_router, prefix="/api/v1")
     app.include_router(export_codes_router, prefix="/api/v1")
+    app.include_router(corpus_router, prefix="/api/v1")
+    app.include_router(corpus_findings_router, prefix="/api/v1")
     return app
 
 

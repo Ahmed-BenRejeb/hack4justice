@@ -10,6 +10,7 @@ from datetime import date, datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    Computed,
     Date,
     DateTime,
     Enum,
@@ -24,7 +25,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from app.config import settings
+from app.config import CORPUS_TEXT_SEARCH_CONFIG, settings
 from app.db.base import Base
 
 
@@ -134,9 +135,16 @@ class CorpusChunk(Base):
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    # French full-text index of unaccent(text), computed by the loader's insert:
-    # unaccent() is not immutable, so this cannot be a generated column.
-    text_search: Mapped[str] = mapped_column(TSVECTOR, nullable=False)
+    # French full-text index, accents folded by the configuration (D-036);
+    # generated from text, never written by the loader.
+    text_search: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed(
+            f"to_tsvector('{CORPUS_TEXT_SEARCH_CONFIG}'::regconfig, text)",
+            persisted=True,
+        ),
+        nullable=False,
+    )
     # Set from corpus/verified-passages.json on every load; never shown when unverified (D-029).
     verification_status: Mapped[str] = mapped_column(
         Enum("unverified", "verified", name="verification_status", native_enum=False),

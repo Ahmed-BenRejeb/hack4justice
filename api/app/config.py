@@ -22,7 +22,8 @@ CORPUS_CHUNK_MAX_TOKENS = 450
 # constant RRF_K. RETRIEVAL_MIN_SIMILARITY drops embedding candidates an
 # unrelated query would otherwise return; 0.4 is provisional, measured on
 # calibration queries, to recalibrate on the evaluation question set.
-CORPUS_TEXT_SEARCH_CONFIG = "french"
+# French stemming with accents folded first (migration b5d8e2a4c617, D-036).
+CORPUS_TEXT_SEARCH_CONFIG = "chahed_french"
 RETRIEVAL_CANDIDATES = 20
 RRF_K = 60
 RETRIEVAL_MIN_SIMILARITY = 0.4

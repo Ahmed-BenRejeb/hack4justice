@@ -23,12 +23,26 @@ LIBERATION_SANS = next(
 )
 
 
+# Migration b5d8e2a4c617 creates this configuration; tests build tables from the
+# models instead of the migrations, so they create it here too.
+CREATE_TEXT_SEARCH_CONFIG = """
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgname = 'chahed_french') THEN
+    CREATE TEXT SEARCH CONFIGURATION chahed_french (COPY = french);
+    ALTER TEXT SEARCH CONFIGURATION chahed_french
+      ALTER MAPPING FOR hword, hword_part, word WITH unaccent, french_stem;
+  END IF;
+END $$;
+"""
+
+
 @pytest.fixture(autouse=True)
 def _clean_schema() -> None:
     """Recreate every table fresh for each test."""
     with engine.begin() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
+        connection.execute(text(CREATE_TEXT_SEARCH_CONFIG))
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 

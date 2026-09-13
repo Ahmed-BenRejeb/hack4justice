@@ -125,6 +125,81 @@ export interface OfficerDecisionInput {
   note: string | null;
 }
 
+/** How a search found a passage: by an exact term, by meaning, or both. */
+export type PassageMatch = "texte" | "sens" | "les deux";
+
+/** A legal passage a person has verified. Unverified text never leaves the backend (D-029). */
+export interface Passage {
+  id: string;
+  source_id: string;
+  source_title: string;
+  source_edition: string;
+  article_ref: string;
+  /** "I, a), tiret 2"; empty for an article's lead text. */
+  paragraph_ref: string;
+  /** Page in the official PDF, starting at 1. */
+  page: number;
+  verified_by: string;
+  /** YYYY-MM-DD. */
+  verified_on: string;
+  /** The official PDF opened at the passage's page. */
+  official_url: string;
+}
+
+/** A verified passage with its full text. */
+export interface PassageText extends Passage {
+  text: string;
+}
+
+/** GET /corpus/search and GET /findings/{id}/related entry. */
+export interface PassageHit extends Passage {
+  /** Matched terms sit between U+0002 and U+0003: split on them, never render the excerpt as HTML. */
+  excerpt: string;
+  match: PassageMatch;
+}
+
+/** An official document the corpus is indexed from. */
+export interface CorpusSource {
+  id: string;
+  title: string;
+  edition: string;
+  publisher: string;
+  url: string;
+  sha256: string;
+  language: string;
+  page_count: number;
+  loaded_at: string;
+}
+
+/** GET /corpus/sources entry. */
+export interface CorpusSourceSummary extends CorpusSource {
+  verified_passages: number;
+  total_passages: number;
+  /** Codes of the rules whose citation URL is this source. */
+  citing_rules: string[];
+}
+
+/** GET /corpus/chunks/{id}: a verified passage for the source reader. */
+export interface PassageDetail {
+  passage: PassageText;
+  /** Null when the neighbouring paragraph is absent or not verified. */
+  previous: PassageText | null;
+  next: PassageText | null;
+  /** The article's verified passages, in document order. */
+  outline: Passage[];
+  source: CorpusSource;
+}
+
+/** GET /corpus/verification-queue entry: a reference to check on the official page, never text. */
+export interface VerificationQueueEntry {
+  id: string;
+  source_id: string;
+  article_ref: string;
+  paragraph_ref: string;
+  page: number;
+  official_url: string;
+}
+
 /** GET /export/operation-codes entry, read from the DGI TEJ schema. */
 export interface OperationCode {
   code: string;
