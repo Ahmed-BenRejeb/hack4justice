@@ -39,6 +39,15 @@ export function errorsByRule(byRule: readonly RuleCount[]): ChartDatum[] {
   return order.map((label) => ({ label, value: totals.get(label)! }));
 }
 
+/**
+ * Filings per day, labelled "13/09". The label is cut from the ISO date itself rather than
+ * parsed into a Date, which would shift the day in any time zone west of UTC; the backend has
+ * already counted the day in Tunisian time and zero-filled the window.
+ */
+export function filingsByDay(days: readonly { day: string; count: number }[]): ChartDatum[] {
+  return days.map(({ day, count }) => ({ label: `${day.slice(8, 10)}/${day.slice(5, 7)}`, value: count }));
+}
+
 /** The facts most often missing, in the backend's own most-blocking-first order. */
 export function missingFactChart(entries: readonly { fact_name: string; count: number }[]): ChartDatum[] {
   return entries.map((entry) => ({ label: fieldLabel(entry.fact_name), value: entry.count }));

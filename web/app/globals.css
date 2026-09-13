@@ -41,6 +41,12 @@
   --color-chart-1: var(--chart-1);
   --color-accent-light: var(--accent-light);
 
+  --color-inverse: var(--inverse);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-inverse-muted: var(--inverse-muted);
+  --color-inverse-accent: var(--inverse-accent);
+  --color-inverse-border: var(--inverse-border);
+
   /* Diagonal crosshatch, used on at most two sections of a screen (DESIGN.md). */
   --background-image-pattern: var(--bg-pattern);
 
@@ -131,6 +137,13 @@
   /* #EEF7E6, the accent tint behind badges and checkmark rows. */
   --accent-light: oklch(0.966 0.023 132);
 
+  /* #111111, DESIGN.md's dark inverted ground: the navigation column and the closing call on `/` (D-062). */
+  --inverse: oklch(0.185 0 0);
+  --inverse-foreground: oklch(0.985 0 0);
+  --inverse-muted: oklch(0.72 0 0);
+  --inverse-accent: oklch(1 0 0 / 10%);
+  --inverse-border: oklch(1 0 0 / 12%);
+
   /*
    * Status still carries meaning and is never decorative. `decided` sits at a teal hue rather
    * than the green it used to, so it cannot be mistaken for the brand accent now that the accent
@@ -171,6 +184,13 @@
   --ring: oklch(0.72 0.16 134);
 
   --accent-light: oklch(0.28 0.035 134);
+
+  /* Darker than the page ground, so the inverted surfaces still read as one in dark mode. */
+  --inverse: oklch(0.13 0 0);
+  --inverse-foreground: oklch(0.96 0 0);
+  --inverse-muted: oklch(0.7 0 0);
+  --inverse-accent: oklch(1 0 0 / 8%);
+  --inverse-border: oklch(1 0 0 / 10%);
 
   --status-decided: oklch(0.79 0.1 178);
   --status-abstained: oklch(0.8 0.11 75);

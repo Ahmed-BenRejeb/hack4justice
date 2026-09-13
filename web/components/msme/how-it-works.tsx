@@ -49,7 +49,8 @@ export function HowItWorks(): JSX.Element {
       </ol>
       <p className="border-t pt-4 text-xs text-muted-foreground">
         La lecture du document et l’application des règles sont effectuées sur le serveur de
-        l’application, sans appel à un service externe.
+        l’application ; seul un texte dont les identifiants sont masqués est transmis au modèle de
+        langage qui repère les champs.
       </p>
     </section>
   );

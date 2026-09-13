@@ -16,5 +16,7 @@ ENV NODE_ENV=production \
     PORT=3000
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# Standalone output leaves out public/ (the logo), which the server still serves.
+COPY --from=build /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]
