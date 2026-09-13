@@ -8,6 +8,7 @@ from app.db.models import Document, DocumentPage, Extraction
 from app.extraction.fields import extract_document_fields
 from app.extraction.masking import mask_with_originals
 from app.extraction.ocr import OcrResult, UnsupportedDocumentType, extract_text
+from app.extraction.photos import UnusablePhotos
 from app.extraction.positions import locate_field
 from app.providers.openrouter import OpenRouterError
 from app.storage import save_page_image
@@ -23,7 +24,7 @@ def run_extraction(
     """
     try:
         result = extract_text(content, content_type)
-    except UnsupportedDocumentType:
+    except (UnsupportedDocumentType, UnusablePhotos):
         document.status = "extraction_failed"
         return
 

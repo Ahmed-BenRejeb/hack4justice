@@ -970,6 +970,39 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 
 **Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Merged after D-054 (sign-in): the new pages endpoints are gated the same way as the sibling document endpoints (`readable_document`), and the browser's plain `<img>` still works unauthenticated-looking, since the Next.js proxy attaches the session's bearer token server-side before forwarding, the same as every other call.
 
+## D-056 - Phone capture built ahead of its phase: several photos filed as one PDF, local OCR
+
+**Date:** 2026-09-13
+
+**Decision:** Build G3 now, although `docs/plan.md` section 8 places it in phase 8. On a touch screen the MSME upload screen offers "Photographier le document": a native `<input type="file" accept="image/*" capture="environment">` opens the camera, each photo joins the pages already taken, and the pages are sent as repeated `file` parts of the existing `POST /documents`. With more than one part the backend turns each photo upright from its EXIF orientation tag, reduces it to 3000 px on its long side, and saves the pages as one PDF (`app/extraction/photos.py`, Pillow), named after the first photo; that PDF is stored and read by the existing scanned-PDF OCR path. A single image upload gets the same upright-and-reduce step before OCR. OCR stays local Tesseract.
+
+**Options considered:**
+- Same device (chosen), or a QR handoff where a desktop page shows a code and the phone uploads to it (a pairing token table, new endpoints, desktop polling and a QR library).
+- Several photos as one document (chosen), or one photo per document.
+- Combining on the backend with Pillow (chosen), or in the browser (a PDF library, a new dependency).
+- Local Tesseract (chosen), or a vision model through OpenRouter, which would send an unmasked image and break D-013.
+
+**Why:** The team asked for phone capture now. MSMEs without an accountant hold paper, and the native input needs no dependency and no new endpoint. One PDF keeps one filing as one document for the rules, the queue and the export. Phones store orientation as a tag rather than rotating the pixels, and Tesseract ignores the tag, so a sideways photo read as noise.
+
+**Result:** `POST /documents` accepts one or more `file` parts; the single-file contract is unchanged. Several parts that are not all readable images, or more than 20, answer 422 and store nothing; an unreadable single image now ends as `extraction_failed` instead of a 500. Tests cover page order through OCR, a sideways EXIF photo, the refusals, and the multi-photo upload. The camera button is hidden on fine pointers (`pointer-fine:hidden`), so a desktop sees the drop zone only. Not built: client-side reduction before upload (full-size photos cross the network), reordering pages, a QR handoff. Photo OCR quality on real invoices is not measured yet (`docs/plan.md` section 9 risk).
+
+## D-057 - Phone capture from a laptop's QR code; photos reduced before upload
+
+**Date:** 2026-09-13
+
+**Decision:** Add a QR handoff to phone capture (D-056). On a laptop (fine pointer) the MSME upload screen offers "Afficher le code": a server action creates a capture link through `POST /capture/links` for the signed-in filer and organisation and returns `PUBLIC_WEB_URL/capture/<token>`, which the laptop draws as a QR code with `uqr`. The phone opens that page without signing in, reads `GET /capture/{token}` to name the organisation, photographs the pages and sends them to `POST /capture/{token}/documents`, which files them through the same code as `POST /documents`, recorded as uploaded by the link's maker. The laptop polls `GET /capture/links/{id}` and opens the review once `document_id` is set. A link lives 10 minutes (`CAPTURE_LINK_TTL_MINUTES`) and files one document; only its token's SHA-256 is stored, in a new `capture_link` table, and its row is locked during the upload so two phones cannot both use it. Separately, the browser redraws every image larger than 3000 px as an upright JPEG within 3000 px before it joins a form (`web/lib/photos.ts`).
+
+**Options considered:**
+- A pairing link the phone uses without signing in (chosen), or signing in on the phone.
+- Opening the review on the laptop when the document arrives (chosen), or staging the photos for the laptop to confirm first.
+- A required `PUBLIC_WEB_URL` for the QR address (chosen), or the laptop's own address, which is `localhost` in development and unreachable from a phone.
+- `uqr` in the browser (chosen: no dependencies of its own), `segno` in the api, or `qrcode` in web (several dependencies).
+- Reducing photos in the browser with `createImageBitmap` and `OffscreenCanvas` (chosen, no dependency), or only on the backend (full-size photos still cross mobile data).
+
+**Why:** The laptop is where an MSME owner or accountant already works and the phone is where the camera is; signing in on a phone mid-task is friction the demo cannot afford. A link grants no more than one upload for one organisation, expires quickly, and is refused once used or once its maker no longer files for the organisation. The QR address identifies a deployment, so it gets no default. The QR code keeps dark modules on a light ground in both themes (two constant tokens in `web/app/globals.css`), since phone cameras do not reliably read an inverted code.
+
+**Result:** Migration `8a4c2f6e1d39` adds `capture_link`. `app/auth/capture.py` makes and looks up links; `app/auth/deps.py` gates the two phone routes by link instead of session. `web/.env` needs `PUBLIC_WEB_URL`; when it is missing, the laptop names it when asked for a code, and uploading still works. New web dependency: `uqr` 0.1.3. Not built: purging expired links, rate limiting on the token routes (the 256-bit token is not guessable, but requests are not throttled), and a limit on polling an expired link left open. The token is in the phone page's URL, so it can appear in a server access log during its 10 minutes of life.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1014,3 +1047,5 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
 | 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
 | 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |
+| 2026-09-13 | team | Added D-056: phone capture (G3) built ahead of phase 8, several photos filed as one PDF, local OCR |
+| 2026-09-13 | team | Added D-057: phone capture from a laptop's QR code through a single-use link, photos reduced before upload |

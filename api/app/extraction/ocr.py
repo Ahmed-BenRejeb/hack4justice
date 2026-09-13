@@ -20,6 +20,8 @@ from pdf2image import convert_from_bytes
 from PIL import Image
 from pytesseract import Output
 
+from app.extraction.photos import prepare_page
+
 OCR_LANGUAGES = "fra+ara+eng"
 MIN_TEXT_LAYER_CHARS = 20
 
@@ -80,7 +82,8 @@ class OcrResult:
 def _render_pages(content: bytes, content_type: str) -> list[Image.Image]:
     if content_type in PDF_CONTENT_TYPES:
         return convert_from_bytes(content, dpi=RASTER_DPI)
-    return [Image.open(io.BytesIO(content)).convert("RGB")]
+    # An image upload is usually a phone photo: turned upright and reduced first (G3).
+    return [prepare_page(content)]
 
 
 def _page_images(rendered: list[Image.Image]) -> tuple[PageImage, ...]:
