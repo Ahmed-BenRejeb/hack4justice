@@ -156,9 +156,10 @@ export const api = {
     return postJson(`${documentPath(id)}/export`, body);
   },
 
-  /** GET /impact: counts from this deployment's own data, with the benefit derived from them. */
-  getImpact(signal?: AbortSignal): Promise<Measurement> {
-    return request("/impact", { signal });
+  /** GET /impact: counts from this deployment's own data, with the benefit derived from them. Scoped to one organisation when given. */
+  getImpact(organisationId?: string, signal?: AbortSignal): Promise<Measurement> {
+    const query = organisationId ? `?${new URLSearchParams({ organisation_id: organisationId })}` : "";
+    return request(`/impact${query}`, { signal });
   },
 
   /** GET /rules: the rule registry. */
