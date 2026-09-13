@@ -937,6 +937,32 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** `recharts` added as a real dependency (`pnpm add recharts`, lockfile updated). `lib/charts.ts` holds the only data shaping (aggregation by article, field labelling), unit-tested per `docs/frontend-plan.md` section 4; the chart components themselves are eye-verified against light and dark mode, screenshotted against live data. `docs/design.md` section 2 records the ramp rule. This is a correction to D-050's literal instruction, not a reversal of its reasoning; if a future screen genuinely needs Tremor's fuller feature set (multi-series legends, clickable filtering), that is a fresh decision, not an extension of this one.
 
+## D-055 - Modern-SaaS visual direction adopted wholesale; charts extended to every route with real data
+
+**Date:** 2026-09-13
+
+**Note:** written as D-054 and renumbered before merging, because `origin/docs/v2-scope-and-architecture` had already published D-054 for sign-in. Same situation and same resolution as D-046: the unpublished local decision is the one that moves.
+
+**Decision:** Adopt the direction in the repository's `DESIGN.md` and `docs/SKILL.md` (a modern-SaaS design skill: editorial serif headings, a green brand accent, a warm yellow chart ramp, soft diffused elevation, a diagonal crosshatch, ambient micro-animation) as the binding visual layer, replacing the austere administrative reading of `docs/design.md` sections 2, 3 and 5. Concretely: `--primary` becomes `#5EA832`, headings move from IBM Plex Sans to Playfair Display and body text to Inter, the chart ramp moves from cool neutrals to warm yellow, and a shadow scale, a pattern token and float/pulse keyframes enter the token file. Charts are extended from the two routes that had them to every route with real data behind it.
+
+Four things are explicitly **not** adopted from those files, and this is a limit on the decision rather than an oversight:
+
+- The marketing content patterns: pricing tiers, testimonials, the logo strip and "trusted by X,000+ companies". This product has no customers and no price, and `docs/facts.md` forbids any on-screen figure that is not verified. Inventing them to fill a section would break a rule that outranks a visual preference.
+- Raw hex in components. `DESIGN.md` writes hex throughout; those values are converted to OKLCH in `web/app/globals.css` and the token discipline is unchanged.
+- The emoji used in `docs/SKILL.md`'s own DO/DON'T table, which the root `CLAUDE.md` bans repository-wide.
+- Ambient motion on working screens. Float, pulse and scroll-reveal are confined to the entry screen `/`; `/agent`, `/entreprise`, both review screens, `/admin` and `/textes` keep motion that only answers a user action, and `prefers-reduced-motion` still collapses everything.
+
+Two consequences worth recording. `--status-decided` moves from green to teal, because the brand accent is now green and a green "decided" badge beside a green primary button is a colour collision in a product whose whole claim is that colour carries status. And `--chart-1` moving to warm yellow is what lets the accent stay out of data visualisation, which `DESIGN.md` calls for by name.
+
+**Options considered:**
+- Keep `docs/design.md` binding and mine the two files for craft only (spacing rhythm, hierarchy, empty-state quality), changing no token values.
+- Adopt the direction wholesale, overturning sections 2, 3 and 5 (chosen).
+- Delete both files as dropped in from another project.
+
+**Why:** The user chose this after being shown the conflict in full: the two files are a generic marketing-SaaS skill, and `docs/design.md` was written deliberately austere for a public-administration tool, so the two disagree on type, colour, raw values, motion and section content. The argument for adopting it is that the hackathon outcome is decided by a 3-minute pitch and a live demo (root `CLAUDE.md`), and a jury reads production quality off the entry screen in the first seconds. The argument against, recorded here because it is real and was not hypothetical: this is a compliance tool for a public officer, and the austerity was a deliberate fit to that reader, not a default. The limits above are what keep the change a restyle rather than a licence to put unverified claims on screen.
+
+**Result:** `web/app/globals.css` rewritten (fonts, accent, chart ramp, shadow scale, pattern, dashed border, float and pulse keyframes, light and dark); `web/app/layout.tsx` serves Playfair Display and Inter through `next/font`, keeping IBM Plex Mono for codes. `docs/design.md` sections 2, 3 and 5 rewritten, section 5 gaining an explicit "ambient motion, marketing surfaces only" boundary and a broader forbidden list. `web/CLAUDE.md` records the font roles, the motion boundary and the rule that a chart needs real data behind it. `lib/charts.ts` gains `queueComposition`, `findingOutcomes`, `rulesBySource`, `corpusCoverage`, `corpusVerified` and `verificationBySource`, each unit-tested; the new charts land on `/agent`, `/admin`, `/textes`, both review screens and `/`.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -980,3 +1006,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
 | 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
+| 2026-09-13 | team | Added D-055: modern-SaaS visual direction adopted wholesale, charts extended to every route with real data |
