@@ -11,3 +11,12 @@ export const DOCUMENT_POLL_MS = 3000;
 
 /** Re-fetch interval for the officer queue, so newly pre-qualified files surface without a reload. */
 export const QUEUE_POLL_MS = 3000;
+
+/** Re-fetch interval for the capture link a laptop shows, so the review opens soon after the phone files the document. */
+export const CAPTURE_POLL_MS = 2000;
+
+/** Longest side, in pixels, a photo is reduced to before upload; mirrors MAX_PAGE_PIXELS in api/app/extraction/photos.py. */
+export const PHOTO_MAX_PIXELS = 3000;
+
+/** JPEG quality of a reduced photo: a fraction of the original's size, still sharp enough for OCR. */
+export const PHOTO_JPEG_QUALITY = 0.85;

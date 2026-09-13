@@ -1,9 +1,12 @@
+"use client";
+
 /**
  * What the backend read from a document: the full text beside the masked copy that is the only text
- * sent to the model (J5), and a table of structured fields once field-level extraction exists.
+ * sent to the model (J5), and a table of structured fields once field-level extraction exists. A field
+ * located on the page (J3) can be selected to outline it in the document viewer alongside the table.
  * Assisted fields carry a visible legend.
  */
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 import { FileSearchIcon } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +16,19 @@ import { formatConfidence } from "@/lib/format";
 import { fieldLabel } from "@/lib/labels";
 import { splitPlaceholders } from "@/lib/masking";
 import { EmptyState } from "./api-state";
+import { DocumentViewer } from "./document-viewer";
 
 /** The field names api/app/extraction/service.py uses for the whole text and its masked copy. */
 const FULL_TEXT_FIELD = "full_text";
 const MASKED_TEXT_FIELD = "masked_text";
 
-function FieldTable({ fields }: { fields: Extraction[] }): JSX.Element {
+interface FieldTableProps {
+  fields: Extraction[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}
+
+function FieldTable({ fields, selectedId, onSelect }: FieldTableProps): JSX.Element {
   const hasAssisted = fields.some((field) => field.source === "assisted");
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
@@ -33,8 +43,28 @@ function FieldTable({ fields }: { fields: Extraction[] }): JSX.Element {
         <TableBody>
           {fields.map((field) => {
             const isAssisted = field.source === "assisted";
+            const locatable = field.bbox !== null && field.page !== null;
             return (
-              <TableRow key={field.id}>
+              <TableRow
+                key={field.id}
+                data-selected={locatable && field.id === selectedId ? "" : undefined}
+                aria-selected={locatable ? field.id === selectedId : undefined}
+                tabIndex={locatable ? 0 : undefined}
+                onClick={locatable ? () => onSelect(field.id) : undefined}
+                onKeyDown={
+                  locatable
+                    ? (event) => {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        onSelect(field.id);
+                      }
+                    : undefined
+                }
+                className={cn(
+                  locatable &&
+                    "cursor-pointer outline-none data-[selected]:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring",
+                )}
+              >
                 <TableCell className="px-4 py-2.5 align-top whitespace-normal text-muted-foreground">
                   {fieldLabel(field.field_name)}
                 </TableCell>
@@ -139,8 +169,19 @@ function MaskedText({ extraction }: { extraction: Extraction }): JSX.Element {
   );
 }
 
-/** Structured fields first when there are any, then the full text beside its masked copy. */
-export function ExtractionView({ extractions }: { extractions: Extraction[] }): JSX.Element {
+interface ExtractionViewProps {
+  documentId: string;
+  extractions: Extraction[];
+}
+
+/** Structured fields (with the source page alongside, J3) first, then the full text beside its masked copy. */
+export function ExtractionView({ documentId, extractions }: ExtractionViewProps): JSX.Element {
+  const fields = extractions.filter(
+    (extraction) => extraction.field_name !== FULL_TEXT_FIELD && extraction.field_name !== MASKED_TEXT_FIELD,
+  );
+  const firstLocatable = fields.find((field) => field.bbox !== null && field.page !== null);
+  const [selectedId, setSelectedId] = useState<string | null>(firstLocatable?.id ?? null);
+
   if (extractions.length === 0) {
     return (
       <EmptyState
@@ -152,13 +193,17 @@ export function ExtractionView({ extractions }: { extractions: Extraction[] }): 
   }
   const fullText = extractions.find((extraction) => extraction.field_name === FULL_TEXT_FIELD);
   const maskedText = extractions.find((extraction) => extraction.field_name === MASKED_TEXT_FIELD);
-  const fields = extractions.filter(
-    (extraction) => extraction.field_name !== FULL_TEXT_FIELD && extraction.field_name !== MASKED_TEXT_FIELD,
-  );
+  const selected = fields.find((field) => field.id === selectedId);
+  const highlight = selected?.bbox && selected.page !== null ? { page: selected.page, bbox: selected.bbox } : null;
 
   return (
     <div className="space-y-4">
-      {fields.length > 0 && <FieldTable fields={fields} />}
+      {fields.length > 0 && (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <FieldTable fields={fields} selectedId={selectedId} onSelect={setSelectedId} />
+          <DocumentViewer documentId={documentId} highlight={highlight} />
+        </div>
+      )}
       <div className={cn("grid gap-4", maskedText && "lg:grid-cols-2")}>
         {fullText && <FullText extraction={fullText} />}
         {maskedText && <MaskedText extraction={maskedText} />}

@@ -5,7 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { AppHeader } from "@/components/shared/app-header";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUser } from "@/lib/session";
-// Fonts are npm packages, never fetched from Google during the build (D-056). The container has
+// Fonts are npm packages, never fetched from Google during the build (D-059). The container has
 // no route to fonts.gstatic.com, and an image build must not depend on one. The variable families
 // carry every weight the interface uses in a single file; Plex Mono is static, so it names its two.
 import "@fontsource-variable/playfair-display/index.css";

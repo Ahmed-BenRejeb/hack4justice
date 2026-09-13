@@ -107,6 +107,8 @@ Steps 2 and 3 happen before step 4, so no full document text crosses the provide
 
 Step 2's structured fields are extracted with one shared model call per document (`api/app/providers/openrouter.py:extract_fields()`), recorded as `extraction` rows with `source = "assisted"`; a field the model could not establish with sufficient confidence is simply absent, so any rule needing it abstains naming that field rather than judging a guess (`docs/decision-log.md` D-043). The call receives the masked text only; placeholders in its answers are read back in memory (D-046).
 
+Step 2 also renders every page once (`api/app/extraction/ocr.py`) and records each word's position on it, so a structured field can be outlined where it was read on the page (J3, D-055): a born-digital PDF's own text layer is positioned with `pdfplumber`; a scanned or image document's OCR path uses Tesseract's own word boxes, already in the rasterised page's pixel space. `api/app/extraction/positions.py` locates a field's as-written value among those words by exact substring match, never an approximate one, and stores nothing when no match is found.
+
 ## 4. Data model
 
 Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
@@ -117,8 +119,10 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 | `app_user` | id, email (unique), password_hash (scrypt, parameters and salt in the string), role ("msme"/"accountant"/"officer"/"admin"), created_at | A person who signs in (D-054) |
 | `organisation_member` | user_id, organisation_id (composite key) | The organisations a user files for: one for an MSME user, several for an accountant, none for an officer or admin |
 | `user_session` | id, user_id, token_sha256 (unique), created_at, expires_at | A signed-in session; the token itself is never stored |
+| `capture_link` | id, user_id, organisation_id, token_sha256 (unique), document_id (nullable), created_at, expires_at | A link a laptop shows as a QR code so a phone files one document for that user and organisation without signing in; `document_id` is set when it is used, which ends it (G3, D-057) |
 | `document` | id, organisation_id, uploaded_by, filename, storage_ref, status, created_at | The raw uploaded file; `uploaded_by` is the signed-in filer's email, `filename` the name as uploaded, `storage_ref` where the bytes live |
-| `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), extracted_at | One row per structured field pulled from the document; `full_text` and its `masked_text` copy, the only text a model receives (A1, D-042) |
+| `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), page (nullable), bbox (nullable JSON), extracted_at | One row per structured field pulled from the document; `full_text` and its `masked_text` copy, the only text a model receives (A1, D-042). `page`/`bbox` locate the field on the page it was read from (J3, D-055); null when no exact match was found there |
+| `document_page` | id, document_id, page, image_ref, width, height | One rendered page per document, at a fixed DPI; the pixel space every `extraction.bbox` on that page is expressed in (J3, D-055) |
 | `corpus_source` | id (the manifest source id), title, edition, publisher, url, sha256, language, page_count, loaded_at | An official document the corpus is indexed from; provenance shown next to its text (D-031) |
 | `corpus_chunk` | id, source_id, article_ref, paragraph_ref, heading_path, page, char_start, char_end, token_count, text, text_sha256, text_search (tsvector generated with the accent-folding `chahed_french` configuration, GIN index), embedding (pgvector), url, verification_status ("unverified"/"verified"), verified_by, verified_on | Paragraph- or item-level legal text, embedded; unique on (source_id, article_ref, paragraph_ref, char_start) so re-indexing updates in place (D-031). Verification comes from `corpus/verified-passages.json` on every load; unverified text never leaves the API (D-029, D-032) |
 | `rule` | id, code, citation_source, article_ref, verbatim_text, url, logic_ref, error_codes (JSON list) | The rule registry entry; `logic_ref` points to the deterministic code that evaluates it. `error_codes` names the decided codes that report a problem found, declared by the rule's author so the impact panel counts errors without inferring meaning from code names (J9, D-048) |
@@ -134,15 +138,21 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 
 ## 5. API surface (api/, FastAPI)
 
-REST, versioned under `/api/v1`. Every endpoint but health, sign-up and sign-in takes `Authorization: Bearer <token>`; the role that may call each is in brackets (D-054).
+REST, versioned under `/api/v1`. Every endpoint but health, sign-up, sign-in and the two capture token routes takes `Authorization: Bearer <token>`; the role that may call each is in brackets (D-054).
 
 - `POST /auth/signup` - creates an MSME, its first `msme` user and a session (`email`, `password`, `organisation: {name, tax_id}`); 409 on a taken email or tax id
 - `POST /auth/login` - opens a session: `{token, expires_at, user}`; 401 with one message for a wrong email or password
 - `POST /auth/logout` [any] - ends the calling session
 - `GET /auth/me` [any] - the user, their role and the organisations they file for
-- `POST /documents?organisation_id=` [msme, accountant] - multipart upload for one of the user's organisations, recorded as uploaded by them; extraction and rule evaluation run before it returns
+- `POST /documents?organisation_id=` [msme, accountant] - multipart upload for one of the user's organisations, recorded as uploaded by them; extraction and rule evaluation run before it returns. Several `file` parts are phone photos of one paper document, stored and read as one PDF; 422 when one is not a readable image or there are more than 20 (G3, D-056)
+- `POST /capture/links?organisation_id=` [msme, accountant] - a phone capture link for one of the user's organisations, `{id, token, expires_at, document_id}`; the token is returned only here, and the link is valid 10 minutes and for one document (D-057)
+- `GET /capture/links/{id}` [its maker] - the link, with `document_id` once a phone has filed through it; the laptop polls this
+- `GET /capture/{token}` [no session: the token] - organisation name and expiry of an unexpired, unused link; 404 otherwise
+- `POST /capture/{token}/documents` [no session: the token] - multipart `file` parts filed like `POST /documents`, recorded as uploaded by the link's maker, which ends the link; 404 once used or expired
 - `GET /documents/{id}` [officer, members of its organisation] - status, filename, organisation, extraction results, officer decision, export
 - `GET /documents/{id}/findings` [officer, members of its organisation] - findings with their rule code, decision trace and resolved citation
+- `GET /documents/{id}/pages` [officer, members of its organisation] - the document's rendered pages (page number, pixel width/height, image URL), for the source viewer (J3, D-055)
+- `GET /documents/{id}/pages/{page}/image` [officer, members of its organisation] - that page's rendered PNG
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
 - `GET /officer/queue` [officer] - extracted files awaiting a decision, with filename, organisation name, finding counts and the distinct missing facts their abstentions name
 - `POST /officer/decisions` [officer] - validate or flag a document (`document_id`, `action`, `note`), recorded as decided by the signed-in officer
@@ -198,3 +208,5 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | supplier_fact and rule.error_codes (section 4); answerable-facts, supplier-facts and impact endpoints (section 5), per D-047 and D-048 |
 | 2026-09-13 | team | Pipeline: masking before the one assisted extraction call, answers read back locally (D-046) |
 | 2026-09-13 | team | Sign-in: four roles (section 2), `app_user`, `organisation_member`, `user_session` (section 4), auth endpoints and the role of every endpoint, `/organisations` removed (section 5), per D-054 |
+| 2026-09-13 | team | Pipeline: page rendering and word positions (section 3); `document_page` table, `extraction.page`/`bbox` (section 4); pages endpoints (section 5), per D-055 |
+| 2026-09-13 | team | Phone capture: several `file` parts filed as one PDF (D-056); `capture_link` (section 4) and the `/capture/*` endpoints (section 5), per D-057 |

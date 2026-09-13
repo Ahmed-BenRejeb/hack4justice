@@ -111,9 +111,17 @@ _THOUSANDS_OR_DECIMAL = re.compile(r"[^\d,.\-]")
 
 @dataclass(frozen=True)
 class ExtractedField:
-    """A field's normalised value and the confidence the model gave it."""
+    """A field's normalised value and the confidence the model gave it.
+
+    `raw_value` is the same answer before amount normalisation, as written on
+    the document: `app/extraction/positions.py` matches this, not `value`,
+    against the document's own words, since normalising to a canonical
+    decimal ("1000.500") makes the text unrecognisable against a page that
+    reads "1 000,500".
+    """
 
     value: str
+    raw_value: str
     confidence: float
 
 
@@ -174,8 +182,10 @@ def _normalize(
         normalized = normalize_amount(value)
         if normalized is None:
             return None
-        return ExtractedField(value=normalized, confidence=fact.confidence)
-    return ExtractedField(value=value, confidence=fact.confidence)
+        return ExtractedField(
+            value=normalized, raw_value=value, confidence=fact.confidence
+        )
+    return ExtractedField(value=value, raw_value=value, confidence=fact.confidence)
 
 
 def extract_document_fields(

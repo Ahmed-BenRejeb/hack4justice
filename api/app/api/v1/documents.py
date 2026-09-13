@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ from app.auth.deps import member_of, readable_document, require_filer
 from app.db.models import (
     Citation,
     Document,
+    DocumentPage,
     Export,
     Extraction,
     Finding,
@@ -24,9 +26,10 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.extraction.photos import UnusablePhotos, combine_photos
 from app.extraction.service import run_extraction
 from app.rules.service import evaluate_all_rules
-from app.storage import save_upload
+from app.storage import read_file, save_upload
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -43,14 +46,36 @@ class DocumentOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BBoxOut(BaseModel):
+    """A field's outline on its page (J3), in that page's own pixel space (see PageOut)."""
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+
 class ExtractionOut(BaseModel):
     id: uuid.UUID
     field_name: str
     value: str
     confidence: float
     source: str
+    # Where this field was found on the document; null for full_text/masked_text
+    # and for a field app/extraction/positions.py could not locate exactly.
+    page: int | None = None
+    bbox: BBoxOut | None = None
 
     model_config = {"from_attributes": True}
+
+
+class PageOut(BaseModel):
+    """One rendered page, and the pixel size every Extraction.bbox on it is expressed in."""
+
+    page: int
+    width: int
+    height: int
+    image_url: str
 
 
 class DocumentDetailOut(DocumentOut):
@@ -62,25 +87,31 @@ class DocumentDetailOut(DocumentOut):
     export: ExportOut | None
 
 
-@router.post("", response_model=DocumentOut, status_code=201)
-async def upload_document(
-    file: UploadFile,
-    organisation_id: uuid.UUID,
-    user: User = Depends(require_filer),
-    db: Session = Depends(get_db),
+async def file_document(
+    db: Session, organisation_id: uuid.UUID, uploaded_by: str, file: list[UploadFile]
 ) -> Document:
-    """Store a file the signed-in user files for one of their organisations, and run extraction on it."""
-    if not member_of(user, organisation_id):
-        raise HTTPException(status_code=404, detail="organisation not found")
+    """Store an upload as one document, read it and apply the rules; the caller commits.
 
-    content = await file.read()
+    Several `file` parts are the photographed pages of one paper document (G3):
+    they are stored and read as one PDF, named after the first photo.
+    """
     # Keep the base name only: some clients send a path, and the name is shown to people.
-    filename = Path(file.filename or "document").name
+    filename = Path(file[0].filename or "document").name
+    if len(file) == 1:
+        content = await file[0].read()
+        content_type = file[0].content_type or ""
+    else:
+        try:
+            content = combine_photos([await part.read() for part in file])
+        except UnusablePhotos as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        filename = f"{Path(filename).stem}.pdf"
+        content_type = "application/pdf"
     storage_ref = save_upload(filename, content)
 
     document = Document(
         organisation_id=organisation_id,
-        uploaded_by=user.email,
+        uploaded_by=uploaded_by,
         filename=filename,
         storage_ref=storage_ref,
         status="uploaded",
@@ -88,10 +119,23 @@ async def upload_document(
     db.add(document)
     db.flush()
 
-    run_extraction(db, document, content, file.content_type or "")
+    run_extraction(db, document, content, content_type)
     if document.status == "extracted":
         evaluate_all_rules(db, document.id)
+    return document
 
+
+@router.post("", response_model=DocumentOut, status_code=201)
+async def upload_document(
+    file: list[UploadFile],
+    organisation_id: uuid.UUID,
+    user: User = Depends(require_filer),
+    db: Session = Depends(get_db),
+) -> Document:
+    """Store a file the signed-in user files for one of their organisations, and run extraction on it."""
+    if not member_of(user, organisation_id):
+        raise HTTPException(status_code=404, detail="organisation not found")
+    document = await file_document(db, organisation_id, user.email, file)
     db.commit()
     db.refresh(document)
     return document
@@ -193,3 +237,44 @@ def get_document_findings(
         )
         for finding, rule in rows
     ]
+
+
+@router.get("/{document_id}/pages", response_model=list[PageOut])
+def get_document_pages(
+    document_id: uuid.UUID,
+    _: Document = Depends(readable_document),
+    db: Session = Depends(get_db),
+) -> list[PageOut]:
+    """The document's rendered pages, in order, for the source viewer (J3)."""
+    pages = (
+        db.query(DocumentPage)
+        .filter_by(document_id=document_id)
+        .order_by(DocumentPage.page)
+        .all()
+    )
+    return [
+        PageOut(
+            page=page.page,
+            width=page.width,
+            height=page.height,
+            image_url=f"/api/v1/documents/{document_id}/pages/{page.page}/image",
+        )
+        for page in pages
+    ]
+
+
+@router.get("/{document_id}/pages/{page}/image")
+def get_document_page_image(
+    document_id: uuid.UUID,
+    page: int,
+    _: Document = Depends(readable_document),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The page's rendered PNG, at the pixel size its PageOut and every
+    Extraction.bbox on it agree on."""
+    document_page = (
+        db.query(DocumentPage).filter_by(document_id=document_id, page=page).one_or_none()
+    )
+    if document_page is None:
+        raise HTTPException(status_code=404, detail="page not found")
+    return Response(content=read_file(document_page.image_ref), media_type="image/png")

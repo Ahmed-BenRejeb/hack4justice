@@ -8,7 +8,7 @@ A public officer's tool and an MSME's tool, sharing one visual system. The tone 
 
 ## 2. Colour
 
-The palette is deliberately tight: a white ground, one green brand accent, a warm yellow chart ramp, and the three status colours. Resist adding a fifth family (D-055).
+The palette is deliberately tight: a white ground, one green brand accent, a warm yellow chart ramp, and the three status colours. Resist adding a fifth family (D-058).
 
 **Status still carries meaning and nothing else.** The three status colours never appear as decoration or branding, and never in a chart that is not reporting that status.
 
@@ -24,13 +24,13 @@ A chart reporting decided, abstained or flagged uses the matching status token. 
 
 ## 3. Typography
 
-Two families, never mixed within a role (D-055):
+Two families, never mixed within a role (D-058):
 
 - **Headings are the serif.** Playfair Display, weight 700 to 800, through the `font-heading` token. Page titles, section titles, and any display number a screen leads with. The serif is the product's single strongest identity marker: sans-serif headings make every screen read as a generic template.
 - **Everything else is the sans.** Inter, weight 400 to 600, through `font-sans`. Navigation, body copy, cards, buttons, labels, table cells.
 - **Codes stay monospaced.** IBM Plex Mono, through `font-mono`, for withholding codes, identifiers and file references. This is functional, not stylistic: those strings are compared character by character.
 
-All three ship as `@fontsource` npm packages imported in `web/app/layout.tsx`, not through `next/font/google` (D-056). They are therefore vendored with the dependencies: the build never contacts `fonts.gstatic.com`, which a container build cannot reach, and no font request leaves the workstation at runtime either. The Latin Extended range covers every accented character in the French interface. Components use the shadcn type scale (`text-sm` body in dense views, `text-2xl` page titles) rather than ad hoc sizes.
+All three ship as `@fontsource` npm packages imported in `web/app/layout.tsx`, not through `next/font/google` (D-059). They are therefore vendored with the dependencies: the build never contacts `fonts.gstatic.com`, which a container build cannot reach, and no font request leaves the workstation at runtime either. The Latin Extended range covers every accented character in the French interface. Components use the shadcn type scale (`text-sm` body in dense views, `text-2xl` page titles) rather than ad hoc sizes.
 
 ## 4. Layout
 
@@ -52,7 +52,7 @@ Every other transition on a working screen responds directly to something the us
 
 ### Ambient motion, marketing surfaces only
 
-D-055 admits a narrow class of ambient motion, and only on the entry screen (`/`), which is a pitch surface rather than a working one: a pulsing dot on the announcement badge. That is the whole of it, and anything added here needs its own decision.
+D-058 admits a narrow class of ambient motion, and only on the entry screen (`/`), which is a pitch surface rather than a working one: a pulsing dot on the announcement badge. That is the whole of it, and anything added here needs its own decision.
 
 They are confined to `/`. **No ambient motion appears on any screen that reports a finding, a status or a number an officer acts on**, because motion there competes with the reading of a compliance decision.
 
@@ -99,4 +99,4 @@ Every screen above must be legible and usable with the reduced-motion preference
 | 2026-09-13 | team | Section 7: added the legal search and passage reader screens, admin now also hosts the corpus verification queue (D-052) |
 | 2026-09-13 | team | Section 2: recorded the neutral chart ramp rule (D-053) |
 | 2026-09-13 | team | Section 7: added the sign-in and sign-up screens (D-054) |
-| 2026-09-13 | team | Sections 2, 3 and 5 rewritten for the modern-SaaS direction: green brand accent, warm yellow chart ramp, serif headings, ambient motion confined to the entry screen (D-055) |
+| 2026-09-13 | team | Sections 2, 3 and 5 rewritten for the modern-SaaS direction: green brand accent, warm yellow chart ramp, serif headings, ambient motion confined to the entry screen (D-058) |

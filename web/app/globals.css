@@ -3,7 +3,7 @@
  * web/ is defined here once; components consume tokens through Tailwind utilities and never set
  * colour values themselves. The three status colours are reserved for reporting that status.
  *
- * Values follow the modern-SaaS direction recorded as D-055: a green brand accent for
+ * Values follow the modern-SaaS direction recorded as D-058: a green brand accent for
  * interaction, a warm yellow chart ramp, an editorial serif for headings. Hex values from
  * DESIGN.md are converted to OKLCH here so light and dark stay perceptually matched; this file
  * remains the only place any colour is written.
@@ -44,9 +44,13 @@
   /* Diagonal crosshatch, used on at most two sections of a screen (DESIGN.md). */
   --background-image-pattern: var(--bg-pattern);
 
+  /* The capture QR code stays dark on light in both themes: phone cameras do not reliably read an inverted code. */
+  --color-qr-paper: oklch(1 0 0);
+  --color-qr-ink: oklch(0.22 0.02 256);
+
   /*
    * Editorial serif for headings, sans for everything else; mono stays for codes and identifiers.
-   * The families are declared by the @fontsource packages imported in app/layout.tsx (D-056), so
+   * The families are declared by the @fontsource packages imported in app/layout.tsx (D-059), so
    * these names must match the `font-family` those packages register.
    */
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
@@ -68,7 +72,7 @@
 
   /* A file arriving in the officer queue: still the one animation nothing else gets. */
   --animate-queue-arrive: queue-arrive 1.8s ease-out;
-  /* Ambient motion on the entry screen only (D-055); never on a screen reporting a finding. */
+  /* Ambient motion on the entry screen only (D-058); never on a screen reporting a finding. */
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
 
   @keyframes queue-arrive {
@@ -130,7 +134,7 @@
   /*
    * Status still carries meaning and is never decorative. `decided` sits at a teal hue rather
    * than the green it used to, so it cannot be mistaken for the brand accent now that the accent
-   * is itself green (D-055).
+   * is itself green (D-058).
    */
   --status-decided: oklch(0.52 0.1 178);
   --status-abstained: oklch(0.5 0.11 68);
