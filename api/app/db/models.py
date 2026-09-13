@@ -48,6 +48,69 @@ class Organisation(Base):
     )
 
 
+class User(Base):
+    """A person who signs in, with one role (A3)."""
+
+    # "user" is a reserved word in PostgreSQL.
+    __tablename__ = "app_user"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(
+        Enum(
+            "msme",
+            "accountant",
+            "officer",
+            "admin",
+            name="user_role",
+            native_enum=False,
+        ),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # One for an MSME user, several for an accountant (A4), none for an officer or admin.
+    organisations: Mapped[list["Organisation"]] = relationship(
+        secondary="organisation_member", order_by="Organisation.name"
+    )
+
+
+class OrganisationMember(Base):
+    """Lets a user file for one organisation and read that organisation's files."""
+
+    __tablename__ = "organisation_member"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id"), primary_key=True
+    )
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organisation.id"), primary_key=True
+    )
+
+
+class UserSession(Base):
+    """A signed-in session. Only the token's SHA-256 is stored, never the token."""
+
+    __tablename__ = "user_session"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id"), nullable=False
+    )
+    token_sha256: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    user: Mapped["User"] = relationship()
+
+
 class Document(Base):
     """The raw uploaded file."""
 
@@ -68,6 +131,37 @@ class Document(Base):
     organisation: Mapped["Organisation"] = relationship()
 
 
+class CaptureLink(Base):
+    """A short-lived link a phone opens to file one document for the user who made it (G3).
+
+    Only the token's SHA-256 is stored. `document_id` is set when a document is
+    filed through the link, which tells the laptop it arrived and ends the link.
+    """
+
+    __tablename__ = "capture_link"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id"), nullable=False
+    )
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organisation.id"), nullable=False
+    )
+    token_sha256: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("document.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    user: Mapped["User"] = relationship()
+    organisation: Mapped["Organisation"] = relationship()
+
+
 class Extraction(Base):
     """One structured field pulled from a document."""
 
@@ -84,9 +178,35 @@ class Extraction(Base):
         Enum("extracted", "assisted", name="extraction_source", native_enum=False),
         nullable=False,
     )
+    # Where on the document this field's value was found (J3): the page it is
+    # on, and its bounding box on that page's DocumentPage image, in the same
+    # pixel space. Null for full_text/masked_text (no single location applies)
+    # and for any structured field app/extraction/positions.py could not
+    # locate exactly: an approximate outline is not evidence, so none is drawn.
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bbox: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     extracted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class DocumentPage(Base):
+    """One page of a document, rendered once at a fixed DPI (J3).
+
+    The pixel space every Extraction.bbox on this page is expressed in.
+    """
+
+    __tablename__ = "document_page"
+    __table_args__ = (UniqueConstraint("document_id", "page", name="uq_document_page"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document.id"), nullable=False
+    )
+    page: Mapped[int] = mapped_column(Integer, nullable=False)
+    image_ref: Mapped[str] = mapped_column(String(500), nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class CorpusSource(Base):

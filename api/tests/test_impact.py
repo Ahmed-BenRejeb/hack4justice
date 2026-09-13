@@ -10,6 +10,7 @@ from app.impact.measurement import (
     measure,
 )
 from app.main import app
+from tests.conftest import AuthHeaders
 
 client = TestClient(app)
 
@@ -174,14 +175,16 @@ def test_measurement_can_be_scoped_to_one_organisation(db: Session) -> None:
     assert measure(db).errors_intercepted == 2
 
 
-def test_impact_endpoint_returns_counts_and_labelled_inputs(db: Session) -> None:
+def test_impact_endpoint_returns_counts_and_labelled_inputs(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
     organisation = _organisation(db, "Atelier Ben Salah", "9998887C")
     document = _document(db, organisation)
     rule = _rule(db, "RULE-ERRORS", ["TEJ_MATRICULE_INVALID"])
     _finding(db, document, rule, "decided", decided_code="TEJ_MATRICULE_INVALID")
     db.commit()
 
-    body = client.get("/api/v1/impact").json()
+    body = client.get("/api/v1/impact", headers=auth_headers("officer")).json()
 
     assert body["documents"] == 1
     assert body["errors_intercepted"] == 1
@@ -190,3 +193,20 @@ def test_impact_endpoint_returns_counts_and_labelled_inputs(db: Session) -> None
         "interventions_per_error": "estimate",
         "officer_hours_per_intervention": "estimate",
     }
+
+
+def test_a_filer_measures_only_one_of_their_own_organisations(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
+    own = _organisation(db, "Atelier Ben Salah", "9998887C")
+    other = _organisation(db, "SARL Nexsol", "1112223D")
+    db.commit()
+    headers = auth_headers("msme", own)
+
+    def status(**params: str) -> int:
+        return client.get("/api/v1/impact", params=params, headers=headers).status_code
+
+    assert status(organisation_id=str(own.id)) == 200
+    assert status(organisation_id=str(other.id)) == 403
+    # The deployment-wide figures are the administration's, not a filer's.
+    assert status() == 403

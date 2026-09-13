@@ -155,7 +155,7 @@ Cut list for phases 0 to 5, in order, if a gate is at risk:
 3. motion polish beyond the one orchestrated moment
 4. the Q&A backups (J10, J11)
 5. approved explanations (J6)
-6. evidence outlines on the page (J3)
+6. evidence outlines on the page (J3) - built, per D-055; no longer a candidate cut
 7. the masked text view (J5)
 8. the impact panel (J9), falling back to the slide
 9. counterparty check (scheduled in phase 9; state it as next)
@@ -220,3 +220,4 @@ Out of scope, with reasons in `docs/feature-research.md` section 7:
 | 2026-09-12 | team | Added Agency Benefit slide subsection to section 7, per D-016 |
 | 2026-09-13 | team | Scope extended to every researched feature: demo moments extended with a sixth, phases 6 to 9, cut list, before-presenting checks, feature scope section, per D-030; verified-only legal text on screen, per D-029 |
 | 2026-09-13 | team | Added a paragraph to section 2: structured fiscal extraction feeds the existing pipeline, not a declaration or treasury feature, per D-043 and D-045 |
+| 2026-09-13 | team | J3 (evidence outlines on the page) built rather than cut, per D-055; cut list item 6 marked done |

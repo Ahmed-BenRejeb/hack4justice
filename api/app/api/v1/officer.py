@@ -14,10 +14,13 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, Finding, OfficerDecision
+from app.auth.deps import require_officer
+from app.db.models import Document, Finding, OfficerDecision, User
 from app.db.session import get_db
 
-router = APIRouter(prefix="/officer", tags=["officer"])
+router = APIRouter(
+    prefix="/officer", tags=["officer"], dependencies=[Depends(require_officer)]
+)
 
 
 class QueuedDocumentOut(BaseModel):
@@ -83,7 +86,6 @@ def get_queue(db: Session = Depends(get_db)) -> list[QueuedDocumentOut]:
 
 class DecisionIn(BaseModel):
     document_id: uuid.UUID
-    officer_id: str
     action: Literal["validated", "flagged"]
     note: str | None = None
 
@@ -101,9 +103,11 @@ class DecisionOut(BaseModel):
 
 @router.post("/decisions", response_model=DecisionOut, status_code=201)
 def create_decision(
-    payload: DecisionIn, db: Session = Depends(get_db)
+    payload: DecisionIn,
+    officer: User = Depends(require_officer),
+    db: Session = Depends(get_db),
 ) -> OfficerDecision:
-    """Record the officer's decision and move the document out of the queue."""
+    """Record the signed-in officer's decision and move the document out of the queue."""
     document = db.get(Document, payload.document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
@@ -120,7 +124,7 @@ def create_decision(
 
     decision = OfficerDecision(
         document_id=payload.document_id,
-        officer_id=payload.officer_id,
+        officer_id=officer.email,
         action=payload.action,
         note=payload.note,
     )

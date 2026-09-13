@@ -1,0 +1,7 @@
+# SITE_ADDRESS is the sslip.io hostname from `terraform output site_url`
+# (scheme stripped), e.g. 3-120-45-6.sslip.io. Caddy obtains and renews the
+# Let's Encrypt certificate for it automatically over the HTTP-01 challenge
+# on port 80, then serves HTTPS on 443.
+{$SITE_ADDRESS} {
+	reverse_proxy web:3000
+}

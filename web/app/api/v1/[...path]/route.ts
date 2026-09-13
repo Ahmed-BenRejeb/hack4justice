@@ -2,10 +2,12 @@
  * Thin pass-through from the browser to the backend's /api/v1 surface (docs/architecture.md section 5).
  *
  * No business logic lives here: method, path, query string, body and content type are
- * forwarded unchanged, and the backend's status and body come back unchanged.
+ * forwarded unchanged, and the backend's status and body come back unchanged. The session
+ * cookie is the one translation: it travels on as the bearer token the backend checks (A3).
  */
 import type { NextRequest } from "next/server";
 import { getApiBaseUrl } from "@/lib/env";
+import { SESSION_COOKIE } from "@/lib/session";
 
 /** Request headers worth forwarding. Cookies and hop-by-hop headers stay on the browser side. */
 const FORWARDED_REQUEST_HEADERS = ["content-type", "accept"];
@@ -30,6 +32,8 @@ async function forward(
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (token) headers.set("authorization", `Bearer ${token}`);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   let upstream: Response;

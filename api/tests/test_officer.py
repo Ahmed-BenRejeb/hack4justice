@@ -1,10 +1,17 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import Document, Finding, Organisation, Rule
 from app.main import app
+from tests.conftest import AuthHeaders
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_as_officer(auth_headers: AuthHeaders) -> None:
+    client.headers.update(auth_headers("officer"))
 
 
 def _make_extracted_document(db: Session) -> Document:
@@ -128,13 +135,14 @@ def test_decision_removes_document_from_queue(db: Session) -> None:
         "/api/v1/officer/decisions",
         json={
             "document_id": str(document.id),
-            "officer_id": "officer@dgi.tn",
             "action": "validated",
             "note": "ok",
         },
     )
     assert response.status_code == 201
     assert response.json()["action"] == "validated"
+    # The deciding officer is the signed-in user, not a value the request supplies.
+    assert response.json()["officer_id"].startswith("officer-")
 
     queue = client.get("/api/v1/officer/queue").json()
     assert str(document.id) not in [item["id"] for item in queue]
@@ -148,7 +156,6 @@ def test_decision_on_unknown_document_returns_404() -> None:
         "/api/v1/officer/decisions",
         json={
             "document_id": "00000000-0000-0000-0000-000000000000",
-            "officer_id": "officer@dgi.tn",
             "action": "flagged",
         },
     )
@@ -159,7 +166,6 @@ def test_second_decision_on_same_document_returns_409(db: Session) -> None:
     document = _make_extracted_document(db)
     payload = {
         "document_id": str(document.id),
-        "officer_id": "officer@dgi.tn",
         "action": "flagged",
     }
 

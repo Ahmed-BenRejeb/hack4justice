@@ -15,10 +15,11 @@ import uuid
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, Extraction
+from app.auth.deps import current_user, readable_document
+from app.db.models import Document, Extraction, User
 from app.db.session import get_db
 from app.rules.service import reevaluate_document
 from app.supplier.facts import (
@@ -53,7 +54,6 @@ class AnswerableFactsOut(BaseModel):
 class ConfirmFactIn(BaseModel):
     fact_name: str
     value: str
-    confirmed_by: str = Field(min_length=1)
     # An attestation that expires: past this date the fact stops applying.
     valid_until: date | None = None
 
@@ -81,12 +81,11 @@ def _supplier_tax_id(db: Session, document_id: uuid.UUID) -> str | None:
 
 @router.get("/{document_id}/answerable-facts", response_model=AnswerableFactsOut)
 def get_answerable_facts(
-    document_id: uuid.UUID, db: Session = Depends(get_db)
+    document_id: uuid.UUID,
+    _: Document = Depends(readable_document),
+    db: Session = Depends(get_db),
 ) -> AnswerableFactsOut:
     """The supplier facts a person may confirm for this document."""
-    if db.get(Document, document_id) is None:
-        raise HTTPException(status_code=404, detail="document not found")
-
     return AnswerableFactsOut(
         supplier_tax_id=_supplier_tax_id(db, document_id),
         facts=[
@@ -100,13 +99,13 @@ def get_answerable_facts(
     "/{document_id}/supplier-facts", response_model=SupplierFactOut, status_code=201
 )
 def confirm_supplier_fact(
-    document_id: uuid.UUID, payload: ConfirmFactIn, db: Session = Depends(get_db)
+    document_id: uuid.UUID,
+    payload: ConfirmFactIn,
+    document: Document = Depends(readable_document),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
 ) -> SupplierFactOut:
-    """Record a person's answer about this document's supplier and re-run its rules."""
-    document = db.get(Document, document_id)
-    if document is None:
-        raise HTTPException(status_code=404, detail="document not found")
-
+    """Record the signed-in user's answer about this document's supplier and re-run its rules."""
     supplier_tax_id = _supplier_tax_id(db, document_id)
     if not supplier_tax_id:
         raise HTTPException(
@@ -124,7 +123,7 @@ def confirm_supplier_fact(
             supplier_tax_id=supplier_tax_id,
             fact_name=payload.fact_name,
             value=payload.value,
-            confirmed_by=payload.confirmed_by,
+            confirmed_by=user.email,
             valid_until=payload.valid_until,
         )
     except (UnanswerableFact, UnacceptedValue) as error:

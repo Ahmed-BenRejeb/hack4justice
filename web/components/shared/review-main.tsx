@@ -18,7 +18,6 @@ interface ReviewMainProps {
   answering?: {
     documentId: string;
     answerable: AnswerableFacts;
-    answeredBy: string;
     onAnswered: () => void;
   };
 }
@@ -47,7 +46,7 @@ export function ReviewMain({ document, findings, answering }: ReviewMainProps): 
         </Section>
       )}
       <Section id="texte" title="Texte extrait">
-        <ExtractionView extractions={document.extractions} />
+        <ExtractionView documentId={document.id} extractions={document.extractions} />
       </Section>
     </>
   );

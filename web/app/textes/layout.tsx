@@ -1,0 +1,9 @@
+/** Legal source screens: search and the passage reader, reached from any citation (J2, J10). */
+import type { JSX, ReactNode } from "react";
+import { requireRole } from "@/lib/session";
+
+/** Open to every signed-in role; medium-width container, matching the admin space. */
+export default async function TextesLayout({ children }: { children: ReactNode }): Promise<JSX.Element> {
+  await requireRole("msme", "accountant", "officer", "admin");
+  return <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>;
+}

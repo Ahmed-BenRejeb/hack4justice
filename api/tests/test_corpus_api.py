@@ -1,5 +1,6 @@
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -8,9 +9,17 @@ from app.corpus.retrieval import MATCH_END, MATCH_START
 from app.corpus.service import index_source
 from app.db.models import CorpusChunk, Document, Finding, Organisation, Rule
 from app.main import app
+from tests.conftest import AuthHeaders
 from tests.fixtures.corpus import TEST_CHECKER, make_source, verify
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_as_msme(auth_headers: AuthHeaders) -> None:
+    """Verified legal text is readable by every role; an MSME user shows it is not officer-only."""
+    client.headers.update(auth_headers("msme"))
+
 
 SOURCE_TEXT = (
     "ARTICLE 1 :\n"
@@ -104,11 +113,13 @@ def test_sources_count_passages_and_name_the_rules_citing_them(db: Session) -> N
 
 
 def test_verification_queue_names_unverified_chunks_by_reference_only(
-    db: Session,
+    db: Session, auth_headers: AuthHeaders
 ) -> None:
     chunks = index_and_verify(db)
 
-    response = client.get("/api/v1/corpus/verification-queue")
+    response = client.get(
+        "/api/v1/corpus/verification-queue", headers=auth_headers("admin")
+    )
 
     assert response.json() == [
         {

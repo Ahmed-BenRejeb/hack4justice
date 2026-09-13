@@ -8,10 +8,12 @@ labelled an estimate on screen (`docs/facts.md`, estimates rule; D-016).
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth.deps import current_user, member_of
+from app.db.models import User
 from app.db.session import get_db
 from app.impact.measurement import measure
 
@@ -63,7 +65,19 @@ class MeasurementOut(BaseModel):
 
 @router.get("", response_model=MeasurementOut)
 def get_impact(
-    organisation_id: uuid.UUID | None = None, db: Session = Depends(get_db)
+    organisation_id: uuid.UUID | None = None,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
 ) -> MeasurementOut:
-    """Counts observed in this deployment, and the benefit figures derived from them."""
+    """Counts observed in this deployment, and the benefit figures derived from them.
+
+    An officer measures the whole deployment or any one organisation. A filer
+    measures only one of their own organisations, for the MSME "Mes chiffres"
+    section (D-053); the deployment-wide figures stay the administration's.
+    """
+    if not (
+        user.role == "officer"
+        or (organisation_id is not None and member_of(user, organisation_id))
+    ):
+        raise HTTPException(status_code=403, detail="this role may not use this route")
     return MeasurementOut.model_validate(measure(db, organisation_id))

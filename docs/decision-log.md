@@ -827,20 +827,6 @@ A prior team project (`Backend-Dashboard-RH-Treso-24-25`, a NestJS/TypeORM treas
 
 **Result:** One model call per upload, on masked text. Five rules are registered beside `CIRPPIS-ART52-I-A`, all tracing their facts. The merge commit keeps the branch's commits and authorship.
 
-## D-047 - Constats grouped by outcome when distinct rules share a precondition
-
-**Date:** 2026-09-13
-
-**Decision:** On the file review screen, when two or more registered rules reach the identical visible outcome (same status, same missing fact or same decided code, same citation), the "Constats" section renders one card naming every contributing rule instead of one card per rule. Nothing changes server side: each rule still runs, still records its own `Finding` and `Citation`, and still carries its own trace (J1); the grouping is a presentation concern in `web/lib/findings.ts`.
-
-**Options considered:**
-- Group visually identical findings onto one card, listing every rule code (chosen).
-- Leave one card per finding.
-- Change the rule registry so `CIRPPIS-ART52-I-A`/`CIRPPIS-ART52-I-A-CODE` and `CIRPPIS-ART55-I-CONTENU`/`CIRPPIS-ART55-I-NET` share one rule instead of two.
-
-**Why:** `CIRPPIS-ART52-I-A` and `CIRPPIS-ART52-I-A-CODE` both abstain naming `payment_category` when that fact is absent, from the same Article 52 citation; `CIRPPIS-ART55-I-CONTENU` and `CIRPPIS-ART55-I-NET` do the same for `amount_net_paid` from Article 55. Both pairs answer genuinely different questions (mention vs. code family; completeness vs. arithmetic) and each carries its own verified citation, so merging the rules themselves would blur two distinct compliance questions into one and is not a call to make without the citation review the root CLAUDE.md requires. Left as one card per finding, the two abstentions read as the same constat shown twice, which is what an officer flagged as a duplication bug. Grouping by visible outcome fixes the reading without touching rule logic, the registry, or the `Finding`/`Citation` tables.
-
-**Result:** `web/lib/findings.ts:groupFindings()` groups by `(status, missing_fact, decided_code, citation.article_ref, citation.verbatim_text)`; `FindingCard` takes a group and lists every contributing `rule_code`, rendering each finding's own `DecisionTrace` underneath one shared citation. The "Règles appliquées" tally in the result banner still counts every finding, ungrouped.
 ## D-047 - Abstentions are answered against the supplier, and the rule re-decides
 
 **Date:** 2026-09-13
@@ -873,11 +859,212 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** Verified against a live server: three files, two errors intercepted (one `ART55_NET_INCOHERENT`, one `TEJ_MATRICULE_INVALID`), one abstention named, one fact confirmed by a person, and the derived figure shown with both inputs labelled "estimation". The panel states that it describes a demonstration set.
 
+## D-049 - Constats grouped by outcome when distinct rules share a precondition
+
+**Date:** 2026-09-13
+
+**Decision:** On the file review screen, when two or more registered rules reach the identical visible outcome (same status, same missing fact or same decided code, same citation), the "Constats" section renders one card naming every contributing rule instead of one card per rule. Nothing changes server side: each rule still runs, still records its own `Finding` and `Citation`, and still carries its own trace (J1); the grouping is a presentation concern in `web/lib/findings.ts`.
+
+**Options considered:**
+- Group visually identical findings onto one card, listing every rule code (chosen).
+- Leave one card per finding.
+- Change the rule registry so `CIRPPIS-ART52-I-A`/`CIRPPIS-ART52-I-A-CODE` and `CIRPPIS-ART55-I-CONTENU`/`CIRPPIS-ART55-I-NET` share one rule instead of two.
+
+**Why:** `CIRPPIS-ART52-I-A` and `CIRPPIS-ART52-I-A-CODE` both abstain naming `payment_category` when that fact is absent, from the same Article 52 citation; `CIRPPIS-ART55-I-CONTENU` and `CIRPPIS-ART55-I-NET` do the same for `amount_net_paid` from Article 55. Both pairs answer genuinely different questions (mention vs. code family; completeness vs. arithmetic) and each carries its own verified citation, so merging the rules themselves would blur two distinct compliance questions into one and is not a call to make without the citation review the root CLAUDE.md requires. Left as one card per finding, the two abstentions read as the same constat shown twice, which is what an officer flagged as a duplication bug. Grouping by visible outcome fixes the reading without touching rule logic, the registry, or the `Finding`/`Citation` tables.
+
+**Result:** `web/lib/findings.ts:groupFindings()` groups by `(status, missing_fact, decided_code, citation.article_ref, citation.verbatim_text)`; `FindingCard` takes a group and lists every contributing `rule_code`, rendering each finding's own `DecisionTrace` underneath one shared citation. The "Règles appliquées" tally in the result banner still counts every finding, ungrouped.
+
+
+## D-050 - Front end stays on shadcn, adds Tremor for charts only, adopts no block library
+
+**Date:** 2026-09-13
+
+**Decision:** The web app keeps shadcn/ui over Radix primitives as its only component base. Tremor is adopted for chart components only, because it is free, copy-paste, and built on the same Tailwind and Radix primitives, so the existing tokens carry over. No block or template library is adopted. `docs/frontend-plan.md` holds the resulting work plan.
+
+**Options considered:**
+- Keep shadcn, add Tremor for charts, adopt nothing else (chosen).
+- Adopt Beste UI (`ui.beste.co`), a freemium block library, as the design direction.
+- Buy Tailwind Plus or Catalyst (roughly 299 or 149 USD, one-time) and rebuild the visual layer on it.
+- Adopt an animated collection such as Aceternity UI or Magic UI for visual impact.
+- Mine Origin UI or ReUI for individual components without adopting anything.
+
+**Why:** Asked whether to adopt Beste UI for a better-looking, higher-impact interface. The component layer is not where this product's visual gap is: 44 components already exist, the tokens are applied, and `docs/design.md` is binding rather than advisory. What the screens lack is data behind them and one missing surface, the corpus API, which is built and tested with no interface at all. Block libraries are oriented to marketing pages (hero sections, pricing, ecommerce, price tickers), which this product has no screens for, and their premium tiers buy more of the same. Animated collections are rejected on a rule already written down: `docs/design.md` section 5 allows one orchestrated moment and otherwise only transitions that answer a user action. Tailwind Plus is genuinely the strongest application UI kit for dense administrative screens and conflicts with nothing here, so it stays open as a budget decision, not a technical one. Tremor is adopted narrowly because charts are the one component family the stack does not have and writing them from scratch would be work without argument. Because every option in this list ships copy-paste code with no runtime dependency, none of this is a lock-in decision and a single component can be lifted from any of them later without revisiting it.
+
+**Result:** `docs/frontend-plan.md` records the direction and the ordered work: the legal source surface (J2, J6, J10), KPI charts for both roles from the existing `GET /impact`, chart tokens added as a neutral ramp so the status colours stay reserved for status, and a polish pass against the quality floor.
+
+## D-051 - One-day demo deploy: a single EC2 instance, Terraform for infrastructure only
+
+**Date:** 2026-09-13
+
+**Decision:** For the pitch and any live rehearsal, the stack deploys to one EC2 instance (`c6i.xlarge`, eu-central-1) running the existing `docker-compose.yml` stack (`db`, `api`, `web`) behind Caddy, which gets a real HTTPS certificate from an sslip.io hostname built from the instance's own public IP, so no domain purchase or DNS step is needed. Terraform (`deploy/terraform/`) provisions only the instance, its security group (SSH from one admin IP, HTTP and HTTPS from anywhere) and its key pair; it does not provision the application, so `terraform destroy` is a complete and verifiable teardown. The repository reaches the instance by `rsync`, not git, because that is also how `api/.env` and `web/.env` reach it: those files are git-ignored by design (root CLAUDE.md's configuration rule) and must still arrive somewhere. No Elastic IP: one fewer resource that can outlive the demo and keep billing after `terraform destroy` is meant to have ended it.
+
+**Options considered:**
+- One EC2 instance running the existing Compose stack, Terraform scoped to infrastructure only (chosen).
+- ECS/Fargate with RDS and an ALB, the standard AWS-managed path.
+- A non-AWS VPS (Hetzner, DigitalOcean, Scaleway).
+
+**Why:** The API image is large (CPU torch plus sentence-transformers, roughly 3GB) and needs Postgres with pgvector; on Fargate that means a task, RDS, and an ALB, and the ALB alone runs roughly $16/month before anything else, which is disproportionate for a stack that only needs to be up for a pitch and a few rehearsals. A single instance sized for the whole stack (`c6i.xlarge`: 4 vCPU, 8GB RAM) at on-demand pricing costs roughly $2-3 for a 12-hour demo day, and Terraform still gives a scripted, repeatable, fully torn-down provisioning step rather than a manually clicked-together box. AWS was kept over a cheaper VPS because the team already holds AWS credit for this budget; the same Compose file would run unchanged on any VPS if that changes.
+
+**Result:** `docs/deploy.md` is the runbook: provision, rsync the repo (secrets included), bring the stack up with `deploy/docker-compose.prod.yml`, smoke test, seed with `seed/seed_demo_data.py` run from the operator's own machine against the deployed API (the script has its own Python dependencies, so it does not run inside either container), then `terraform destroy` as soon as the demo window closes, confirmed with an `aws ec2 describe-instances` check since a failed destroy step can leave a resource behind silently.
+
+## D-052 - Legal source surface built: search, passage reader, related passages, verification queue
+
+**Date:** 2026-09-13
+
+**Decision:** Implement `docs/frontend-plan.md` section 3.1 in full: a passage reader at `/textes/[chunkId]` (`GET /corpus/chunks/{id}`), a legal search screen at `/textes` (`GET /corpus/search`), a "Textes apparentés" panel under each finding card (`GET /findings/{id}/related`), and a corpus verification queue on `/admin` (`GET /corpus/verification-queue`). Added a fourth top-level nav space, "Textes", alongside Entreprise/Agent/Administration.
+
+**Options considered:**
+- Link the reader from a rule's own `Citation` component directly, by resolving a matching corpus chunk from the rule's `article_ref`.
+- Link the reader only from "related passages" under a finding, where a real chunk id already exists via `GET /findings/{id}/related` (chosen).
+- Add "Textes" as a fourth nav space (chosen) versus leaving the search screen reachable only by a link from other screens.
+
+**Why:** A `Rule`'s citation (hand-verified `verbatim_text`, root CLAUDE.md) and a `CorpusChunk` (RAG-indexed, verified separately per D-032) are two different provenance records with no guaranteed one-to-one match; inferring one from an `article_ref` string would be a guess, not a citation. `GET /findings/{id}/related` already resolves to real, verified chunk ids for a specific finding, so linking from there is honest instead of invented. J10 (legal search) is named in `docs/plan.md` as a Q&A backup the team should be able to show on request, which argues for it being one click from the header rather than buried inside a finding.
+
+**Result:** With the corpus register nearly empty of verified entries (1 of 78 chunks today), the reader's 404 branch reads as "ce passage n'est pas encore vérifié" rather than a generic error (D-029's binding constraint, made calm rather than alarming per the plan's explicit instruction); `related-passages.tsx` renders nothing while loading, on error, or with zero hits, so it never flashes into view only to disappear. `docs/design.md` section 7 gains the two new routes; `web/CLAUDE.md` and the root `CLAUDE.md` repository map record `components/corpus/` and `components/admin/`.
+
+## D-053 - KPI charts built on recharts directly, not vendored Tremor Raw source; neutral chart ramp added
+
+**Date:** 2026-09-13
+
+**Decision:** Implement `docs/frontend-plan.md` section 3.2 (KPI charts for both roles) and 3.3 (chart tokens) together, since a chart cannot be built compliantly without the tokens it draws with. Depend on `recharts` directly and write two small local wrappers, `components/shared/simple-bar-chart.tsx` (single-series, neutral tone) and `status-bar-chart.tsx` (decided against abstained, status tones), rather than vendoring Tremor Raw's own `BarChart`. Added `--chart-1` (light and dark) as the neutral chart ramp, one step for now, extended only when a real chart needs a second series. Officer `/agent/mesures` gained three charts (decided against abstained; errors intercepted, aggregated by article since two rules can share a citation, D-052's same reasoning; facts most often missing). MSME `/entreprise` gained a "Mes chiffres" section, organisation-scoped via `GET /impact?organisation_id=`, with tiles for its own file counts and errors intercepted before filing, plus the one chart the plan calls out as actionable there: which facts it keeps failing to supply. No benefit calculation on the MSME side (D-016 still holds: that figure argues to the administration, not the business).
+
+**Options considered:**
+- Vendor Tremor Raw's `BarChart` component verbatim, per D-050's literal wording.
+- Depend on `recharts` directly and write minimal, token-driven wrappers (chosen).
+- Skip charts, ship the existing tiles and tables from `docs/decision-log.md` D-048 unchanged.
+
+**Why:** Fetched Tremor Raw's actual `BarChart` source (`raw.tremor.so`) before writing anything, per the root CLAUDE.md rule to verify against the real thing rather than a doc snippet from memory. It hardcodes a Tailwind `gray-*`/`blue-*` palette disconnected from this repo's OKLCH token file, and its legend-slider and click-to-filter interactions need `@remixicon/react` (a second icon library beside `lucide-react`) plus two more vendored utility files, all in service of features (multi-series legends, per-category colours) none of these charts use: every chart here is single-series except the one two-bar status comparison. Copying it verbatim would mean either shipping colours `docs/design.md` section 2 forbids (arbitrary hues per category, a fixed grayscale instead of our tokens) or reskinning most of the component's internals, at which point it is no longer "adopting Tremor," it is maintaining a fork of it. D-050's actual point, recorded in its own words, was "writing them from scratch would be work without argument": `recharts` is the exact engine Tremor wraps, so depending on it directly still avoids hand-rolling SVG chart rendering, while every colour stays sourced from the token file as the binding design doc requires.
+
+**Result:** `recharts` added as a real dependency (`pnpm add recharts`, lockfile updated). `lib/charts.ts` holds the only data shaping (aggregation by article, field labelling), unit-tested per `docs/frontend-plan.md` section 4; the chart components themselves are eye-verified against light and dark mode, screenshotted against live data. `docs/design.md` section 2 records the ramp rule. This is a correction to D-050's literal instruction, not a reversal of its reasoning; if a future screen genuinely needs Tremor's fuller feature set (multi-series legends, clickable filtering), that is a fresh decision, not an extension of this one.
+
+## D-058 - Modern-SaaS visual direction adopted wholesale; charts extended to every route with real data
+
+**Date:** 2026-09-13
+
+**Note:** renumbered twice before merging, from D-054 to D-055 and then to D-058, because `origin/docs/v2-scope-and-architecture` published D-054 for sign-in and then D-055 to D-057 for the document viewer and phone capture while this decision was still local. Same rule as D-046 each time: the unpublished local decision is the one that moves. D-059 moved with it, for the same reason.
+
+**Decision:** Adopt the direction in the repository's `DESIGN.md` and `docs/SKILL.md` (a modern-SaaS design skill: editorial serif headings, a green brand accent, a warm yellow chart ramp, soft diffused elevation, a diagonal crosshatch, ambient micro-animation) as the binding visual layer, replacing the austere administrative reading of `docs/design.md` sections 2, 3 and 5. Concretely: `--primary` becomes `#5EA832`, headings move from IBM Plex Sans to Playfair Display and body text to Inter, the chart ramp moves from cool neutrals to warm yellow, and a shadow scale, a pattern token and float/pulse keyframes enter the token file. Charts are extended from the two routes that had them to every route with real data behind it.
+
+Four things are explicitly **not** adopted from those files, and this is a limit on the decision rather than an oversight:
+
+- The marketing content patterns: pricing tiers, testimonials, the logo strip and "trusted by X,000+ companies". This product has no customers and no price, and `docs/facts.md` forbids any on-screen figure that is not verified. Inventing them to fill a section would break a rule that outranks a visual preference.
+- Raw hex in components. `DESIGN.md` writes hex throughout; those values are converted to OKLCH in `web/app/globals.css` and the token discipline is unchanged.
+- The emoji used in `docs/SKILL.md`'s own DO/DON'T table, which the root `CLAUDE.md` bans repository-wide.
+- Ambient motion on working screens. Float, pulse and scroll-reveal are confined to the entry screen `/`; `/agent`, `/entreprise`, both review screens, `/admin` and `/textes` keep motion that only answers a user action, and `prefers-reduced-motion` still collapses everything.
+
+Two consequences worth recording. `--status-decided` moves from green to teal, because the brand accent is now green and a green "decided" badge beside a green primary button is a colour collision in a product whose whole claim is that colour carries status. And `--chart-1` moving to warm yellow is what lets the accent stay out of data visualisation, which `DESIGN.md` calls for by name.
+
+**Options considered:**
+- Keep `docs/design.md` binding and mine the two files for craft only (spacing rhythm, hierarchy, empty-state quality), changing no token values.
+- Adopt the direction wholesale, overturning sections 2, 3 and 5 (chosen).
+- Delete both files as dropped in from another project.
+
+**Why:** The user chose this after being shown the conflict in full: the two files are a generic marketing-SaaS skill, and `docs/design.md` was written deliberately austere for a public-administration tool, so the two disagree on type, colour, raw values, motion and section content. The argument for adopting it is that the hackathon outcome is decided by a 3-minute pitch and a live demo (root `CLAUDE.md`), and a jury reads production quality off the entry screen in the first seconds. The argument against, recorded here because it is real and was not hypothetical: this is a compliance tool for a public officer, and the austerity was a deliberate fit to that reader, not a default. The limits above are what keep the change a restyle rather than a licence to put unverified claims on screen.
+
+**Result:** `web/app/globals.css` rewritten (fonts, accent, chart ramp, shadow scale, pattern, dashed border, float and pulse keyframes, light and dark); `web/app/layout.tsx` serves Playfair Display and Inter through `next/font`, keeping IBM Plex Mono for codes. `docs/design.md` sections 2, 3 and 5 rewritten, section 5 gaining an explicit "ambient motion, marketing surfaces only" boundary and a broader forbidden list. `web/CLAUDE.md` records the font roles, the motion boundary and the rule that a chart needs real data behind it. `lib/charts.ts` gains `queueComposition`, `findingOutcomes`, `rulesBySource`, `corpusCoverage`, `corpusVerified` and `verificationBySource`, each unit-tested; the new charts land on `/agent`, `/admin`, `/textes` and both review screens.
+
+**Amended the same day, on merging with D-054:** the entry screen's `LiveCounts` block was removed and its component deleted. D-054 made deployment-wide `GET /impact` officer-only, and `/` is public, so the block would have been permanently blank for exactly the signed-out visitor it was built to impress. Deployment-wide figures stay on `/agent/mesures`, which is officer-only by design. The float keyframe went with it, since nothing else used it, leaving the pulsing announcement dot as the only ambient motion in the product.
+## D-054 - Sign-in: database sessions, four roles, organisation-scoped files
+
+**Date:** 2026-09-13
+
+**Decision:** Build A3's first step on both processes. Accounts carry one role (`msme`, `accountant`, `officer`, `admin`); sessions are opaque random tokens whose SHA-256 is stored in `user_session`, passwords are hashed with the standard library's scrypt. Every route except health, sign-up and sign-in requires a session and is gated by role; a document is read only by an officer or a member of its organisation (404 otherwise, like a missing one); `uploaded_by`, `officer_id` and `confirmed_by` are taken from the session, no longer from the request. MSME owners sign up themselves, which creates their organisation; officer, admin and accountant accounts are created with `python -m app.auth.create_user`, an accountant granted each organisation by matricule fiscal. The web app signs in through server actions that keep the token in an HttpOnly cookie, the proxy forwards it as a bearer token, and route-group layouts send each role to its own space. The sign-in and sign-up screens are the shadcn `login-03` block (shadcn's own registry, not a third-party block library, so D-050 holds).
+
+**Options considered:**
+- Database sessions with stdlib scrypt (chosen), stateless JWT (a new secret and dependency, and a token cannot be revoked before it expires), or auth in Next.js only (the backend would stay open to anyone calling it directly).
+- MSME self sign-up (chosen) or seeded accounts only.
+- An accountant role with per-organisation membership now (chosen), or deferring it to A4.
+- The `login-03` block (chosen), `login-01`, or composing Card and Field primitives.
+
+**Why:** The backend is the trust boundary: identity fields were typed by the client and the demo deploy is reachable from the internet (D-051). Database sessions make sign-out real and need no new dependency. Self sign-up replaces the organisation picker's create path, which existed only because there was no sign-in (D-024).
+
+**Result:** Migration `e6b1c9d4a7f2` adds `app_user`, `organisation_member` and `user_session`; `/auth/signup`, `/auth/login`, `/auth/logout` and `/auth/me` are added and `/organisations` is removed. `OFFICER_ID` leaves `web/.env`. `seed/seed_demo_data.py` signs every call in: it needs `CHAHED_DEMO_PASSWORD` and an officer account created first. Verified end to end against a running stack: role redirects, the proxy's 401/403, sign-in, sign-up and sign-out through the server actions, and uploads and decisions recording the signed-in user. Not built: a delegation the MSME grants and revokes itself (A4), DigiGo and Mobile ID, password reset, login rate limiting, purging expired sessions. Sign-up does not prove the person runs the organisation they name; that needs a verified identity.
+
+Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` and `GET /impact` without sign-in: that section now takes the signed-in user's organisations, and `GET /impact` admits a filer who names one of their own organisations, while the deployment-wide figures stay officer-only.
+
+## D-059 - Fonts ship as npm packages, so the image build never contacts Google
+
+**Date:** 2026-09-13
+
+**Decision:** Replace `next/font/google` with `@fontsource` packages (`@fontsource-variable/inter`, `@fontsource-variable/playfair-display`, `@fontsource/ibm-plex-mono`), imported as CSS in `web/app/layout.tsx`. The font families are named directly in `web/app/globals.css` instead of through the `--font-*` variables `next/font` used to generate.
+
+**Options considered:**
+- Keep `next/font/google` and fix the network path so the container can reach `fonts.gstatic.com`.
+- Vendor the `.woff2` files into the repository and use `next/font/local`.
+- Serve the fonts from npm with `@fontsource` (chosen).
+
+**Why:** `docker compose build web` failed: `next/font/google` downloads the actual `.woff2` files during `pnpm build`, every request to `fonts.gstatic.com` timed out inside the container, and Turbopack then could not resolve the generated font module, which collapsed into a wall of "Module not found" errors. Measured rather than assumed: the same URL times out under both `docker run` and `docker build`, with an explicit `--dns 8.8.8.8` and with `--network=host`, while `registry.npmjs.org` succeeds and the Windows host downloads the same file fine. So it is not DNS, not IPv6, and not BuildKit; something on this network blocks Google's font CDN from the Docker VM specifically. IBM Plex Mono timed out too, so the failure predates the D-058 typeface change and would have hit the old build as well.
+
+Fixing the network was rejected because it is machine-specific and would leave the build broken for any teammate or CI runner behind the same block. Vendoring `.woff2` files was rejected because Google splits each family into separate `latin` and `latin-ext` files with complementary unicode ranges, and `next/font/local` has no per-file `unicode-range`, so the two subsets of one weight collide. `@fontsource` resolves it through the one network path the container demonstrably has, adds no binaries to git, and makes the image build reproducible offline, which also protects the EC2 deploy in D-051.
+
+**Result:** Three dependencies added to `web/package.json`. `app/layout.tsx` no longer imports `next/font/google` and no longer sets font variables on `<html>`; `app/globals.css` names `Inter Variable`, `Playfair Display Variable` and `IBM Plex Mono` directly, verified against the `font-family` each installed package registers. One side effect worth recording: the `packages:` key added to `web/pnpm-workspace.yaml` makes `web/` a pnpm workspace root, so `pnpm add` now requires `-w`.
+## D-055 - Evidence outlined on the document page (J3): word positions, no new PDF viewer library
+
+**Date:** 2026-09-13
+
+**Decision:** Build J3 rather than cut it. `app/extraction/ocr.py` now renders every page once at a fixed DPI (`RASTER_DPI`, 150) and returns each word's bounding box in that same pixel space: `pdfplumber` for a born-digital PDF's own text layer (scaled from PDF points), Tesseract's own `image_to_data()` word boxes for the OCR path, already in the rasterised image's pixel space. `app/extraction/positions.py` locates a structured field's raw (pre-normalisation) value among those words by exact substring match after stripping punctuation and case, and returns the union bounding box of the matching run, or nothing. A new `document_page` table (one row per rendered page: image ref, pixel width and height) and two new nullable `extraction` columns (`page`, `bbox`) carry this; `GET /documents/{id}/pages` and `GET /documents/{id}/pages/{page}/image` serve it. The web field table can select a located field, outlining it over the page image in `components/shared/document-viewer.tsx`.
+
+**Options considered:**
+- Cut J3 to the cut list (`docs/plan.md` section 9 already names "evidence outlines on the page" as a cuttable item) and keep the field table as the only evidence.
+- Build it: OCR-level word positions plus a page-image viewer (chosen).
+- Build it with a client-side PDF renderer (`pdf.js`) instead of server-rendered page images, so the browser draws the original vector PDF rather than a raster.
+
+**Why:** The user asked for it built, not cut, once the gap was found. Server-rendered page images (already a dependency, `pdf2image`/Poppler, used for the OCR path) avoid adding a PDF.js dependency and avoid a second coordinate system: the same raster the browser displays is the same raster Tesseract's own boxes are already in, and `pdfplumber`'s point-space boxes need only one scalar conversion (`RASTER_DPI / 72`) to agree with it. Matching on the field's `raw_value` (as written on the document) rather than its normalised `value` (a canonical decimal, e.g. `"1000.500"`) is required: the normalised form does not appear anywhere on the page to search for. An exact substring match, not a fuzzy one, keeps the same "never guess" law this codebase applies to a compliance finding: a field whose value cannot be found verbatim among the document's own words gets no outline, not an approximate one. This is pure display evidence: `app/rules/service.py` still reads only `Extraction.value`; no rule reads `page` or `bbox`, so the citation and abstention machinery is unchanged.
+
+**Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Merged after D-054 (sign-in): the new pages endpoints are gated the same way as the sibling document endpoints (`readable_document`), and the browser's plain `<img>` still works unauthenticated-looking, since the Next.js proxy attaches the session's bearer token server-side before forwarding, the same as every other call.
+
+## D-056 - Phone capture built ahead of its phase: several photos filed as one PDF, local OCR
+
+**Date:** 2026-09-13
+
+**Decision:** Build G3 now, although `docs/plan.md` section 8 places it in phase 8. On a touch screen the MSME upload screen offers "Photographier le document": a native `<input type="file" accept="image/*" capture="environment">` opens the camera, each photo joins the pages already taken, and the pages are sent as repeated `file` parts of the existing `POST /documents`. With more than one part the backend turns each photo upright from its EXIF orientation tag, reduces it to 3000 px on its long side, and saves the pages as one PDF (`app/extraction/photos.py`, Pillow), named after the first photo; that PDF is stored and read by the existing scanned-PDF OCR path. A single image upload gets the same upright-and-reduce step before OCR. OCR stays local Tesseract.
+
+**Options considered:**
+- Same device (chosen), or a QR handoff where a desktop page shows a code and the phone uploads to it (a pairing token table, new endpoints, desktop polling and a QR library).
+- Several photos as one document (chosen), or one photo per document.
+- Combining on the backend with Pillow (chosen), or in the browser (a PDF library, a new dependency).
+- Local Tesseract (chosen), or a vision model through OpenRouter, which would send an unmasked image and break D-013.
+
+**Why:** The team asked for phone capture now. MSMEs without an accountant hold paper, and the native input needs no dependency and no new endpoint. One PDF keeps one filing as one document for the rules, the queue and the export. Phones store orientation as a tag rather than rotating the pixels, and Tesseract ignores the tag, so a sideways photo read as noise.
+
+**Result:** `POST /documents` accepts one or more `file` parts; the single-file contract is unchanged. Several parts that are not all readable images, or more than 20, answer 422 and store nothing; an unreadable single image now ends as `extraction_failed` instead of a 500. Tests cover page order through OCR, a sideways EXIF photo, the refusals, and the multi-photo upload. The camera button is hidden on fine pointers (`pointer-fine:hidden`), so a desktop sees the drop zone only. Not built: client-side reduction before upload (full-size photos cross the network), reordering pages, a QR handoff. Photo OCR quality on real invoices is not measured yet (`docs/plan.md` section 9 risk).
+
+## D-057 - Phone capture from a laptop's QR code; photos reduced before upload
+
+**Date:** 2026-09-13
+
+**Decision:** Add a QR handoff to phone capture (D-056). On a laptop (fine pointer) the MSME upload screen offers "Afficher le code": a server action creates a capture link through `POST /capture/links` for the signed-in filer and organisation and returns `PUBLIC_WEB_URL/capture/<token>`, which the laptop draws as a QR code with `uqr`. The phone opens that page without signing in, reads `GET /capture/{token}` to name the organisation, photographs the pages and sends them to `POST /capture/{token}/documents`, which files them through the same code as `POST /documents`, recorded as uploaded by the link's maker. The laptop polls `GET /capture/links/{id}` and opens the review once `document_id` is set. A link lives 10 minutes (`CAPTURE_LINK_TTL_MINUTES`) and files one document; only its token's SHA-256 is stored, in a new `capture_link` table, and its row is locked during the upload so two phones cannot both use it. Separately, the browser redraws every image larger than 3000 px as an upright JPEG within 3000 px before it joins a form (`web/lib/photos.ts`).
+
+**Options considered:**
+- A pairing link the phone uses without signing in (chosen), or signing in on the phone.
+- Opening the review on the laptop when the document arrives (chosen), or staging the photos for the laptop to confirm first.
+- A required `PUBLIC_WEB_URL` for the QR address (chosen), or the laptop's own address, which is `localhost` in development and unreachable from a phone.
+- `uqr` in the browser (chosen: no dependencies of its own), `segno` in the api, or `qrcode` in web (several dependencies).
+- Reducing photos in the browser with `createImageBitmap` and `OffscreenCanvas` (chosen, no dependency), or only on the backend (full-size photos still cross mobile data).
+
+**Why:** The laptop is where an MSME owner or accountant already works and the phone is where the camera is; signing in on a phone mid-task is friction the demo cannot afford. A link grants no more than one upload for one organisation, expires quickly, and is refused once used or once its maker no longer files for the organisation. The QR address identifies a deployment, so it gets no default. The QR code keeps dark modules on a light ground in both themes (two constant tokens in `web/app/globals.css`), since phone cameras do not reliably read an inverted code.
+
+**Result:** Migration `8a4c2f6e1d39` adds `capture_link`. `app/auth/capture.py` makes and looks up links; `app/auth/deps.py` gates the two phone routes by link instead of session. `web/.env` needs `PUBLIC_WEB_URL`; when it is missing, the laptop names it when asked for a code, and uploading still works. New web dependency: `uqr` 0.1.3. Not built: purging expired links, rate limiting on the token routes (the 256-bit token is not guessable, but requests are not throttled), and a limit on polling an expired link left open. The token is in the phone page's URL, so it can appear in a server access log during its 10 minutes of life.
+
+## D-060 - Live AWS deploy: two runbook bugs found and fixed, real end to end
+
+**Date:** 2026-09-13
+
+**Decision:** Actually ran `docs/deploy.md` for the first time end to end (`terraform apply`, rsync, `docker compose up`, seed) rather than only reasoning about it, and fixed the two real bugs it surfaced instead of working around them by hand each time.
+
+**Options considered:**
+- Route `/api/v1/*` at Caddy directly to `api`, bypassing `web`'s proxy, so a bearer-token script works against the public URL like the doc originally claimed.
+- Keep the proxy as the one path for `/api/v1/*` (browser and script alike), and run the seed script inside the compose network instead (chosen).
+- Leave the plain `export SITE_ADDRESS=...; sudo docker compose ...` sequence in the doc and rely on operators discovering the fix themselves.
+
+**Why:** Routing `/api/v1/*` straight to `api` would leave the browser's own calls broken: `web/app/api/v1/[...path]/route.ts` is what turns the session cookie into the bearer header the API requires (D-054), and FastAPI's `readable_document`/`current_user` never look at a cookie. Bypassing the proxy for the whole prefix fixes a script at the cost of the actual product. `docker-compose.prod.yml`'s own comment ("Only Caddy is reachable from outside the instance") already says the right place to reach `api` directly is inside the compose network, not from outside it; the seed script just needed to run there. Separately, `sudo` resets the environment under Ubuntu's stock sudoers, so `export SITE_ADDRESS=...` followed by a plain `sudo docker compose ...` on the next line silently loses the variable - every command against `docker-compose.prod.yml` needs it, since Compose interpolates the whole file (including `caddy`'s required-variable declaration) before running any subcommand, `ps` and `logs` included, not only `up`.
+
+**Result:** Found live, both blocking a first real launch: `docker compose ... up -d --build` failed with "required variable SITE_ADDRESS is missing a value" until reissued as `sudo SITE_ADDRESS=$SITE_ADDRESS docker compose ...`; the seed script failed with `401 {"detail": "not signed in"}` against the public `site_url` until run as `docker compose -f deploy/docker-compose.prod.yml run --rm -v .../seed:/seed:ro -v .../fixtures:/fixtures:ro -e CHAHED_API_BASE_URL=http://api:8000/api/v1 ... api uv run python /seed/seed_demo_data.py`, reaching `api` by its internal compose hostname with the repo's `seed/`/`fixtures/` bind-mounted in (the `api` image does not bundle either, `api/Dockerfile`). `docs/deploy.md` rewritten at both points. Verified for real: the AWS account initially refused any non-free-tier instance type until upgraded mid-session, then `c6i.xlarge` provisioned cleanly in `eu-central-1`, `https://<sslip.io host>/api/v1/health` answering over a real Let's Encrypt certificate, and the five hero documents seeded and decided through the live instance.
+
 ## Change log
 
 | Date | Author | What changed |
 |---|---|---|
-| 2026-09-12 | team | Regenerated decision log from description-projet-v2.md, D-001 through D-015 |
 | 2026-09-12 | team | Added D-016: derived hours figure for the mandatory Agency Benefit slide |
 | 2026-09-12 | team | Added D-017: api/ scaffold deviations (Python 3.12 pin, embedding dimension default) |
 | 2026-09-12 | team | Added D-018: resolved D-012, verified OpenRouter embeddings work, kept local default |
@@ -909,6 +1096,17 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-044: Article 55(I) certificate rules and a schema-grounded matricule rule |
 | 2026-09-13 | team | Added D-045: fiscal ledger reframed as the rule engine's fact base, not a declaration product |
 | 2026-09-13 | team | Added D-046: fiscal fact layer merged, with masked extraction, provenance traces and optional VAT; branch decisions renumbered D-043 to D-045 |
-| 2026-09-13 | team | Added D-047: constats grouped by outcome when distinct rules share a precondition |
 | 2026-09-13 | team | Added D-047: abstentions answered against the supplier, rules re-decide, person source in the trace (J4, B3, B4, J11) |
 | 2026-09-13 | team | Added D-048: rules declare their error codes; impact panel counts them with the labelled benefit calculation (J9) |
+| 2026-09-13 | team | Renumbered the constats grouping decision to D-049: it and the abstention loop were both merged as D-047 |
+| 2026-09-13 | team | Added D-050: front end stays on shadcn, Tremor for charts only, no block library; front-end plan added |
+| 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
+| 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
+| 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
+| 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
+| 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |
+| 2026-09-13 | team | Added D-056: phone capture (G3) built ahead of phase 8, several photos filed as one PDF, local OCR |
+| 2026-09-13 | team | Added D-057: phone capture from a laptop's QR code through a single-use link, photos reduced before upload |
+| 2026-09-13 | team | Added D-058: modern-SaaS visual direction adopted wholesale, charts extended to every route with real data |
+| 2026-09-13 | team | Added D-059: fonts ship as @fontsource npm packages so the image build never contacts fonts.gstatic.com |
+| 2026-09-13 | team | Added D-060: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |

@@ -6,22 +6,28 @@
  */
 import type {
   AnswerableFacts,
+  CaptureInvite,
+  CaptureLink,
+  CapturedDocument,
   ConfirmFactInput,
+  CorpusSourceSummary,
   DocumentDetail,
+  DocumentPage,
   DocumentSummary,
   Finding,
   Measurement,
   OfficerDecision,
   OfficerDecisionInput,
   OperationCode,
-  Organisation,
-  OrganisationInput,
+  PassageDetail,
+  PassageHit,
   QueueItem,
   Rule,
   SupplierFact,
   TejExport,
   TejExportDraft,
   TejExportRequest,
+  VerificationQueueEntry,
 } from "./api-types";
 
 const BASE_PATH = "/api/v1";
@@ -86,25 +92,40 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 const documentPath = (id: string): string => `/documents/${encodeURIComponent(id)}`;
+const capturePath = (token: string): string => `/capture/${encodeURIComponent(token)}`;
+
+/** A multipart body with one `file` part per file; several are the pages of one paper document (G3). */
+function filesForm(files: File[]): FormData {
+  const form = new FormData();
+  for (const file of files) form.append("file", file);
+  return form;
+}
 
 /** The backend operations the UI uses, one method per endpoint. */
 export const api = {
-  /** GET /organisations: every organisation, alphabetically. */
-  listOrganisations(signal?: AbortSignal): Promise<Organisation[]> {
-    return request("/organisations", { signal });
+  /**
+   * POST /documents: uploads a payment file for one of the signed-in user's organisations, who is
+   * recorded as its filer; extraction and rule evaluation run before it returns. Several files are
+   * the photographed pages of one paper document, which the backend files as one PDF (G3).
+   */
+  uploadDocument(files: File[], organisationId: string): Promise<DocumentSummary> {
+    const query = new URLSearchParams({ organisation_id: organisationId });
+    return request(`/documents?${query}`, { method: "POST", body: filesForm(files) });
   },
 
-  /** POST /organisations: creates an MSME; a duplicate tax id is refused with 409. */
-  createOrganisation(input: OrganisationInput): Promise<Organisation> {
-    return postJson("/organisations", input);
+  /** GET /capture/links/{id}: a phone capture link the signed-in user made, with the document filed through it once there is one. */
+  getCaptureLink(id: string, signal?: AbortSignal): Promise<CaptureLink> {
+    return request(`/capture/links/${encodeURIComponent(id)}`, { signal });
   },
 
-  /** POST /documents: uploads a payment file; extraction and rule evaluation run before it returns. */
-  uploadDocument(file: File, organisationId: string, uploadedBy: string): Promise<DocumentSummary> {
-    const form = new FormData();
-    form.append("file", file);
-    const query = new URLSearchParams({ organisation_id: organisationId, uploaded_by: uploadedBy });
-    return request(`/documents?${query}`, { method: "POST", body: form });
+  /** GET /capture/{token}: the organisation a capture link files for; 404 once it is used or expired. Needs no session. */
+  getCaptureInvite(token: string, signal?: AbortSignal): Promise<CaptureInvite> {
+    return request(capturePath(token), { signal });
+  },
+
+  /** POST /capture/{token}/documents: a phone's photos, filed as one document for the person who made the link. */
+  sendCapturedPhotos(token: string, files: File[]): Promise<CapturedDocument> {
+    return request(`${capturePath(token)}/documents`, { method: "POST", body: filesForm(files) });
   },
 
   /** GET /documents/{id}: status, organisation, extraction results, decision and export. */
@@ -115,6 +136,11 @@ export const api = {
   /** GET /documents/{id}/findings: findings with their rule code and citation resolved. */
   getFindings(id: string, signal?: AbortSignal): Promise<Finding[]> {
     return request(`${documentPath(id)}/findings`, { signal });
+  },
+
+  /** GET /documents/{id}/pages: the document's rendered pages, for the source viewer (J3). */
+  getDocumentPages(id: string, signal?: AbortSignal): Promise<DocumentPage[]> {
+    return request(`${documentPath(id)}/pages`, { signal });
   },
 
   /** GET /officer/queue: extracted files awaiting an officer decision. */
@@ -152,13 +178,40 @@ export const api = {
     return postJson(`${documentPath(id)}/export`, body);
   },
 
-  /** GET /impact: counts from this deployment's own data, with the benefit derived from them. */
-  getImpact(signal?: AbortSignal): Promise<Measurement> {
-    return request("/impact", { signal });
+  /** GET /impact: counts from this deployment's own data, with the benefit derived from them. Scoped to one organisation when given. */
+  getImpact(organisationId?: string, signal?: AbortSignal): Promise<Measurement> {
+    const query = organisationId ? `?${new URLSearchParams({ organisation_id: organisationId })}` : "";
+    return request(`/impact${query}`, { signal });
   },
 
   /** GET /rules: the rule registry. */
   listRules(signal?: AbortSignal): Promise<Rule[]> {
     return request("/rules", { signal });
+  },
+
+  /** GET /corpus/search: verified passages for a query, best first (J10). */
+  searchCorpus(query: string, signal?: AbortSignal): Promise<PassageHit[]> {
+    const params = new URLSearchParams({ q: query });
+    return request(`/corpus/search?${params}`, { signal });
+  },
+
+  /** GET /corpus/chunks/{id}: a verified passage, its neighbours, its article's outline and its source (J2). */
+  getPassage(chunkId: string, signal?: AbortSignal): Promise<PassageDetail> {
+    return request(`/corpus/chunks/${encodeURIComponent(chunkId)}`, { signal });
+  },
+
+  /** GET /corpus/sources: every indexed source with its provenance and verification counts. */
+  listCorpusSources(signal?: AbortSignal): Promise<CorpusSourceSummary[]> {
+    return request("/corpus/sources", { signal });
+  },
+
+  /** GET /corpus/verification-queue: unverified chunks by reference only, never their text. */
+  getVerificationQueue(signal?: AbortSignal): Promise<VerificationQueueEntry[]> {
+    return request("/corpus/verification-queue", { signal });
+  },
+
+  /** GET /findings/{id}/related: verified passages related to a finding's rule and missing fact. */
+  getRelatedPassages(findingId: string, signal?: AbortSignal): Promise<PassageHit[]> {
+    return request(`/findings/${encodeURIComponent(findingId)}/related`, { signal });
   },
 };

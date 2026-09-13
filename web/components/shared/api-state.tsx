@@ -19,6 +19,10 @@ export function describeError(error: unknown): { title: string; detail: string |
         title: "Service d’analyse injoignable",
         detail: "Le serveur d’application ne parvient pas à joindre le service d’analyse.",
       };
+    case 401:
+      return { title: "Session expirée", detail: "Reconnectez-vous pour continuer." };
+    case 403:
+      return { title: "Accès refusé", detail: "Votre rôle ne permet pas cette action." };
     case 404:
       return { title: "Ressource introuvable", detail: error.message };
     case 409:

@@ -16,8 +16,16 @@ from app.supplier.facts import (
     confirm_fact,
     current_facts,
 )
+from tests.conftest import AuthHeaders
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_as_officer(auth_headers: AuthHeaders) -> None:
+    """An officer reads every file, so one session answers for any document these tests build."""
+    client.headers.update(auth_headers("officer"))
+
 
 CODE_RULE = {
     "code": "CIRPPIS-ART52-I-A-CODE",
@@ -216,7 +224,6 @@ def test_answering_an_abstention_turns_it_into_a_decision(db: Session) -> None:
         json={
             "fact_name": "beneficiary_fiscal_regime",
             "value": "reel",
-            "confirmed_by": "owner@example.tn",
         },
     )
 
@@ -228,7 +235,8 @@ def test_answering_an_abstention_turns_it_into_a_decision(db: Session) -> None:
     confirmed = [step for step in after[0]["trace"] if step["source"] == "person"]
     assert len(confirmed) == 1
     assert confirmed[0]["fact"] == "beneficiary_fiscal_regime"
-    assert confirmed[0]["confirmed_by"] == "owner@example.tn"
+    # The person is the signed-in user, not a value the request supplies.
+    assert confirmed[0]["confirmed_by"].startswith("officer-")
 
 
 def test_answering_refuses_a_value_the_fact_does_not_accept(db: Session) -> None:
@@ -240,7 +248,6 @@ def test_answering_refuses_a_value_the_fact_does_not_accept(db: Session) -> None
         json={
             "fact_name": "beneficiary_fiscal_regime",
             "value": "peut-etre",
-            "confirmed_by": "owner@example.tn",
         },
     )
 
@@ -257,7 +264,6 @@ def test_answering_without_an_identified_supplier_returns_409(db: Session) -> No
         json={
             "fact_name": "beneficiary_fiscal_regime",
             "value": "reel",
-            "confirmed_by": "owner@example.tn",
         },
     )
 
@@ -277,7 +283,6 @@ def test_a_second_file_from_the_same_supplier_does_not_abstain(db: Session) -> N
         json={
             "fact_name": "beneficiary_fiscal_regime",
             "value": "reel",
-            "confirmed_by": "owner@example.tn",
         },
     )
 

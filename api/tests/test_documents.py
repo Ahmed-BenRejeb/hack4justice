@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Document, Export, OfficerDecision, Organisation, Rule
 from app.extraction.fields import FIELD_QUESTIONS
 from app.main import app
-from tests.conftest import make_born_digital_pdf
+from tests.conftest import AuthHeaders, make_born_digital_pdf, make_text_image
 
 client = TestClient(app)
 
@@ -37,16 +37,17 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_upload_document_persists_and_extracts_it(db: Session) -> None:
+def test_upload_document_persists_and_extracts_it(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     pdf_bytes = make_born_digital_pdf("Certificat de retenue a la source: article 62.")
 
     response = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("certificat.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
     )
 
@@ -54,10 +55,12 @@ def test_upload_document_persists_and_extracts_it(db: Session) -> None:
     body = response.json()
     assert body["organisation_id"] == str(organisation.id)
     assert body["filename"] == "certificat.pdf"
+    # The filer is the signed-in user, not a value the request supplies.
+    assert body["uploaded_by"].startswith("msme-")
     assert body["status"] == "extracted"
     assert body["storage_ref"].endswith(".pdf")
 
-    detail = client.get(f"/api/v1/documents/{body['id']}")
+    detail = client.get(f"/api/v1/documents/{body['id']}", headers=headers)
     assert detail.status_code == 200
     detail_body = detail.json()
     assert detail_body["organisation"]["name"] == "Atelier Ben Salah"
@@ -70,23 +73,72 @@ def test_upload_document_persists_and_extracts_it(db: Session) -> None:
     assert "article 62" in extractions["full_text"]
 
 
-def test_upload_stores_a_masked_copy_without_identifiers_or_the_filer_name(
-    db: Session,
+def test_upload_of_several_photos_files_one_pdf_document(
+    db: Session, auth_headers: AuthHeaders
 ) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
+    pages = [("Facture honoraires", "page-1.png"), ("Quittance fiscale", "page-2.png")]
+
+    response = client.post(
+        "/api/v1/documents",
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
+        files=[
+            ("file", (name, io.BytesIO(make_text_image(text)), "image/png"))
+            for text, name in pages
+        ],
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["filename"] == "page-1.pdf"
+    assert body["storage_ref"].endswith(".pdf")
+    assert body["status"] == "extracted"
+    detail = client.get(f"/api/v1/documents/{body['id']}", headers=headers).json()
+    full_text = next(
+        e["value"] for e in detail["extractions"] if e["field_name"] == "full_text"
+    ).lower()
+    assert full_text.index("facture") < full_text.index("quittance")
+
+
+def test_upload_of_several_files_with_an_unreadable_photo_is_refused(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
+    organisation = _make_organisation(db)
+
+    response = client.post(
+        "/api/v1/documents",
+        params={"organisation_id": str(organisation.id)},
+        headers=auth_headers("msme", organisation),
+        files=[
+            ("file", ("page-1.png", io.BytesIO(make_text_image("Page")), "image/png")),
+            ("file", ("notes.txt", io.BytesIO(b"plain text"), "text/plain")),
+        ],
+    )
+
+    assert response.status_code == 422
+    assert db.query(Document).count() == 0
+
+
+def test_upload_stores_a_masked_copy_without_identifiers_or_the_filer_name(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
+    organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     pdf_bytes = make_born_digital_pdf(
         "Facture Atelier Ben Salah, MF 1234567A/A/M/000, contact compta@atelier.tn"
     )
 
     upload = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
     )
-    detail = client.get(f"/api/v1/documents/{upload.json()['id']}").json()
+    detail = client.get(
+        f"/api/v1/documents/{upload.json()['id']}", headers=headers
+    ).json()
     masked = next(
         e["value"] for e in detail["extractions"] if e["field_name"] == "masked_text"
     )
@@ -98,9 +150,10 @@ def test_upload_stores_a_masked_copy_without_identifiers_or_the_filer_name(
 
 
 def test_upload_extracts_structured_fiscal_fields_from_the_masked_text(
-    db: Session,
+    db: Session, auth_headers: AuthHeaders
 ) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     pdf_bytes = make_born_digital_pdf(
         "Facture Cabinet Jlassi matricule fiscal 7654321B, "
         "honoraires de conseil, montant HT 1000.000 TND, regime reel."
@@ -108,13 +161,13 @@ def test_upload_extracts_structured_fiscal_fields_from_the_masked_text(
 
     upload = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
     )
-    detail = client.get(f"/api/v1/documents/{upload.json()['id']}").json()
+    detail = client.get(
+        f"/api/v1/documents/{upload.json()['id']}", headers=headers
+    ).json()
     extractions = detail["extractions"]
 
     field_names = {e["field_name"] for e in extractions}
@@ -130,10 +183,44 @@ def test_upload_extracts_structured_fiscal_fields_from_the_masked_text(
     assert not any(PLACEHOLDER.search(e["value"]) for e in structured)
     supplier_tax_id = [e for e in structured if e["field_name"] == "supplier_tax_id"]
     assert all(e["value"] == "7654321B" for e in supplier_tax_id)
+    # It appears verbatim in the born-digital text, so it must be locatable on the page (J3).
+    assert supplier_tax_id[0]["page"] == 1
+    assert supplier_tax_id[0]["bbox"] is not None
 
 
-def test_document_detail_includes_decision_and_export(db: Session) -> None:
+def test_document_pages_are_rendered_and_served(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
+    pdf_bytes = make_born_digital_pdf("Facture pour verifier le rendu de page.")
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
+        files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    document_id = upload.json()["id"]
+
+    pages = client.get(
+        f"/api/v1/documents/{document_id}/pages", headers=headers
+    ).json()
+    assert len(pages) == 1
+    assert pages[0]["page"] == 1
+    assert pages[0]["width"] > 0 and pages[0]["height"] > 0
+
+    image = client.get(pages[0]["image_url"], headers=headers)
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.content.startswith(b"\x89PNG")
+
+
+def test_document_detail_includes_decision_and_export(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
+    organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     document = Document(
         organisation_id=organisation.id,
         uploaded_by="accountant@example.tn",
@@ -154,7 +241,7 @@ def test_document_detail_includes_decision_and_export(db: Session) -> None:
     db.add(Export(document_id=document.id, xml_ref="decl.xml", xsd_validated=True))
     db.commit()
 
-    body = client.get(f"/api/v1/documents/{document.id}").json()
+    body = client.get(f"/api/v1/documents/{document.id}", headers=headers).json()
 
     assert body["officer_decision"]["action"] == "validated"
     assert body["officer_decision"]["note"] == "ok"
@@ -162,15 +249,16 @@ def test_document_detail_includes_decision_and_export(db: Session) -> None:
     assert body["export"]["xsd_validated"] is True
 
 
-def test_upload_document_unsupported_type_marks_extraction_failed(db: Session) -> None:
+def test_upload_document_unsupported_type_marks_extraction_failed(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
 
     response = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("notes.txt", io.BytesIO(b"plain text notes"), "text/plain")},
     )
 
@@ -178,13 +266,13 @@ def test_upload_document_unsupported_type_marks_extraction_failed(db: Session) -
     assert response.json()["status"] == "extraction_failed"
 
 
-def test_upload_document_unknown_organisation_returns_404() -> None:
+def test_upload_document_unknown_organisation_returns_404(
+    auth_headers: AuthHeaders,
+) -> None:
     response = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": "00000000-0000-0000-0000-000000000000",
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": "00000000-0000-0000-0000-000000000000"},
+        headers=auth_headers("msme"),
         files={
             "file": ("certificat.pdf", io.BytesIO(b"%PDF-1.4 test"), "application/pdf")
         },
@@ -193,22 +281,27 @@ def test_upload_document_unknown_organisation_returns_404() -> None:
     assert response.status_code == 404
 
 
-def test_get_document_unknown_id_returns_404() -> None:
-    response = client.get("/api/v1/documents/00000000-0000-0000-0000-000000000000")
+def test_get_document_unknown_id_returns_404(auth_headers: AuthHeaders) -> None:
+    response = client.get(
+        "/api/v1/documents/00000000-0000-0000-0000-000000000000",
+        headers=auth_headers("officer"),
+    )
     assert response.status_code == 404
 
 
-def test_findings_unknown_document_returns_404() -> None:
+def test_findings_unknown_document_returns_404(auth_headers: AuthHeaders) -> None:
     response = client.get(
-        "/api/v1/documents/00000000-0000-0000-0000-000000000000/findings"
+        "/api/v1/documents/00000000-0000-0000-0000-000000000000/findings",
+        headers=auth_headers("officer"),
     )
     assert response.status_code == 404
 
 
 def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
-    db: Session,
+    db: Session, auth_headers: AuthHeaders
 ) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     db.add(
         Rule(
             **FIXTURE_RULE,
@@ -221,15 +314,15 @@ def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
 
     upload = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
     )
     document_id = upload.json()["id"]
 
-    findings = client.get(f"/api/v1/documents/{document_id}/findings").json()
+    findings = client.get(
+        f"/api/v1/documents/{document_id}/findings", headers=headers
+    ).json()
 
     assert len(findings) == 1
     assert findings[0]["status"] == "abstained"
@@ -250,9 +343,10 @@ def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
 
 
 def test_upload_evaluates_registered_rules_and_decides_when_fact_present(
-    db: Session,
+    db: Session, auth_headers: AuthHeaders
 ) -> None:
     organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
     db.add(
         Rule(
             **FIXTURE_RULE,
@@ -265,15 +359,15 @@ def test_upload_evaluates_registered_rules_and_decides_when_fact_present(
 
     upload = client.post(
         "/api/v1/documents",
-        params={
-            "organisation_id": str(organisation.id),
-            "uploaded_by": "accountant@example.tn",
-        },
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
         files={"file": ("certificat.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
     )
     document_id = upload.json()["id"]
 
-    findings = client.get(f"/api/v1/documents/{document_id}/findings").json()
+    findings = client.get(
+        f"/api/v1/documents/{document_id}/findings", headers=headers
+    ).json()
 
     assert len(findings) == 1
     assert findings[0]["status"] == "decided"
