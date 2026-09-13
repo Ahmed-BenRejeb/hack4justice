@@ -22,7 +22,8 @@ change.
 - Your current public IP, for `admin_cidr`: `curl ifconfig.me`.
 - `api/.env` and `web/.env` filled in locally (see each file's
   `.env.example`). They are not committed; rsync copies them to the
-  instance in step 3.
+  instance in step 3. In `web/.env`, `PUBLIC_WEB_URL` is `https://<site_url>`,
+  the address phones open from the capture QR code (D-056).
 
 ## 1. Provision the instance
 
