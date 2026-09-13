@@ -11,7 +11,8 @@ from dataclasses import dataclass
 import pypdf
 import pytesseract
 from pdf2image import convert_from_bytes
-from PIL import Image
+
+from app.extraction.photos import prepare_page
 
 OCR_LANGUAGES = "fra+ara+eng"
 MIN_TEXT_LAYER_CHARS = 20
@@ -48,8 +49,8 @@ def _ocr_pdf(content: bytes) -> str:
 
 
 def _ocr_image(content: bytes) -> str:
-    image = Image.open(io.BytesIO(content))
-    return pytesseract.image_to_string(image, lang=OCR_LANGUAGES)
+    # An image upload is usually a phone photo: turned upright and reduced first.
+    return pytesseract.image_to_string(prepare_page(content), lang=OCR_LANGUAGES)
 
 
 def extract_text(content: bytes, content_type: str) -> OcrResult:

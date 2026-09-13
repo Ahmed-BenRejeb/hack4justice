@@ -24,6 +24,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.extraction.photos import UnusablePhotos, combine_photos
 from app.extraction.service import run_extraction
 from app.rules.service import evaluate_all_rules
 from app.storage import save_upload
@@ -64,18 +65,31 @@ class DocumentDetailOut(DocumentOut):
 
 @router.post("", response_model=DocumentOut, status_code=201)
 async def upload_document(
-    file: UploadFile,
+    file: list[UploadFile],
     organisation_id: uuid.UUID,
     user: User = Depends(require_filer),
     db: Session = Depends(get_db),
 ) -> Document:
-    """Store a file the signed-in user files for one of their organisations, and run extraction on it."""
+    """Store a file the signed-in user files for one of their organisations, and run extraction on it.
+
+    Several `file` parts are the photographed pages of one paper document (G3):
+    they are stored and read as one PDF, named after the first photo.
+    """
     if not member_of(user, organisation_id):
         raise HTTPException(status_code=404, detail="organisation not found")
 
-    content = await file.read()
     # Keep the base name only: some clients send a path, and the name is shown to people.
-    filename = Path(file.filename or "document").name
+    filename = Path(file[0].filename or "document").name
+    if len(file) == 1:
+        content = await file[0].read()
+        content_type = file[0].content_type or ""
+    else:
+        try:
+            content = combine_photos([await part.read() for part in file])
+        except UnusablePhotos as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        filename = f"{Path(filename).stem}.pdf"
+        content_type = "application/pdf"
     storage_ref = save_upload(filename, content)
 
     document = Document(
@@ -88,7 +102,7 @@ async def upload_document(
     db.add(document)
     db.flush()
 
-    run_extraction(db, document, content, file.content_type or "")
+    run_extraction(db, document, content, content_type)
     if document.status == "extracted":
         evaluate_all_rules(db, document.id)
 

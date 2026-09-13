@@ -8,6 +8,7 @@ from app.db.models import Document, Extraction
 from app.extraction.fields import extract_document_fields
 from app.extraction.masking import mask_with_originals
 from app.extraction.ocr import UnsupportedDocumentType, extract_text
+from app.extraction.photos import UnusablePhotos
 from app.providers.openrouter import OpenRouterError
 
 
@@ -21,7 +22,7 @@ def run_extraction(
     """
     try:
         result = extract_text(content, content_type)
-    except UnsupportedDocumentType:
+    except (UnsupportedDocumentType, UnusablePhotos):
         document.status = "extraction_failed"
         return
 
