@@ -1,24 +1,18 @@
 /** Root layout: fonts, theme, toasts, skip link, and the shared header on every screen. */
 import type { JSX } from "react";
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { AppHeader } from "@/components/shared/app-header";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUser } from "@/lib/session";
+// Fonts are npm packages, never fetched from Google during the build (D-059). The container has
+// no route to fonts.gstatic.com, and an image build must not depend on one. The variable families
+// carry every weight the interface uses in a single file; Plex Mono is static, so it names its two.
+import "@fontsource-variable/playfair-display/index.css";
+import "@fontsource-variable/inter/index.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
-
-// Latin Extended covers every accented character in the French interface (docs/design.md section 3).
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600"],
-  variable: "--font-plex-sans",
-});
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500"],
-  variable: "--font-plex-mono",
-});
 
 export const metadata: Metadata = {
   title: { default: "Chahed", template: "%s · Chahed" },
@@ -30,7 +24,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: LayoutProps<"/">): Promise<JSX.Element> {
   const user = await getCurrentUser();
   return (
-    <html lang="fr" suppressHydrationWarning className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="fr" suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <a

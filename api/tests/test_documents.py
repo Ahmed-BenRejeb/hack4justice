@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Document, Export, OfficerDecision, Organisation, Rule
 from app.extraction.fields import FIELD_QUESTIONS
 from app.main import app
-from tests.conftest import AuthHeaders, make_born_digital_pdf
+from tests.conftest import AuthHeaders, make_born_digital_pdf, make_text_image
 
 client = TestClient(app)
 
@@ -71,6 +71,54 @@ def test_upload_document_persists_and_extracts_it(
     # structured fields above the confidence threshold (live model call).
     assert {"full_text", "masked_text"} <= set(extractions)
     assert "article 62" in extractions["full_text"]
+
+
+def test_upload_of_several_photos_files_one_pdf_document(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
+    organisation = _make_organisation(db)
+    headers = auth_headers("msme", organisation)
+    pages = [("Facture honoraires", "page-1.png"), ("Quittance fiscale", "page-2.png")]
+
+    response = client.post(
+        "/api/v1/documents",
+        params={"organisation_id": str(organisation.id)},
+        headers=headers,
+        files=[
+            ("file", (name, io.BytesIO(make_text_image(text)), "image/png"))
+            for text, name in pages
+        ],
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["filename"] == "page-1.pdf"
+    assert body["storage_ref"].endswith(".pdf")
+    assert body["status"] == "extracted"
+    detail = client.get(f"/api/v1/documents/{body['id']}", headers=headers).json()
+    full_text = next(
+        e["value"] for e in detail["extractions"] if e["field_name"] == "full_text"
+    ).lower()
+    assert full_text.index("facture") < full_text.index("quittance")
+
+
+def test_upload_of_several_files_with_an_unreadable_photo_is_refused(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
+    organisation = _make_organisation(db)
+
+    response = client.post(
+        "/api/v1/documents",
+        params={"organisation_id": str(organisation.id)},
+        headers=auth_headers("msme", organisation),
+        files=[
+            ("file", ("page-1.png", io.BytesIO(make_text_image("Page")), "image/png")),
+            ("file", ("notes.txt", io.BytesIO(b"plain text"), "text/plain")),
+        ],
+    )
+
+    assert response.status_code == 422
+    assert db.query(Document).count() == 0
 
 
 def test_upload_stores_a_masked_copy_without_identifiers_or_the_filer_name(

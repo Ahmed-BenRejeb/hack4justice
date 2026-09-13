@@ -5,7 +5,9 @@ import type { JSX } from "react";
 import { ClipboardCheckIcon, ExternalLinkIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock } from "@/components/shared/api-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { SimpleBarChart } from "@/components/shared/simple-bar-chart";
 import { api } from "@/lib/api-client";
+import { verificationBySource } from "@/lib/charts";
 import { countLabel, httpUrl } from "@/lib/format";
 import { useResource } from "@/lib/use-resource";
 
@@ -37,6 +39,18 @@ export function VerificationQueue(): JSX.Element {
           <p aria-live="polite" className="text-sm text-muted-foreground">
             {countLabel(data.length, "référence en attente", "références en attente")}
           </p>
+
+          {/* Where the backlog actually sits, so a verification session can start with one source. */}
+          {verificationBySource(data).length > 1 && (
+            <div className="rounded-xl border bg-card px-5 py-4 shadow-card">
+              <h3 className="text-sm font-medium">Références en attente par source</h3>
+              <SimpleBarChart
+                data={verificationBySource(data)}
+                labelWidth={180}
+                height={Math.max(120, verificationBySource(data).length * 36)}
+              />
+            </div>
+          )}
           <ul className="divide-y overflow-hidden rounded-xl border bg-card">
             {data.map((entry) => {
               const href = httpUrl(entry.official_url);

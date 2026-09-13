@@ -937,6 +937,33 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** `recharts` added as a real dependency (`pnpm add recharts`, lockfile updated). `lib/charts.ts` holds the only data shaping (aggregation by article, field labelling), unit-tested per `docs/frontend-plan.md` section 4; the chart components themselves are eye-verified against light and dark mode, screenshotted against live data. `docs/design.md` section 2 records the ramp rule. This is a correction to D-050's literal instruction, not a reversal of its reasoning; if a future screen genuinely needs Tremor's fuller feature set (multi-series legends, clickable filtering), that is a fresh decision, not an extension of this one.
 
+## D-058 - Modern-SaaS visual direction adopted wholesale; charts extended to every route with real data
+
+**Date:** 2026-09-13
+
+**Note:** renumbered twice before merging, from D-054 to D-055 and then to D-058, because `origin/docs/v2-scope-and-architecture` published D-054 for sign-in and then D-055 to D-057 for the document viewer and phone capture while this decision was still local. Same rule as D-046 each time: the unpublished local decision is the one that moves. D-059 moved with it, for the same reason.
+
+**Decision:** Adopt the direction in the repository's `DESIGN.md` and `docs/SKILL.md` (a modern-SaaS design skill: editorial serif headings, a green brand accent, a warm yellow chart ramp, soft diffused elevation, a diagonal crosshatch, ambient micro-animation) as the binding visual layer, replacing the austere administrative reading of `docs/design.md` sections 2, 3 and 5. Concretely: `--primary` becomes `#5EA832`, headings move from IBM Plex Sans to Playfair Display and body text to Inter, the chart ramp moves from cool neutrals to warm yellow, and a shadow scale, a pattern token and float/pulse keyframes enter the token file. Charts are extended from the two routes that had them to every route with real data behind it.
+
+Four things are explicitly **not** adopted from those files, and this is a limit on the decision rather than an oversight:
+
+- The marketing content patterns: pricing tiers, testimonials, the logo strip and "trusted by X,000+ companies". This product has no customers and no price, and `docs/facts.md` forbids any on-screen figure that is not verified. Inventing them to fill a section would break a rule that outranks a visual preference.
+- Raw hex in components. `DESIGN.md` writes hex throughout; those values are converted to OKLCH in `web/app/globals.css` and the token discipline is unchanged.
+- The emoji used in `docs/SKILL.md`'s own DO/DON'T table, which the root `CLAUDE.md` bans repository-wide.
+- Ambient motion on working screens. Float, pulse and scroll-reveal are confined to the entry screen `/`; `/agent`, `/entreprise`, both review screens, `/admin` and `/textes` keep motion that only answers a user action, and `prefers-reduced-motion` still collapses everything.
+
+Two consequences worth recording. `--status-decided` moves from green to teal, because the brand accent is now green and a green "decided" badge beside a green primary button is a colour collision in a product whose whole claim is that colour carries status. And `--chart-1` moving to warm yellow is what lets the accent stay out of data visualisation, which `DESIGN.md` calls for by name.
+
+**Options considered:**
+- Keep `docs/design.md` binding and mine the two files for craft only (spacing rhythm, hierarchy, empty-state quality), changing no token values.
+- Adopt the direction wholesale, overturning sections 2, 3 and 5 (chosen).
+- Delete both files as dropped in from another project.
+
+**Why:** The user chose this after being shown the conflict in full: the two files are a generic marketing-SaaS skill, and `docs/design.md` was written deliberately austere for a public-administration tool, so the two disagree on type, colour, raw values, motion and section content. The argument for adopting it is that the hackathon outcome is decided by a 3-minute pitch and a live demo (root `CLAUDE.md`), and a jury reads production quality off the entry screen in the first seconds. The argument against, recorded here because it is real and was not hypothetical: this is a compliance tool for a public officer, and the austerity was a deliberate fit to that reader, not a default. The limits above are what keep the change a restyle rather than a licence to put unverified claims on screen.
+
+**Result:** `web/app/globals.css` rewritten (fonts, accent, chart ramp, shadow scale, pattern, dashed border, float and pulse keyframes, light and dark); `web/app/layout.tsx` serves Playfair Display and Inter through `next/font`, keeping IBM Plex Mono for codes. `docs/design.md` sections 2, 3 and 5 rewritten, section 5 gaining an explicit "ambient motion, marketing surfaces only" boundary and a broader forbidden list. `web/CLAUDE.md` records the font roles, the motion boundary and the rule that a chart needs real data behind it. `lib/charts.ts` gains `queueComposition`, `findingOutcomes`, `rulesBySource`, `corpusCoverage`, `corpusVerified` and `verificationBySource`, each unit-tested; the new charts land on `/agent`, `/admin`, `/textes` and both review screens.
+
+**Amended the same day, on merging with D-054:** the entry screen's `LiveCounts` block was removed and its component deleted. D-054 made deployment-wide `GET /impact` officer-only, and `/` is public, so the block would have been permanently blank for exactly the signed-out visitor it was built to impress. Deployment-wide figures stay on `/agent/mesures`, which is officer-only by design. The float keyframe went with it, since nothing else used it, leaving the pulsing announcement dot as the only ambient motion in the product.
 ## D-054 - Sign-in: database sessions, four roles, organisation-scoped files
 
 **Date:** 2026-09-13
@@ -955,6 +982,22 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` and `GET /impact` without sign-in: that section now takes the signed-in user's organisations, and `GET /impact` admits a filer who names one of their own organisations, while the deployment-wide figures stay officer-only.
 
+## D-059 - Fonts ship as npm packages, so the image build never contacts Google
+
+**Date:** 2026-09-13
+
+**Decision:** Replace `next/font/google` with `@fontsource` packages (`@fontsource-variable/inter`, `@fontsource-variable/playfair-display`, `@fontsource/ibm-plex-mono`), imported as CSS in `web/app/layout.tsx`. The font families are named directly in `web/app/globals.css` instead of through the `--font-*` variables `next/font` used to generate.
+
+**Options considered:**
+- Keep `next/font/google` and fix the network path so the container can reach `fonts.gstatic.com`.
+- Vendor the `.woff2` files into the repository and use `next/font/local`.
+- Serve the fonts from npm with `@fontsource` (chosen).
+
+**Why:** `docker compose build web` failed: `next/font/google` downloads the actual `.woff2` files during `pnpm build`, every request to `fonts.gstatic.com` timed out inside the container, and Turbopack then could not resolve the generated font module, which collapsed into a wall of "Module not found" errors. Measured rather than assumed: the same URL times out under both `docker run` and `docker build`, with an explicit `--dns 8.8.8.8` and with `--network=host`, while `registry.npmjs.org` succeeds and the Windows host downloads the same file fine. So it is not DNS, not IPv6, and not BuildKit; something on this network blocks Google's font CDN from the Docker VM specifically. IBM Plex Mono timed out too, so the failure predates the D-058 typeface change and would have hit the old build as well.
+
+Fixing the network was rejected because it is machine-specific and would leave the build broken for any teammate or CI runner behind the same block. Vendoring `.woff2` files was rejected because Google splits each family into separate `latin` and `latin-ext` files with complementary unicode ranges, and `next/font/local` has no per-file `unicode-range`, so the two subsets of one weight collide. `@fontsource` resolves it through the one network path the container demonstrably has, adds no binaries to git, and makes the image build reproducible offline, which also protects the EC2 deploy in D-051.
+
+**Result:** Three dependencies added to `web/package.json`. `app/layout.tsx` no longer imports `next/font/google` and no longer sets font variables on `<html>`; `app/globals.css` names `Inter Variable`, `Playfair Display Variable` and `IBM Plex Mono` directly, verified against the `font-family` each installed package registers. One side effect worth recording: the `packages:` key added to `web/pnpm-workspace.yaml` makes `web/` a pnpm workspace root, so `pnpm add` now requires `-w`.
 ## D-055 - Evidence outlined on the document page (J3): word positions, no new PDF viewer library
 
 **Date:** 2026-09-13
@@ -970,7 +1013,40 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 
 **Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Merged after D-054 (sign-in): the new pages endpoints are gated the same way as the sibling document endpoints (`readable_document`), and the browser's plain `<img>` still works unauthenticated-looking, since the Next.js proxy attaches the session's bearer token server-side before forwarding, the same as every other call.
 
-## D-056 - Live AWS deploy: two runbook bugs found and fixed, real end to end
+## D-056 - Phone capture built ahead of its phase: several photos filed as one PDF, local OCR
+
+**Date:** 2026-09-13
+
+**Decision:** Build G3 now, although `docs/plan.md` section 8 places it in phase 8. On a touch screen the MSME upload screen offers "Photographier le document": a native `<input type="file" accept="image/*" capture="environment">` opens the camera, each photo joins the pages already taken, and the pages are sent as repeated `file` parts of the existing `POST /documents`. With more than one part the backend turns each photo upright from its EXIF orientation tag, reduces it to 3000 px on its long side, and saves the pages as one PDF (`app/extraction/photos.py`, Pillow), named after the first photo; that PDF is stored and read by the existing scanned-PDF OCR path. A single image upload gets the same upright-and-reduce step before OCR. OCR stays local Tesseract.
+
+**Options considered:**
+- Same device (chosen), or a QR handoff where a desktop page shows a code and the phone uploads to it (a pairing token table, new endpoints, desktop polling and a QR library).
+- Several photos as one document (chosen), or one photo per document.
+- Combining on the backend with Pillow (chosen), or in the browser (a PDF library, a new dependency).
+- Local Tesseract (chosen), or a vision model through OpenRouter, which would send an unmasked image and break D-013.
+
+**Why:** The team asked for phone capture now. MSMEs without an accountant hold paper, and the native input needs no dependency and no new endpoint. One PDF keeps one filing as one document for the rules, the queue and the export. Phones store orientation as a tag rather than rotating the pixels, and Tesseract ignores the tag, so a sideways photo read as noise.
+
+**Result:** `POST /documents` accepts one or more `file` parts; the single-file contract is unchanged. Several parts that are not all readable images, or more than 20, answer 422 and store nothing; an unreadable single image now ends as `extraction_failed` instead of a 500. Tests cover page order through OCR, a sideways EXIF photo, the refusals, and the multi-photo upload. The camera button is hidden on fine pointers (`pointer-fine:hidden`), so a desktop sees the drop zone only. Not built: client-side reduction before upload (full-size photos cross the network), reordering pages, a QR handoff. Photo OCR quality on real invoices is not measured yet (`docs/plan.md` section 9 risk).
+
+## D-057 - Phone capture from a laptop's QR code; photos reduced before upload
+
+**Date:** 2026-09-13
+
+**Decision:** Add a QR handoff to phone capture (D-056). On a laptop (fine pointer) the MSME upload screen offers "Afficher le code": a server action creates a capture link through `POST /capture/links` for the signed-in filer and organisation and returns `PUBLIC_WEB_URL/capture/<token>`, which the laptop draws as a QR code with `uqr`. The phone opens that page without signing in, reads `GET /capture/{token}` to name the organisation, photographs the pages and sends them to `POST /capture/{token}/documents`, which files them through the same code as `POST /documents`, recorded as uploaded by the link's maker. The laptop polls `GET /capture/links/{id}` and opens the review once `document_id` is set. A link lives 10 minutes (`CAPTURE_LINK_TTL_MINUTES`) and files one document; only its token's SHA-256 is stored, in a new `capture_link` table, and its row is locked during the upload so two phones cannot both use it. Separately, the browser redraws every image larger than 3000 px as an upright JPEG within 3000 px before it joins a form (`web/lib/photos.ts`).
+
+**Options considered:**
+- A pairing link the phone uses without signing in (chosen), or signing in on the phone.
+- Opening the review on the laptop when the document arrives (chosen), or staging the photos for the laptop to confirm first.
+- A required `PUBLIC_WEB_URL` for the QR address (chosen), or the laptop's own address, which is `localhost` in development and unreachable from a phone.
+- `uqr` in the browser (chosen: no dependencies of its own), `segno` in the api, or `qrcode` in web (several dependencies).
+- Reducing photos in the browser with `createImageBitmap` and `OffscreenCanvas` (chosen, no dependency), or only on the backend (full-size photos still cross mobile data).
+
+**Why:** The laptop is where an MSME owner or accountant already works and the phone is where the camera is; signing in on a phone mid-task is friction the demo cannot afford. A link grants no more than one upload for one organisation, expires quickly, and is refused once used or once its maker no longer files for the organisation. The QR address identifies a deployment, so it gets no default. The QR code keeps dark modules on a light ground in both themes (two constant tokens in `web/app/globals.css`), since phone cameras do not reliably read an inverted code.
+
+**Result:** Migration `8a4c2f6e1d39` adds `capture_link`. `app/auth/capture.py` makes and looks up links; `app/auth/deps.py` gates the two phone routes by link instead of session. `web/.env` needs `PUBLIC_WEB_URL`; when it is missing, the laptop names it when asked for a code, and uploading still works. New web dependency: `uqr` 0.1.3. Not built: purging expired links, rate limiting on the token routes (the 256-bit token is not guessable, but requests are not throttled), and a limit on polling an expired link left open. The token is in the phone page's URL, so it can appear in a server access log during its 10 minutes of life.
+
+## D-060 - Live AWS deploy: two runbook bugs found and fixed, real end to end
 
 **Date:** 2026-09-13
 
@@ -1029,4 +1105,8 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
 | 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
 | 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |
-| 2026-09-13 | team | Added D-056: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |
+| 2026-09-13 | team | Added D-056: phone capture (G3) built ahead of phase 8, several photos filed as one PDF, local OCR |
+| 2026-09-13 | team | Added D-057: phone capture from a laptop's QR code through a single-use link, photos reduced before upload |
+| 2026-09-13 | team | Added D-058: modern-SaaS visual direction adopted wholesale, charts extended to every route with real data |
+| 2026-09-13 | team | Added D-059: fonts ship as @fontsource npm packages so the image build never contacts fonts.gstatic.com |
+| 2026-09-13 | team | Added D-060: live AWS deploy, two real runbook bugs found and fixed (sudo env, seed script auth) |

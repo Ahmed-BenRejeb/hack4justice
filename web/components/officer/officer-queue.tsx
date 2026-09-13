@@ -6,12 +6,14 @@ import Link from "next/link";
 import { ActivityIcon, InboxIcon, RefreshCwIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { StatusBarChart } from "@/components/shared/status-bar-chart";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api-client";
 import { QUEUE_POLL_MS } from "@/lib/config";
+import { queueComposition } from "@/lib/charts";
 import { countLabel, formatTime } from "@/lib/format";
 import { fieldLabel } from "@/lib/labels";
 import { filterQueue, newArrivals, queueMissingFacts, withMissingFact, type QueueFilter } from "@/lib/queue";
@@ -114,6 +116,16 @@ export function OfficerQueue(): JSX.Element {
       ) : (
         <>
           {error !== undefined && <StaleNotice onRetry={reload} />}
+          {data.items.length > 0 && (
+            <div className="rounded-xl border bg-card px-5 py-4 shadow-card">
+              <h2 className="text-sm font-medium">Composition de la file</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Dossiers dont toutes les règles ont tranché, contre ceux qui attendent encore une
+                information.
+              </p>
+              <StatusBarChart {...queueComposition(data.items)} height={120} />
+            </div>
+          )}
           {data.items.length === 0 ? (
             <EmptyState
               icon={InboxIcon}

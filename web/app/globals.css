@@ -2,6 +2,11 @@
  * The token file (docs/design.md section 2). Every colour, font, radius and animation used in
  * web/ is defined here once; components consume tokens through Tailwind utilities and never set
  * colour values themselves. The three status colours are reserved for reporting that status.
+ *
+ * Values follow the modern-SaaS direction recorded as D-058: a green brand accent for
+ * interaction, a warm yellow chart ramp, an editorial serif for headings. Hex values from
+ * DESIGN.md are converted to OKLCH here so light and dark stay perceptually matched; this file
+ * remains the only place any colour is written.
  */
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -34,10 +39,23 @@
   --color-status-flagged: var(--status-flagged);
 
   --color-chart-1: var(--chart-1);
+  --color-accent-light: var(--accent-light);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /* Diagonal crosshatch, used on at most two sections of a screen (DESIGN.md). */
+  --background-image-pattern: var(--bg-pattern);
+
+  /* The capture QR code stays dark on light in both themes: phone cameras do not reliably read an inverted code. */
+  --color-qr-paper: oklch(1 0 0);
+  --color-qr-ink: oklch(0.22 0.02 256);
+
+  /*
+   * Editorial serif for headings, sans for everything else; mono stays for codes and identifiers.
+   * The families are declared by the @fontsource packages imported in app/layout.tsx (D-059), so
+   * these names must match the `font-family` those packages register.
+   */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Playfair Display Variable", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -49,8 +67,13 @@
 }
 
 @theme {
-  /* The one orchestrated moment: a file arriving in the officer queue (docs/design.md section 5). */
+  /* Soft, diffused elevation only; no hard drop shadows (DESIGN.md). */
+  --shadow-card: 0 1px 3px var(--shadow-ink-weak);
+
+  /* A file arriving in the officer queue: still the one animation nothing else gets. */
   --animate-queue-arrive: queue-arrive 1.8s ease-out;
+  /* Ambient motion on the entry screen only (D-058); never on a screen reporting a finding. */
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
 
   @keyframes queue-arrive {
     0% {
@@ -67,66 +90,97 @@
       background-color: transparent;
     }
   }
+
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.4;
+      transform: scale(1.4);
+    }
+  }
 }
 
-/* Light: cool administrative neutrals, one ink-blue accent for interaction. */
+/* Light: near-white ground, warm neutral text, one green accent reserved for interaction. */
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  --background: oklch(0.982 0.003 250);
-  --foreground: oklch(0.22 0.02 256);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.185 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.02 256);
+  --card-foreground: oklch(0.185 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.02 256);
-  --primary: oklch(0.38 0.085 256);
-  --primary-foreground: oklch(0.985 0.003 250);
-  --secondary: oklch(0.953 0.006 250);
-  --secondary-foreground: oklch(0.26 0.03 256);
-  --muted: oklch(0.953 0.006 250);
-  --muted-foreground: oklch(0.49 0.02 256);
-  --accent: oklch(0.945 0.012 252);
-  --accent-foreground: oklch(0.26 0.03 256);
+  --popover-foreground: oklch(0.185 0 0);
+  /* #5EA832, the brand accent: CTAs, links, focus, checkmarks. Never a chart series. */
+  --primary: oklch(0.633 0.149 134);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.973 0 0);
+  --secondary-foreground: oklch(0.26 0 0);
+  --muted: oklch(0.968 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.966 0.023 132);
+  --accent-foreground: oklch(0.42 0.12 134);
   --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.905 0.008 250);
-  --input: oklch(0.87 0.01 250);
-  --ring: oklch(0.52 0.1 256);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.633 0.149 134);
 
-  --status-decided: oklch(0.49 0.1 160);
+  /* #EEF7E6, the accent tint behind badges and checkmark rows. */
+  --accent-light: oklch(0.966 0.023 132);
+
+  /*
+   * Status still carries meaning and is never decorative. `decided` sits at a teal hue rather
+   * than the green it used to, so it cannot be mistaken for the brand accent now that the accent
+   * is itself green (D-058).
+   */
+  --status-decided: oklch(0.52 0.1 178);
   --status-abstained: oklch(0.5 0.11 68);
   --status-flagged: oklch(0.5 0.17 355);
 
-  /* Neutral chart ramp (docs/design.md section 2): a chart not reporting a status uses this, never a status colour. */
-  --chart-1: oklch(0.55 0.04 256);
+  /* Warm yellow chart ramp, independent of the brand accent (DESIGN.md): charts never use green. */
+  --chart-1: oklch(0.876 0.107 100);
+
+  --bg-pattern: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l20 20M20 0L0 20' stroke='%23E0E0E0' stroke-width='0.5'/%3E%3C/svg%3E");
+
+  --shadow-ink-weak: oklch(0 0 0 / 6%);
 
   --arrival: color-mix(in oklch, var(--primary) 12%, transparent);
 }
 
 .dark {
-  --background: oklch(0.17 0.012 256);
-  --foreground: oklch(0.95 0.005 250);
-  --card: oklch(0.21 0.014 256);
-  --card-foreground: oklch(0.95 0.005 250);
-  --popover: oklch(0.21 0.014 256);
-  --popover-foreground: oklch(0.95 0.005 250);
-  --primary: oklch(0.8 0.075 256);
-  --primary-foreground: oklch(0.2 0.03 256);
-  --secondary: oklch(0.26 0.015 256);
-  --secondary-foreground: oklch(0.95 0.005 250);
-  --muted: oklch(0.26 0.015 256);
-  --muted-foreground: oklch(0.72 0.015 250);
-  --accent: oklch(0.28 0.02 256);
-  --accent-foreground: oklch(0.95 0.005 250);
+  --background: oklch(0.165 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.72 0.16 134);
+  --primary-foreground: oklch(0.17 0.03 134);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.26 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.28 0.035 134);
+  --accent-foreground: oklch(0.88 0.1 134);
   --destructive: oklch(0.7 0.17 27);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.68 0.08 256);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.72 0.16 134);
 
-  --status-decided: oklch(0.77 0.1 160);
+  --accent-light: oklch(0.28 0.035 134);
+
+  --status-decided: oklch(0.79 0.1 178);
   --status-abstained: oklch(0.8 0.11 75);
   --status-flagged: oklch(0.75 0.14 355);
 
-  --chart-1: oklch(0.68 0.05 256);
+  --chart-1: oklch(0.82 0.1 100);
+
+  --bg-pattern: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l20 20M20 0L0 20' stroke='%23FFFFFF' stroke-opacity='0.07' stroke-width='0.5'/%3E%3C/svg%3E");
+
+  --shadow-ink-weak: oklch(0 0 0 / 30%);
 
   --arrival: color-mix(in oklch, var(--primary) 16%, transparent);
 }

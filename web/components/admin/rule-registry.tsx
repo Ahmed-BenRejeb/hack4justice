@@ -6,9 +6,11 @@ import { BookOpenIcon, SearchIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock } from "@/components/shared/api-state";
 import { Citation } from "@/components/shared/citation";
 import { PageHeader } from "@/components/shared/page-header";
+import { SimpleBarChart } from "@/components/shared/simple-bar-chart";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
 import type { Rule } from "@/lib/api-types";
+import { rulesBySource } from "@/lib/charts";
 import { countLabel, foldText } from "@/lib/format";
 import { useResource } from "@/lib/use-resource";
 
@@ -65,6 +67,21 @@ export function RuleRegistry(): JSX.Element {
               {countLabel(rules.length, "règle", "règles")} · consultation seule
             </p>
           </div>
+
+          {/* The whole registry, not the filtered view: this reports coverage, not search results. */}
+          {rulesBySource(data).length > 1 && (
+            <div className="rounded-xl border bg-card px-5 py-4 shadow-card">
+              <h3 className="text-sm font-medium">Règles par source citée</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sur l’ensemble du registre, indépendamment de la recherche.
+              </p>
+              <SimpleBarChart
+                data={rulesBySource(data)}
+                labelWidth={200}
+                height={Math.max(120, rulesBySource(data).length * 36)}
+              />
+            </div>
+          )}
 
           {rules.length === 0 ? (
             <EmptyState

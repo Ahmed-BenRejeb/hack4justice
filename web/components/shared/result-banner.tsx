@@ -1,8 +1,10 @@
 /** The answer first: proposed code and what is still missing, stated above the evidence they summarise. */
 import type { JSX, ReactNode } from "react";
 import type { Finding } from "@/lib/api-types";
+import { findingOutcomes } from "@/lib/charts";
 import { summarizeFindings } from "@/lib/findings";
 import { countLabel } from "@/lib/format";
+import { StatusBarChart } from "./status-bar-chart";
 
 function Tile({ label, children }: { label: string; children: ReactNode }): JSX.Element {
   return (
@@ -53,6 +55,13 @@ export function ResultBanner({ findings }: { findings: Finding[] }): JSX.Element
         </Tile>
         <Tile label="Règles appliquées">{findings.length}</Tile>
       </dl>
+      {/* One bar per outcome for this file alone; a single finding needs no chart to be read. */}
+      {findings.length > 1 && (
+        <div className="border-t bg-card px-5 py-4">
+          <h3 className="text-sm font-medium">Constats de ce dossier</h3>
+          <StatusBarChart {...findingOutcomes(findings)} height={110} />
+        </div>
+      )}
       {summary.abstained > 0 && (
         <p className="border-t bg-card px-5 py-3 text-sm text-muted-foreground">
           Le système s’abstient plutôt que de deviner : chaque information manquante est nommée dans
