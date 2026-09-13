@@ -52,7 +52,7 @@ Every other transition on a working screen responds directly to something the us
 
 ### Ambient motion, marketing surfaces only
 
-D-055 admits a narrow class of ambient motion, and only on the entry screen (`/`), which is a pitch surface rather than a working one: a slow float on the hero cards, a pulsing dot on the announcement badge, and scroll-reveal on sections entering the viewport. These exist to make the entry screen read as a finished product.
+D-055 admits a narrow class of ambient motion, and only on the entry screen (`/`), which is a pitch surface rather than a working one: a pulsing dot on the announcement badge. That is the whole of it, and anything added here needs its own decision.
 
 They are confined to `/`. **No ambient motion appears on any screen that reports a finding, a status or a number an officer acts on**, because motion there competes with the reading of a compliance decision.
 
