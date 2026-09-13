@@ -892,6 +892,21 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** `docs/frontend-plan.md` records the direction and the ordered work: the legal source surface (J2, J6, J10), KPI charts for both roles from the existing `GET /impact`, chart tokens added as a neutral ramp so the status colours stay reserved for status, and a polish pass against the quality floor.
 
+## D-051 - One-day demo deploy: a single EC2 instance, Terraform for infrastructure only
+
+**Date:** 2026-09-13
+
+**Decision:** For the pitch and any live rehearsal, the stack deploys to one EC2 instance (`c6i.xlarge`, eu-central-1) running the existing `docker-compose.yml` stack (`db`, `api`, `web`) behind Caddy, which gets a real HTTPS certificate from an sslip.io hostname built from the instance's own public IP, so no domain purchase or DNS step is needed. Terraform (`deploy/terraform/`) provisions only the instance, its security group (SSH from one admin IP, HTTP and HTTPS from anywhere) and its key pair; it does not provision the application, so `terraform destroy` is a complete and verifiable teardown. The repository reaches the instance by `rsync`, not git, because that is also how `api/.env` and `web/.env` reach it: those files are git-ignored by design (root CLAUDE.md's configuration rule) and must still arrive somewhere. No Elastic IP: one fewer resource that can outlive the demo and keep billing after `terraform destroy` is meant to have ended it.
+
+**Options considered:**
+- One EC2 instance running the existing Compose stack, Terraform scoped to infrastructure only (chosen).
+- ECS/Fargate with RDS and an ALB, the standard AWS-managed path.
+- A non-AWS VPS (Hetzner, DigitalOcean, Scaleway).
+
+**Why:** The API image is large (CPU torch plus sentence-transformers, roughly 3GB) and needs Postgres with pgvector; on Fargate that means a task, RDS, and an ALB, and the ALB alone runs roughly $16/month before anything else, which is disproportionate for a stack that only needs to be up for a pitch and a few rehearsals. A single instance sized for the whole stack (`c6i.xlarge`: 4 vCPU, 8GB RAM) at on-demand pricing costs roughly $2-3 for a 12-hour demo day, and Terraform still gives a scripted, repeatable, fully torn-down provisioning step rather than a manually clicked-together box. AWS was kept over a cheaper VPS because the team already holds AWS credit for this budget; the same Compose file would run unchanged on any VPS if that changes.
+
+**Result:** `docs/deploy.md` is the runbook: provision, rsync the repo (secrets included), bring the stack up with `deploy/docker-compose.prod.yml`, smoke test, seed with `seed/seed_demo_data.py` run from the operator's own machine against the deployed API (the script has its own Python dependencies, so it does not run inside either container), then `terraform destroy` as soon as the demo window closes, confirmed with an `aws ec2 describe-instances` check since a failed destroy step can leave a resource behind silently.
+
 ## Change log
 
 | Date | Author | What changed |
