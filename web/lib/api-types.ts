@@ -250,6 +250,8 @@ export interface TejOperationInput {
   montant_ttc: number;
   montant_rs: number;
   montant_net_servi: number;
+  /** Optional: omitted certificates report no VAT. */
+  montant_tva?: number;
   cnpc: boolean;
   p_charge: boolean;
 }
@@ -271,4 +273,30 @@ export interface TejExportRequest {
   mois_depot: string;
   acte_depot: "0" | "1";
   certificats: TejCertificateInput[];
+}
+
+/** A pre-filled export draft, projected from what was read off the document. Every value stays editable. */
+export interface TejExportDraftValues {
+  declarant_matricule_fiscal: string | null;
+  beneficiary_name: string | null;
+  beneficiary_matricule_fiscal: string | null;
+  beneficiary_address: string | null;
+  invoice_year: string | null;
+  code: string | null;
+  /** Percentage, such as "1.5". */
+  rate: string | null;
+  /** Dinars, such as "1000.500". */
+  amount_excl_tax: string | null;
+  amount_vat: string | null;
+  amount_incl_tax: string | null;
+  amount_withheld: string | null;
+  amount_net_paid: string | null;
+  reference: string | null;
+}
+
+/** GET /documents/{id}/export-draft: officer units throughout, so lib/tej.ts stays the only conversion boundary. */
+export interface TejExportDraft {
+  values: TejExportDraftValues;
+  /** Names of the fields in `values` that came from the document, not typed by the officer. */
+  derived_fields: string[];
 }

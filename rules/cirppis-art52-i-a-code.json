@@ -1,0 +1,8 @@
+{
+  "code": "CIRPPIS-ART52-I-A-CODE",
+  "citation_source": "Code de l'IRPP et de l'IS, édition 2026 (Direction Générale des Impôts, jibaya.tn)",
+  "article_ref": "Article 52, paragraphe I, a)",
+  "verbatim_text": "I. L'impôt sur le revenu et l'impôt sur les sociétés font l'objet d'une retenue à la source aux taux suivants : a) 10%(1) au titre des honoraires, commissions, courtages, loyers et rémunérations des activités non commerciales qu’elle qu’en soit l’appellation payés par l’Etat, les collectivités locales, les personnes morales ainsi que les personnes physiques soumises à l’impôt sur le revenu selon le régime réel et les personnes visées au paragraphe II de l’article 22 du présent code.",
+  "url": "https://jibaya.tn/wp-content/uploads/2026/03/11.pdf",
+  "logic_ref": "app.rules.withholding_code_proposal.propose_withholding_code"
+}

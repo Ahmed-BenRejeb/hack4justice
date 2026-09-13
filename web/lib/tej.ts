@@ -5,7 +5,7 @@
  * wants integer millimes, a two-decimal rate and a DD/MM/YYYY date (schemas/tej/TEJDeclarationRS_v1.0.xsd).
  * Conversion happens here and nowhere else. Nothing is computed from other fields.
  */
-import type { TaxpayerCategory, TejExportRequest } from "./api-types";
+import type { TaxpayerCategory, TejExportDraft, TejExportRequest } from "./api-types";
 
 /** Every form value as typed by the officer; selects and inputs are strings, checkboxes booleans. */
 export interface TejFormValues {
@@ -28,10 +28,11 @@ export interface TejFormValues {
   invoiceYear: string;
   /** Percentage, such as "1.5". */
   rate: string;
-  /** Percentage, such as "19". */
+  /** Percentage, such as "19". Empty means no VAT rate reported: the operation omits TauxTVA. */
   vatRate: string;
   /** Dinars, such as "1000.500". */
   amountExclTax: string;
+  /** Dinars. Empty means no VAT reported: the operation omits MontantTVA. */
   amountVat: string;
   amountInclTax: string;
   amountWithheld: string;
@@ -216,11 +217,11 @@ export function buildExportRequest(values: TejFormValues): TejExportRequest {
             annee_facturation: values.invoiceYear.trim(),
             montant_ht: dinarsToMillimes(values.amountExclTax),
             taux_rs: formatRate(values.rate),
-            taux_tva: formatRate(values.vatRate),
-            montant_tva: dinarsToMillimes(values.amountVat),
             montant_ttc: dinarsToMillimes(values.amountInclTax),
             montant_rs: dinarsToMillimes(values.amountWithheld),
             montant_net_servi: dinarsToMillimes(values.amountNetPaid),
+            ...(values.vatRate.trim() ? { taux_tva: formatRate(values.vatRate) } : {}),
+            ...(values.amountVat.trim() ? { montant_tva: dinarsToMillimes(values.amountVat) } : {}),
             cnpc: values.cnpc,
             p_charge: values.pCharge,
           },
@@ -228,4 +229,46 @@ export function buildExportRequest(values: TejFormValues): TejExportRequest {
       },
     ],
   };
+}
+
+/** The string-valued keys of TejFormValues (excludes the boolean checkbox fields). */
+export type TejFormTextKey = { [K in keyof TejFormValues]: TejFormValues[K] extends string ? K : never }[keyof TejFormValues];
+
+/** Which form field each export-draft value fills. Keys match TejExportDraftValues (lib/api-types.ts). */
+const DRAFT_FIELD_TO_FORM_KEY: Record<string, TejFormTextKey> = {
+  declarant_matricule_fiscal: "declarantMatricule",
+  beneficiary_name: "beneficiaryName",
+  beneficiary_matricule_fiscal: "beneficiaryMatricule",
+  beneficiary_address: "beneficiaryAddress",
+  invoice_year: "invoiceYear",
+  code: "code",
+  rate: "rate",
+  amount_excl_tax: "amountExclTax",
+  amount_vat: "amountVat",
+  amount_incl_tax: "amountInclTax",
+  amount_withheld: "amountWithheld",
+  amount_net_paid: "amountNetPaid",
+  reference: "reference",
+};
+
+/**
+ * Overlays a derived export draft onto the current form values.
+ *
+ * Every value stays editable afterwards: this only sets initial content and reports which keys
+ * came from the document (D-008, the officer decides and owns the whole payload regardless).
+ */
+export function applyExportDraft(
+  current: TejFormValues,
+  draft: TejExportDraft,
+): { values: TejFormValues; prefilledKeys: Set<TejFormTextKey> } {
+  const values = { ...current };
+  const prefilledKeys = new Set<TejFormTextKey>();
+  for (const [draftField, formKey] of Object.entries(DRAFT_FIELD_TO_FORM_KEY)) {
+    const value = draft.values[draftField as keyof typeof draft.values];
+    if (value !== null && value !== undefined) {
+      values[formKey] = value;
+      prefilledKeys.add(formKey);
+    }
+  }
+  return { values, prefilledKeys };
 }

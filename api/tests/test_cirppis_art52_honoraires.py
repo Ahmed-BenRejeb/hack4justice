@@ -1,14 +1,7 @@
-from app.extraction.masking import mask
-from app.rules.cirppis_art52_honoraires import (
-    CONFIDENCE_THRESHOLD,
-    decide_article_52_withholding_mention,
-)
-from app.rules.engine import Abstention, Decision, TraceStep
+from app.rules.cirppis_art52_honoraires import decide_article_52_withholding_mention
+from app.rules.engine import Abstention, Decision, Facts, TraceStep
 
-
-def _facts(text: str) -> dict[str, str]:
-    return {"full_text": text, "masked_text": mask(text)}
-
+THRESHOLD = 0.5
 
 HONORAIRES_INVOICE_WITH_WITHHOLDING = """
 FACTURE N. 2026-0342
@@ -33,9 +26,23 @@ Quantite: 40 unites.
 """
 
 
+def _facts(text: str, category: str | None, confidence: float = 0.9) -> Facts:
+    """Facts as rules receive them at upload: payment_category is model-supplied."""
+    values = {"full_text": text}
+    if category is not None:
+        values["payment_category"] = category
+    return Facts(
+        values,
+        model_confidences={
+            "payment_category": confidence if category is not None else None
+        },
+        threshold=THRESHOLD,
+    )
+
+
 def test_decides_withholding_present_when_category_and_keyword_both_found() -> None:
     outcome = decide_article_52_withholding_mention(
-        _facts(HONORAIRES_INVOICE_WITH_WITHHOLDING)
+        _facts(HONORAIRES_INVOICE_WITH_WITHHOLDING, "honoraires")
     )
 
     assert isinstance(outcome, Decision)
@@ -45,46 +52,56 @@ def test_decides_withholding_present_when_category_and_keyword_both_found() -> N
     )
 
 
-def test_decides_withholding_missing_when_category_found_but_no_keyword() -> None:
+def test_decides_withholding_missing_and_traces_the_model_fact_with_its_confidence() -> (
+    None
+):
     outcome = decide_article_52_withholding_mention(
-        _facts(HONORAIRES_INVOICE_WITHOUT_WITHHOLDING)
+        _facts(HONORAIRES_INVOICE_WITHOUT_WITHHOLDING, "honoraires", confidence=0.86)
     )
 
     assert isinstance(outcome, Decision)
     assert outcome.code == "ART52_WITHHOLDING_MISSING"
-    text_step, category_step, mention_step = outcome.trace
-    assert text_step == TraceStep(fact="full_text", source="document", value=True)
-    assert category_step.fact == "article_52_category"
-    assert category_step.source == "model"
-    assert category_step.value is not None
-    assert category_step.confidence >= CONFIDENCE_THRESHOLD
-    assert category_step.threshold == CONFIDENCE_THRESHOLD
-    assert mention_step == TraceStep(
-        fact="withholding_mention", source="document", value=False
+    assert outcome.trace == (
+        TraceStep(fact="full_text", source="document", value=True),
+        TraceStep(
+            fact="payment_category",
+            source="model",
+            value="honoraires",
+            confidence=0.86,
+            threshold=THRESHOLD,
+        ),
+        TraceStep(fact="withholding_mention", source="document", value=False),
     )
 
 
-def test_abstains_when_document_does_not_describe_a_covered_category() -> None:
-    outcome = decide_article_52_withholding_mention(_facts(UNRELATED_DOCUMENT))
-
-    assert isinstance(outcome, Abstention)
-    assert outcome.missing_fact == "article_52_category"
-    # The trace stops at the fact the rule could not establish.
-    assert [step.fact for step in outcome.trace] == ["full_text", "article_52_category"]
-
-
-def test_abstains_without_masked_text_before_any_model_call() -> None:
+def test_abstains_when_category_is_not_a_covered_one() -> None:
     outcome = decide_article_52_withholding_mention(
-        {"full_text": HONORAIRES_INVOICE_WITHOUT_WITHHOLDING}
+        _facts(UNRELATED_DOCUMENT, "vente de biens")
     )
 
     assert isinstance(outcome, Abstention)
-    assert outcome.missing_fact == "masked_text"
-    assert [step.fact for step in outcome.trace] == ["full_text"]
+    assert outcome.missing_fact == "payment_category"
+    # The trace stops at the fact the rule could not accept.
+    assert [step.fact for step in outcome.trace] == ["full_text", "payment_category"]
+    assert outcome.trace[-1].value == "vente de biens"
+
+
+def test_abstains_when_payment_category_is_absent() -> None:
+    outcome = decide_article_52_withholding_mention(_facts(UNRELATED_DOCUMENT, None))
+
+    assert isinstance(outcome, Abstention)
+    assert outcome.missing_fact == "payment_category"
+    assert outcome.trace[-1] == TraceStep(
+        fact="payment_category",
+        source="model",
+        value=None,
+        confidence=None,
+        threshold=THRESHOLD,
+    )
 
 
 def test_abstains_when_full_text_is_missing() -> None:
-    outcome = decide_article_52_withholding_mention({})
+    outcome = decide_article_52_withholding_mention(Facts())
 
     assert isinstance(outcome, Abstention)
     assert outcome.missing_fact == "full_text"

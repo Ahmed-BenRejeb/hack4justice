@@ -7,50 +7,37 @@ law forbids guessing at those). It only checks a narrower, safer question:
 does this document describe a payment in a category Article 52 covers, and
 if so, does the document mention any withholding at all. A missing mention
 is escalated to a human, not treated as a violation.
+
+The "payment_category" fact is supplied by the model at upload, from the
+masked text (app/extraction/fields.py, docs/decision-log.md D-043), not by
+this rule: a rule reads facts, it does not go fetch them.
 """
 
-from app.providers.openrouter import extract_fact
-from app.rules.engine import Abstention, Decision, RuleOutcome, TraceStep
+from app.rules.engine import Abstention, Decision, Facts, RuleOutcome, TraceStep
 
-CATEGORY_QUESTION = (
-    "Does this document describe a payment for honoraires (professional "
-    "fees), commissions, courtages (brokerage), or loyers (rent)? Answer "
-    "with just the category name in French if one applies, or null if none "
-    "of these apply."
-)
-CONFIDENCE_THRESHOLD = 0.5
+COVERED_CATEGORIES = ("honoraires", "commissions", "courtages", "loyers")
 WITHHOLDING_KEYWORD = "retenue"
 
 
-def decide_article_52_withholding_mention(facts: dict[str, str]) -> RuleOutcome:
+def decide_article_52_withholding_mention(facts: Facts) -> RuleOutcome:
     """Decide whether a covered payment is missing any mention of withholding.
 
     Facts required: "full_text" (the document's extracted text) and
-    "masked_text" (its masked copy, the only text the model sees, A1). Asks the
-    model whether the text describes an Article 52 category; abstains if it
-    cannot tell. If it can, checks deterministically (no model call) whether
-    the text also mentions withholding at all. Every outcome carries the
-    steps that led to it (J1).
+    "payment_category" (supplied by the model, absent when it could not be
+    established). Checks deterministically, without a model call, whether the
+    text mentions withholding at all. Every outcome carries the steps that led
+    to it (J1).
     """
     full_text = facts.get("full_text", "")
     text_step = TraceStep(fact="full_text", source="document", value=bool(full_text))
     if not full_text:
         return Abstention(missing_fact="full_text", trace=(text_step,))
-    masked_text = facts.get("masked_text", "")
-    if not masked_text:
-        return Abstention(missing_fact="masked_text", trace=(text_step,))
 
-    category = extract_fact(context=masked_text, question=CATEGORY_QUESTION)
-    category_step = TraceStep(
-        fact="article_52_category",
-        source="model",
-        value=category.value,
-        confidence=category.confidence,
-        threshold=CONFIDENCE_THRESHOLD,
-    )
-    if category.value is None or category.confidence < CONFIDENCE_THRESHOLD:
+    category_step = facts.step("payment_category")
+    category = str(category_step.value or "").strip().lower()
+    if not any(covered in category for covered in COVERED_CATEGORIES):
         return Abstention(
-            missing_fact="article_52_category", trace=(text_step, category_step)
+            missing_fact="payment_category", trace=(text_step, category_step)
         )
 
     mentioned = WITHHOLDING_KEYWORD in full_text.lower()

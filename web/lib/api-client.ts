@@ -16,6 +16,7 @@ import type {
   QueueItem,
   Rule,
   TejExport,
+  TejExportDraft,
   TejExportRequest,
 } from "./api-types";
 
@@ -125,6 +126,11 @@ export const api = {
   /** GET /export/operation-codes: the withholding codes the TEJ schema accepts. */
   listOperationCodes(signal?: AbortSignal): Promise<OperationCode[]> {
     return request("/export/operation-codes", { signal });
+  },
+
+  /** GET /documents/{id}/export-draft: a pre-fill for the export form, projected from what was extracted. */
+  getExportDraft(id: string, signal?: AbortSignal): Promise<TejExportDraft> {
+    return request(`${documentPath(id)}/export-draft`, { signal });
   },
 
   /** POST /documents/{id}/export: builds the TEJ XML and validates it against the XSD. */

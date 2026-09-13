@@ -1,13 +1,17 @@
 import io
+import re
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import Document, Export, OfficerDecision, Organisation, Rule
+from app.extraction.fields import FIELD_QUESTIONS
 from app.main import app
 from tests.conftest import make_born_digital_pdf
 
 client = TestClient(app)
+
+PLACEHOLDER = re.compile(r"\[[A-Z]+_\d+\]")
 
 FIXTURE_RULE = {
     "citation_source": "Fixture Code, not a real legal text",
@@ -60,7 +64,9 @@ def test_upload_document_persists_and_extracts_it(db: Session) -> None:
     assert detail_body["officer_decision"] is None
     assert detail_body["export"] is None
     extractions = {e["field_name"]: e["value"] for e in detail_body["extractions"]}
-    assert set(extractions) == {"full_text", "masked_text"}
+    # Always the text and its masked copy; sparse text may or may not yield
+    # structured fields above the confidence threshold (live model call).
+    assert {"full_text", "masked_text"} <= set(extractions)
     assert "article 62" in extractions["full_text"]
 
 
@@ -89,6 +95,41 @@ def test_upload_stores_a_masked_copy_without_identifiers_or_the_filer_name(
     assert "Ben Salah" not in masked
     assert "1234567A" not in masked
     assert "compta@atelier.tn" not in masked
+
+
+def test_upload_extracts_structured_fiscal_fields_from_the_masked_text(
+    db: Session,
+) -> None:
+    organisation = _make_organisation(db)
+    pdf_bytes = make_born_digital_pdf(
+        "Facture Cabinet Jlassi matricule fiscal 7654321B, "
+        "honoraires de conseil, montant HT 1000.000 TND, regime reel."
+    )
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    detail = client.get(f"/api/v1/documents/{upload.json()['id']}").json()
+    extractions = detail["extractions"]
+
+    field_names = {e["field_name"] for e in extractions}
+    # Every structured field name comes from the fixed vocabulary web/lib/labels.ts also carries.
+    assert field_names <= {"full_text", "masked_text"} | set(FIELD_QUESTIONS)
+    structured = [
+        e for e in extractions if e["field_name"] not in ("full_text", "masked_text")
+    ]
+    assert structured
+    assert all(e["source"] == "assisted" for e in structured)
+    assert all(e["confidence"] >= 0.5 for e in structured)
+    # The model saw [MATRICULE_1]; what is stored is the real value, never a placeholder.
+    assert not any(PLACEHOLDER.search(e["value"]) for e in structured)
+    supplier_tax_id = [e for e in structured if e["field_name"] == "supplier_tax_id"]
+    assert all(e["value"] == "7654321B" for e in supplier_tax_id)
 
 
 def test_document_detail_includes_decision_and_export(db: Session) -> None:

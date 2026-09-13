@@ -65,11 +65,14 @@ Three roles, matching the route groups in `web/app/`:
 1. Upload (web, MSME role)
       |
       v
-2. OCR + structured extraction (api/app/extraction, local)
-      |  parties, tax IDs, service description, amounts, fiscal mentions
+2. OCR (api/app/extraction, local)
+      |  the document's full text
       v
-3. Masking (api/app/extraction, local)
-      |  strip/replace personal identifiers before any external call
+3. Masking, then structured extraction (api/app/extraction: local masking, one assisted call)
+      |  identifiers replaced by placeholders before any external call; the model reads
+      |  parties, tax IDs, addresses, dates, amounts (HT/TVA/TTC/retenue/net), withholding
+      |  rate, payment category and beneficiary fiscal regime from the masked text, and
+      |  placeholders in its answers are read back locally
       v
 4. Retrieval (api/app/corpus)
       |  query the DGI code list + governing articles corpus (pgvector)
@@ -94,6 +97,8 @@ Three roles, matching the route groups in `web/app/`:
 ```
 
 Steps 2 and 3 happen before step 4, so no full document text crosses the provider boundary in step 5's assisted-fact path (`docs/decision-log.md` D-013).
+
+Step 2's structured fields are extracted with one shared model call per document (`api/app/providers/openrouter.py:extract_fields()`), recorded as `extraction` rows with `source = "assisted"`; a field the model could not establish with sufficient confidence is simply absent, so any rule needing it abstains naming that field rather than judging a guess (`docs/decision-log.md` D-043). The call receives the masked text only; placeholders in its answers are read back in memory (D-046).
 
 ## 4. Data model
 
@@ -127,6 +132,7 @@ REST, versioned under `/api/v1`:
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
 - `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name, finding counts and the distinct missing facts their abstentions name
 - `POST /officer/decisions` - validate or flag a document (`officer_id`, `action`, `note`)
+- `GET /documents/{id}/export-draft` - a pre-fill for the export form, projected from the document's extraction rows (no new table: `docs/decision-log.md` D-043); every value stays editable and the officer still supplies and owns the whole export payload
 - `POST /documents/{id}/export` - build and validate the TEJ export from caller-supplied declaration fields, VAT included (only after validation); a refusal answers 422 with every schema and arithmetic error placed on its request field, as `{loc, msg, type}`
 - `GET /export/operation-codes` - the withholding codes the TEJ schema accepts, read from `schemas/tej/`
 - `GET /rules` - registry read; rules are written by the loader in `api/app/rules`, not over HTTP
@@ -171,3 +177,5 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | API: queue rows name their missing facts (D-040) |
 | 2026-09-13 | team | API: export takes VAT and places refused values on request fields (D-041) |
 | 2026-09-13 | team | Data model: `masked_text` extraction, the only text sent to a model (D-042) |
+| 2026-09-13 | team | Structured field extraction (section 3), GET /documents/{id}/export-draft (section 5); data model (section 4) unchanged, per D-043 |
+| 2026-09-13 | team | Pipeline: masking before the one assisted extraction call, answers read back locally (D-046) |

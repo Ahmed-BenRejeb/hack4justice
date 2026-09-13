@@ -8,13 +8,21 @@ const FIELD_LABELS = new Map<string, string>([
   ["masked_text", "Texte masqué transmis au modèle"],
   ["supplier_name", "Fournisseur"],
   ["supplier_tax_id", "Matricule fiscal du fournisseur"],
+  ["supplier_address", "Adresse du fournisseur"],
   ["client_name", "Client"],
   ["client_tax_id", "Matricule fiscal du client"],
   ["service_description", "Objet de la prestation"],
   ["invoice_date", "Date de facture"],
+  ["invoice_reference", "Référence de la facture"],
   ["amount_excl_tax", "Montant hors taxes"],
-  // Facts the Article 52, I, a) rule uses (api/app/rules/cirppis_art52_honoraires.py).
-  ["article_52_category", "Catégorie du paiement (honoraires, commissions, courtages, loyers)"],
+  ["amount_vat", "Montant de la TVA"],
+  ["amount_incl_tax", "Montant TTC"],
+  ["withholding_rate", "Taux de retenue à la source"],
+  ["withholding_amount", "Montant de la retenue"],
+  ["amount_net_paid", "Montant net payé"],
+  ["payment_category", "Catégorie du paiement"],
+  ["beneficiary_fiscal_regime", "Régime fiscal du bénéficiaire"],
+  // Read by the Article 52, I, a) rule itself (api/app/rules/cirppis_art52_honoraires.py).
   ["withholding_mention", "Mention « retenue » dans le texte"],
 ]);
 

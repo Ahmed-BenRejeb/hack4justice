@@ -756,6 +756,77 @@ The RAG UI (steps 8 to 11) and hero-document work (B1, J3) stay behind the gate.
 
 The phase 2 gate ("the text sent to the model contains no personal identifier") is therefore met for fixed-format identifiers and the filer's name only. Supplier names need B3 (known suppliers) or a decision on a local entity model. Bare 8-digit runs are masked as `[NUMERO_n]` whatever they are, so an 8-digit amount written without separators is hidden from the model too.
 
+## D-043 - Structured fiscal extraction and a derived TEJ export, no new tables
+
+**Date:** 2026-09-13
+
+**Decision:** Extend extraction to structured fiscal facts (supplier and client identity, amounts, withholding rate) instead of only `full_text`, derive the TEJ export draft from those facts to pre-fill the officer's form, and add deterministic Article 55(I) and TEJ-schema rules against them. All of it stays projected from `Extraction` rows at request time: no new database table.
+
+**Options considered:**
+- No change: keep `full_text` as the only extracted field, the export form fully hand-typed.
+- A new `withholding_certificate` table (or a fuller `tiers`/`facture`/`retenue_source` set, modeled on a prior team project's NestJS treasury dashboard), populated from extraction and read by both rules and the export.
+- Structured `Extraction` rows only, with the export draft a pure projection computed at request time.
+
+**Why:** `app/rules/service.py:evaluate_all_rules()` reads only `Extraction` rows; a certificate table would be invisible to every rule and could only ever serve the export draft, which runs once per document over a handful of short strings, cheap to project on request. `counterparty_check` and `audit_entry` are already tables nothing reads, and the root and api CLAUDE.md rule against placeholder modules applies equally to placeholder tables. "Centralizing the fiscal flow" is delivered by one module owning the projection (`app/export/derive.py`), not by storage; today that logic lives in a React form, which is the actual gap.
+
+A prior team project (`Backend-Dashboard-RH-Treso-24-25`, a NestJS/TypeORM treasury dashboard) supplied the domain model (a `RetenueSource` entity: beneficiary identity and address, rate, montant brut/retenue/net) and the field vocabulary, not code: different language, different ORM, and this repo's design law (extraction and derivation only, judgement stays deterministic and cited) does not match that project's manual-entry treasury CRUD.
+
+**Result:** `app/extraction/fields.py` (field schema, confidence threshold, amount normaliser), `app/providers/openrouter.py:extract_fields()` (one multi-field call per upload, replacing what would otherwise be several sequential `extract_fact()` calls), `app/export/derive.py` and `GET /documents/{id}/export-draft`. No migration. Standing boundary, to avoid re-litigating this: a certificate table becomes correct the moment "which certificates did this org issue in period X" is a real question, which is the monthly declaration roll-up, explicitly out of scope per `docs/plan.md` section 2.
+
+## D-044 - Article 55(I) certificate rules and a schema-grounded matricule rule
+
+**Date:** 2026-09-13
+
+**Decision:** Register `CIRPPIS-ART55-I-CONTENU` (the certificate must state the required elements) and `CIRPPIS-ART55-I-NET` (montant net = montant brut - montant retenue), both citing Article 55(I) per the `docs/facts.md` promotion in the same session. Register `TEJ-MATRICULE-FISCAL`, citing the TEJ XSD's `TypeMatriculeFiscal` pattern rather than a legal article.
+
+**Options considered:**
+- Also write a rule that `montant_rs == montant_ht * taux_rs` (the rate applied to a base amount).
+- Ship only the rules whose citation is settled; leave the rate-application question explicitly blocked.
+
+**Why:** Article 55(I) enumerates required certificate contents verbatim; that supports a completeness rule with no inference. The net/brut/retenue relationship is one inference step from that enumeration (three amounts that must appear together on one certificate), not a verbatim formula, and the `docs/facts.md` note says so explicitly so the reviewer signs the inference, not just the text. The rate-application rule is different in kind: nothing in Article 52 or 55 states whether the withholding base is HT or TTC, and the TEJ schema carries both side by side, so asserting one is taking a legal position with no citation behind it. `TEJ-MATRICULE-FISCAL` is grounded in a schema type, not a legal article, which is a real citation by the root CLAUDE.md standard (source, verbatim text, url) but a different kind of ground than the other rules in the registry; flagged as a judgement call rather than presented as equivalent to a legal citation.
+
+**Result:** Two Article 55(I) rules registered. The rate-application rule is not written in any form, including as a client-side warning: an unsourced warning is a finding by another name. The source to resolve it is the arrete du ministre des finances named in Article 55's own footnote, or a DGI TEJ filing guide; neither is in `corpus/sources/` yet.
+
+## D-045 - Fiscal ledger reframed as the rule engine's fact base, not a declaration product
+
+**Date:** 2026-09-13
+
+**Decision:** D-043 and D-044 extend the extraction and rule layer with structured fiscal facts, drawing on a prior team project's treasury domain model. This is scoped as feeding the existing citation-and-abstention pipeline, not as a monthly declaration engine, an invoicing feature, or a treasury dashboard.
+
+**Options considered:**
+- Reverse D-003 and `docs/plan.md` section 2's rejection of the monthly declaration, add a declaration screen and demo moment.
+- Build the fuller treasury surface (encaissement, decaissement, flux, agios, registre RAS) as a second product surface.
+- Extend only the fact base the existing pipeline already argues for: structured extraction feeding the same rules, findings, and citations, with the TEJ export derived instead of hand-typed.
+
+**Why:** `docs/plan.md` section 2 rejects the monthly declaration by name ("every accounting package already covers it") and D-003 scopes the product to erroné and confus, not a general ledger. A declaration or treasury surface would be a second product, competing for the same three-minute pitch with demo moments 1, 2 and 5 rather than deepening them. The chosen scope does not reverse either decision: it makes the extraction step (currently one `full_text` blob) do what Phase 2's own gate in `docs/plan.md` section 8 already calls for, and it makes the export step (currently fully hand-typed) reflect what was actually read off the document, which is the citation argument the product already makes for findings.
+
+**Result:** No change to `docs/plan.md` sections 2, 6, or 8's scope; section 2 gains a short paragraph noting the structured fiscal facts are the rule engine's fact base, not a filing feature. `docs/facts.md` and the registry gain only what D-043 and D-044 describe.
+
+## D-046 - Fiscal fact layer merged: masked extraction, provenance traces, optional VAT
+
+**Date:** 2026-09-13
+
+**Decision:** Merge `feat/fiscal-fact-extraction` (its D-029 to D-031, renumbered D-043 to D-045 because docs/v2 already used those numbers) into `docs/v2-scope-and-architecture`, reconciled with D-039, D-041 and D-042:
+- **Masked field extraction:** `extract_fields()` receives the masked text only. Masking also returns each placeholder's original value, kept in memory, and every answer naming a placeholder is read back locally before it is stored. Identifiers are still extracted, and the provider guard still refuses any unmasked identifier. This refines D-042: the originals are still never stored or sent, but they are now used to read answers back.
+- **Provenance traces:** rules receive `Facts`, the values plus which facts the model supplies and with what confidence. `facts.step()` builds each trace step, so the five fact-reading rules (Article 52 mention and code proposal, Article 55 content and net, matricule format) return traces showing model facts with their confidence and the 0.5 extraction threshold. The Article 52 fact `article_52_category` becomes the extracted `payment_category`.
+- **Optional VAT:** `TauxTVA` and `MontantTVA` are both optional in the export, each emitted only when given, and `TotalMontantTVA` sums the amounts reported.
+- **Export arithmetic kept:** the D-041 checks stay, with an absent VAT counted as 0. This departs from D-044's "no arithmetic validation at export". Those checks test the internal consistency of values the officer typed, not a compliance finding. The cited Article 55 rules still judge the document's own amounts at upload.
+- **Export form:** it combines the pre-fill with the French field errors. Browser `pattern` attributes stay removed (D-041), and the VAT fields are not required.
+- **Stale references:** mentions of the deleted `corpus/sources/cirppis-retenues-a-la-source.txt` now point to PDF page 97 of the DGI 2026 edition.
+
+**Options considered:**
+- Masking: mask and restore locally (chosen); exempt field extraction from the guard; drop identity fields from extraction.
+- Export: both checks with optional VAT (chosen); follow the branch's D-044 and remove the export arithmetic; keep required VAT per D-041.
+- Trace: carry provenance to rules (chosen); trace model facts without confidence.
+- Method: merge the branch's history and reconcile (chosen); re-apply its functionality as new commits.
+
+**Why:** Chosen by the user.
+- **Masking:** restoring answers locally keeps both A1 (nothing identifying leaves the workstation) and B1 (identifiers pre-fill the export and feed the matricule rule). Exempting the call would send the most identifying text there is.
+- **Provenance:** keeps J1's point, that the model supplies a fact and the rule decides, now that rules no longer call the model themselves.
+- **Export:** a supplier outside VAT reports none, so required VAT fields would force a false 0 rate. Typed amounts that do not add up still produce a declaration no one intended.
+
+**Result:** One model call per upload, on masked text. Five rules are registered beside `CIRPPIS-ART52-I-A`, all tracing their facts. The merge commit keeps the branch's commits and authorship.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -788,3 +859,7 @@ The phase 2 gate ("the text sent to the model contains no personal identifier") 
 | 2026-09-13 | team | Added D-040: officer queue rows name their missing facts, with a filter by missing fact |
 | 2026-09-13 | team | Added D-041: refused export values explained on their fields; VAT emitted and arithmetic checked |
 | 2026-09-13 | team | Added D-042: deterministic masking before every model call, provider guard, masked text shown beside the original |
+| 2026-09-13 | team | Added D-043: structured fiscal extraction and a derived TEJ export, no new tables |
+| 2026-09-13 | team | Added D-044: Article 55(I) certificate rules and a schema-grounded matricule rule |
+| 2026-09-13 | team | Added D-045: fiscal ledger reframed as the rule engine's fact base, not a declaration product |
+| 2026-09-13 | team | Added D-046: fiscal fact layer merged, with masked extraction, provenance traces and optional VAT; branch decisions renumbered D-043 to D-045 |

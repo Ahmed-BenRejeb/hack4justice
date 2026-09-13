@@ -37,19 +37,30 @@ def test_extract_fact_abstains_when_context_lacks_the_answer() -> None:
     assert fact.confidence < 0.5
 
 
+def _reply_with(content: str):
+    return lambda payload: {"choices": [{"message": {"content": content}}]}
+
+
 def test_extract_fact_raises_when_the_model_returns_json_that_is_not_an_object(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Observed live: the model occasionally answers a bare JSON value instead of
     # the requested object, which must surface as the provider's own error.
-    monkeypatch.setattr(
-        openrouter,
-        "_post",
-        lambda payload: {"choices": [{"message": {"content": '["honoraires"]'}}]},
-    )
+    monkeypatch.setattr(openrouter, "_post", _reply_with('["honoraires"]'))
 
     with pytest.raises(openrouter.OpenRouterError):
         openrouter.extract_fact(context="Facture d'honoraires.", question="Catégorie ?")
+
+
+def test_extract_fields_raises_when_the_model_returns_json_that_is_not_an_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(openrouter, "_post", _reply_with('["honoraires"]'))
+
+    with pytest.raises(openrouter.OpenRouterError):
+        openrouter.extract_fields(
+            context="Facture d'honoraires.", fields={"payment_category": "Catégorie ?"}
+        )
 
 
 def test_a_message_with_an_unmasked_identifier_is_refused_unsent(
@@ -65,6 +76,29 @@ def test_a_message_with_an_unmasked_identifier_is_refused_unsent(
 
     assert "MATRICULE" in str(raised.value)
     assert "1234567A" not in str(raised.value)
+
+
+def test_extract_fields_answers_every_field_from_shared_masked_context() -> None:
+    facts = openrouter.extract_fields(
+        context=(
+            "Facture: Atelier Ben Salah, matricule fiscal [MATRICULE_1]. "
+            "Honoraires de conseil, montant HT 1000.000 TND."
+        ),
+        fields={
+            "supplier_name": "What is the supplier's name?",
+            "supplier_tax_id": "What is the supplier's matricule fiscal?",
+            "invoice_date": "What date is this document dated?",
+        },
+    )
+
+    assert set(facts) == {"supplier_name", "supplier_tax_id", "invoice_date"}
+    assert facts["supplier_name"].value is not None
+    assert "ben salah" in facts["supplier_name"].value.lower()
+    # A masked identifier comes back as its placeholder, for the caller to read back.
+    assert facts["supplier_tax_id"].value is not None
+    assert "[MATRICULE_1]" in facts["supplier_tax_id"].value
+    # Not stated in the context: abstains with confidence 0, not a guess.
+    assert facts["invoice_date"].confidence < 0.5
 
 
 def test_complete_raises_on_an_invalid_model_id(

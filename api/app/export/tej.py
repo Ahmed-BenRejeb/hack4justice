@@ -41,11 +41,12 @@ class Operation:
     annee_facturation: str
     montant_ht: int
     taux_rs: str
-    taux_tva: str  # two decimals, e.g. "19.00"
-    montant_tva: int
     montant_ttc: int
     montant_rs: int
     montant_net_servi: int
+    # VAT is optional in the schema: a supplier outside VAT reports neither (D-046).
+    taux_tva: str | None = None  # two decimals, e.g. "19.00"
+    montant_tva: int | None = None
     cnpc: bool = False
     p_charge: bool = False
 
@@ -123,7 +124,7 @@ def _add_certificat(parent: etree._Element, certificat: Certificat) -> None:
     for operation in certificat.operations:
         _add_operation(liste_operations_el, operation)
         total_ht += operation.montant_ht
-        total_tva += operation.montant_tva
+        total_tva += operation.montant_tva or 0
         total_ttc += operation.montant_ttc
         total_rs += operation.montant_rs
         total_net += operation.montant_net_servi
@@ -137,6 +138,10 @@ def _add_certificat(parent: etree._Element, certificat: Certificat) -> None:
 
 
 def _add_operation(parent: etree._Element, operation: Operation) -> None:
+    """Element order follows the XSD sequence: HT, TauxRS, (TauxTVA), (MontantTVA),
+    TTC, RS, NetServi. MontantTVA is optional (minOccurs="0") but position-sensitive:
+    it must sit between TauxRS and MontantTTC, not appended anywhere else.
+    """
     operation_el = etree.SubElement(parent, "Operation", IdTypeOperation=operation.code)
     etree.SubElement(
         operation_el, "AnneeFacturation"
@@ -145,8 +150,10 @@ def _add_operation(parent: etree._Element, operation: Operation) -> None:
     etree.SubElement(operation_el, "P_Charge").text = _bool_tag(operation.p_charge)
     etree.SubElement(operation_el, "MontantHT").text = str(operation.montant_ht)
     etree.SubElement(operation_el, "TauxRS").text = operation.taux_rs
-    etree.SubElement(operation_el, "TauxTVA").text = operation.taux_tva
-    etree.SubElement(operation_el, "MontantTVA").text = str(operation.montant_tva)
+    if operation.taux_tva is not None:
+        etree.SubElement(operation_el, "TauxTVA").text = operation.taux_tva
+    if operation.montant_tva is not None:
+        etree.SubElement(operation_el, "MontantTVA").text = str(operation.montant_tva)
     etree.SubElement(operation_el, "MontantTTC").text = str(operation.montant_ttc)
     etree.SubElement(operation_el, "MontantRS").text = str(operation.montant_rs)
     etree.SubElement(operation_el, "MontantNetServi").text = str(

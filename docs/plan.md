@@ -49,6 +49,8 @@ We do not replace E-Sit-Fisc or any existing filing channel. We feed those syste
 
 We do not do supplier reputation checks or scoring (`docs/decision-log.md` D-007): practitioners interviewed attach no value to it.
 
+This case is also why the pipeline now extracts structured fiscal facts (supplier and client identity, amounts, withholding rate) instead of only the document's raw text, and why the export form arrives pre-filled from them: it is the same fact base the rule engine already needs to decide and cite a code, read once instead of retyped by the officer. It is not the monthly declaration this section rejects above, and not an invoicing or treasury feature: no declaration roll-up across documents exists, and none is planned (`docs/decision-log.md` D-043, D-045).
+
 ## 3. Roles
 
 Three roles. Full detail in `docs/architecture.md` section 2.
@@ -217,3 +219,4 @@ Out of scope, with reasons in `docs/feature-research.md` section 7:
 | 2026-09-12 | team | Regenerated plan from description-projet-v2.md, scoped to withholding-code decision plus export and counterparty check |
 | 2026-09-12 | team | Added Agency Benefit slide subsection to section 7, per D-016 |
 | 2026-09-13 | team | Scope extended to every researched feature: demo moments extended with a sixth, phases 6 to 9, cut list, before-presenting checks, feature scope section, per D-030; verified-only legal text on screen, per D-029 |
+| 2026-09-13 | team | Added a paragraph to section 2: structured fiscal extraction feeds the existing pipeline, not a declaration or treasury feature, per D-043 and D-045 |
