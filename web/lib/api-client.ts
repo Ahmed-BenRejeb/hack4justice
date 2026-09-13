@@ -93,11 +93,12 @@ const documentPath = (id: string): string => `/documents/${encodeURIComponent(id
 export const api = {
   /**
    * POST /documents: uploads a payment file for one of the signed-in user's organisations, who is
-   * recorded as its filer; extraction and rule evaluation run before it returns.
+   * recorded as its filer; extraction and rule evaluation run before it returns. Several files are
+   * the photographed pages of one paper document, which the backend files as one PDF (G3).
    */
-  uploadDocument(file: File, organisationId: string): Promise<DocumentSummary> {
+  uploadDocument(files: File[], organisationId: string): Promise<DocumentSummary> {
     const form = new FormData();
-    form.append("file", file);
+    for (const file of files) form.append("file", file);
     const query = new URLSearchParams({ organisation_id: organisationId });
     return request(`/documents?${query}`, { method: "POST", body: form });
   },
