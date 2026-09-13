@@ -13,6 +13,7 @@ import { PipelineProgress } from "@/components/shared/pipeline-progress";
 import { ReviewLayout } from "@/components/shared/review-layout";
 import { ReviewMain } from "@/components/shared/review-main";
 import { pipelineProgress } from "@/lib/pipeline";
+import { useAnswerableFacts } from "@/lib/use-answerable-facts";
 import { useDocumentFile } from "@/lib/use-document-file";
 import { DecisionPanel } from "./decision-panel";
 import { ExportForm } from "./export-form";
@@ -26,6 +27,7 @@ interface OfficerReviewProps {
 /** Loads the file by id; the decision panel gives way to the recorded decision once one exists. */
 export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JSX.Element {
   const { data, error, isLoading, reload } = useDocumentFile(documentId);
+  const answerable = useAnswerableFacts(documentId);
 
   if (isLoading) return <LoadingBlock label="Chargement du dossier" rows={4} />;
   if (!data) return <ErrorNotice error={error} onRetry={reload} />;
@@ -33,6 +35,11 @@ export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JS
   const { document: detail, findings } = data;
   const decision = detail.officer_decision;
   const awaitingExport = decision?.action === "validated" && detail.export === null;
+  // An officer resolves what is missing before validating; once decided, the file is settled.
+  const answering =
+    answerable.data && !decision
+      ? { documentId, answerable: answerable.data, answeredBy: officerId, onAnswered: reload }
+      : undefined;
 
   return (
     <ReviewLayout
@@ -45,7 +52,7 @@ export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JS
       main={
         <>
           {awaitingExport && <ExportForm document={detail} onExported={reload} />}
-          <ReviewMain document={detail} findings={findings} />
+          <ReviewMain document={detail} findings={findings} answering={answering} />
         </>
       }
       rail={

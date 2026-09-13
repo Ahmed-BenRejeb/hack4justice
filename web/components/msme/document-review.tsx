@@ -13,16 +13,27 @@ import { PipelineProgress } from "@/components/shared/pipeline-progress";
 import { ReviewLayout } from "@/components/shared/review-layout";
 import { ReviewMain } from "@/components/shared/review-main";
 import { pipelineProgress } from "@/lib/pipeline";
+import { useAnswerableFacts } from "@/lib/use-answerable-facts";
 import { useDocumentFile } from "@/lib/use-document-file";
 
 /** Loads the file by id and keeps it current while an officer acts on it. */
 export function DocumentReview({ documentId }: { documentId: string }): JSX.Element {
   const { data, error, isLoading, reload } = useDocumentFile(documentId);
+  const answerable = useAnswerableFacts(documentId);
 
   if (isLoading) return <LoadingBlock label="Chargement du dossier" rows={4} />;
   if (!data) return <ErrorNotice error={error} onRetry={reload} />;
 
   const { document: detail, findings } = data;
+  // The person who filed the document answers questions about their own supplier (J4).
+  const answering = answerable.data
+    ? {
+        documentId,
+        answerable: answerable.data,
+        answeredBy: detail.uploaded_by,
+        onAnswered: reload,
+      }
+    : undefined;
 
   return (
     <ReviewLayout
@@ -32,7 +43,7 @@ export function DocumentReview({ documentId }: { documentId: string }): JSX.Elem
           {error !== undefined && <StaleNotice onRetry={reload} />}
         </>
       }
-      main={<ReviewMain document={detail} findings={findings} />}
+      main={<ReviewMain document={detail} findings={findings} answering={answering} />}
       rail={
         <>
           <PipelineProgress stages={pipelineProgress(detail)} />

@@ -5,7 +5,7 @@
 import type { JSX } from "react";
 import { FileXIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { DocumentDetail, Finding } from "@/lib/api-types";
+import type { AnswerableFacts, DocumentDetail, Finding } from "@/lib/api-types";
 import { ExtractionView } from "./extraction-view";
 import { FindingList } from "./finding-list";
 import { ResultBanner } from "./result-banner";
@@ -14,10 +14,17 @@ import { Section } from "./section";
 interface ReviewMainProps {
   document: DocumentDetail;
   findings: Finding[];
+  /** Lets an abstention be answered in place (J4). Omitted where no one may answer. */
+  answering?: {
+    documentId: string;
+    answerable: AnswerableFacts;
+    answeredBy: string;
+    onAnswered: () => void;
+  };
 }
 
 /** Result banner, findings (when any) and extracted text, or the read failure. */
-export function ReviewMain({ document, findings }: ReviewMainProps): JSX.Element {
+export function ReviewMain({ document, findings, answering }: ReviewMainProps): JSX.Element {
   if (document.status === "extraction_failed") {
     return (
       <Alert variant="destructive">
@@ -36,7 +43,7 @@ export function ReviewMain({ document, findings }: ReviewMainProps): JSX.Element
       <ResultBanner findings={findings} />
       {findings.length > 0 && (
         <Section id="constats" title="Constats" description="Ouvrez une citation pour lire l’article qui fonde le constat.">
-          <FindingList findings={findings} />
+          <FindingList findings={findings} answering={answering} />
         </Section>
       )}
       <Section id="texte" title="Texte extrait">
