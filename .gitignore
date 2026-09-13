@@ -21,3 +21,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 api/data/
+
+# Terraform (deploy/terraform): local state and per-person values never belong
+# in git. terraform.tfvars.example and .terraform.lock.hcl (pins provider
+# versions) stay tracked; real .tfvars files and local state do not.
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+deploy/terraform/*.tfvars

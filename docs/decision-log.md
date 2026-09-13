@@ -932,3 +932,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-048: rules declare their error codes; impact panel counts them with the labelled benefit calculation (J9) |
 | 2026-09-13 | team | Renumbered the constats grouping decision to D-049: it and the abstention loop were both merged as D-047 |
 | 2026-09-13 | team | Added D-050: front end stays on shadcn, Tremor for charts only, no block library; front-end plan added |
+| 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |

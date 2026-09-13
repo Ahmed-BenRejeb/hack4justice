@@ -6,22 +6,16 @@
  */
 import type { JSX } from "react";
 import { cn } from "cn";
+import type { AnswerableFacts } from "@/lib/api-types";
 import type { FindingGroup } from "@/lib/findings";
-import type { AnswerableFacts, Finding } from "@/lib/api-types";
 import { fieldLabel } from "@/lib/labels";
 import { AnswerAbstention } from "./answer-abstention";
 import { Citation } from "./citation";
 import { DecisionTrace } from "./decision-trace";
 import { FindingStatusBadge } from "./status-badge";
 
-export function FindingCard({ group }: { group: FindingGroup }): JSX.Element {
-  const [first, ...rest] = group.findings;
-  const decided = first.status === "decided";
-  const titleId = `finding-${first.id}`;
-  const ruleLabel = rest.length === 0 ? "Règle" : "Règles";
-  const ruleCodes = group.findings.map((finding) => finding.rule_code).join(", ");
 interface FindingCardProps {
-  finding: Finding;
+  group: FindingGroup;
   /** Set where a person may answer an abstention on the spot (J4); omitted elsewhere. */
   answering?: {
     documentId: string;
@@ -31,10 +25,13 @@ interface FindingCardProps {
   };
 }
 
-/** Status and rule on one line, then the code or the missing fact, then how the rule got there, then the citation. */
-export function FindingCard({ finding, answering }: FindingCardProps): JSX.Element {
-  const decided = finding.status === "decided";
-  const titleId = `finding-${finding.id}`;
+/** Status and rule(s) on one line, then the code or the missing fact, then every contributing rule's own trace, then the citation. */
+export function FindingCard({ group, answering }: FindingCardProps): JSX.Element {
+  const [first, ...rest] = group.findings;
+  const decided = first.status === "decided";
+  const titleId = `finding-${first.id}`;
+  const ruleLabel = rest.length === 0 ? "Règle" : "Règles";
+  const ruleCodes = group.findings.map((finding) => finding.rule_code).join(", ");
 
   return (
     <article
@@ -69,11 +66,11 @@ export function FindingCard({ finding, answering }: FindingCardProps): JSX.Eleme
           <p className="mt-1 text-sm text-muted-foreground">
             Aucun code n’est proposé tant que ce fait n’est pas établi.
           </p>
-          {answering && finding.missing_fact && (
+          {answering && first.missing_fact && (
             <div className="mt-3">
               <AnswerAbstention
                 documentId={answering.documentId}
-                missingFact={finding.missing_fact}
+                missingFact={first.missing_fact}
                 answerable={answering.answerable}
                 answeredBy={answering.answeredBy}
                 onAnswered={answering.onAnswered}
