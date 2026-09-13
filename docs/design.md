@@ -18,6 +18,8 @@ Colour carries status and nothing else. The three status colours never appear as
 
 The token file is `web/app/globals.css`. It holds a light and a dark set of cool administrative neutrals, the three status tokens, and one ink-blue accent (`--primary`) reserved for interaction: links, primary buttons, focus. System errors (a backend that cannot be reached) use `--destructive`, which is not a status colour. No component sets a colour value directly.
 
+A chart reporting decided, abstained or flagged uses the matching status token. Every other chart uses the neutral chart ramp (`--chart-1` through `--chart-n`, extended only when a real chart needs another series), derived from the same cool-neutral hue as the rest of the token file, never a status colour or `--primary`.
+
 ## 3. Typography
 
 IBM Plex Sans (Latin and Latin Extended subsets) for all interface text in both roles; IBM Plex Mono for withholding codes, identifiers, and file references. Both are self-hosted at build time through `next/font`, so no font request leaves the workstation at runtime. Components use the shadcn type scale (`text-sm` body in dense views, `text-2xl` page titles) rather than ad hoc sizes.
@@ -78,3 +80,4 @@ Every screen above must be legible and usable with the reduced-motion preference
 | 2026-09-12 | team | Section 4: answer-first file review with a side rail, clickable queue rows (D-023) |
 | 2026-09-12 | team | Section 4: review adapted to the real backend, RNE removed, TEJ form placement (D-024) |
 | 2026-09-13 | team | Section 7: added the legal search and passage reader screens, admin now also hosts the corpus verification queue (D-052) |
+| 2026-09-13 | team | Section 2: recorded the neutral chart ramp rule (D-053) |
