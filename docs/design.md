@@ -16,7 +16,7 @@ Colour carries status and nothing else. The three status colours never appear as
 | `--status-abstained` | A rule could not decide, a fact is missing | Ochre; never rendered as an error/danger colour - abstention is a correct outcome, not a failure |
 | `--status-flagged` | An officer flagged a file | Magenta; reserved for officer actions only |
 
-The token file is `web/app/globals.css`. It holds a light and a dark set of cool administrative neutrals, the three status tokens, and one ink-blue accent (`--primary`) reserved for interaction: links, primary buttons, focus. System errors (a backend that cannot be reached) use `--destructive`, which is not a status colour. No component sets a colour value directly.
+The token file is `web/app/globals.css`. It holds a light and a dark set of cool administrative neutrals, the three status tokens, the Chahed navy (`--primary`) reserved for interaction: links, primary buttons, focus, and the Chahed brick (`--brand`) reserved for brand marks: the active navigation marker, section eyebrows and the home page's step rule (D-058). `--brand` never reports a status, never marks a destructive action and never colours a chart; its hue sits next to `--destructive`'s, so it stays a thin mark, never a filled control. The navy `--inverse` ground carries the navigation column of every space and the home page's lead and closing bands; keyboard focus on it uses the light ring its section re-scopes. System errors (a backend that cannot be reached) use `--destructive`, which is not a status colour. No component sets a colour value directly.
 
 A chart reporting decided, abstained or flagged uses the matching status token. Every other chart uses the neutral chart ramp (`--chart-1` through `--chart-n`, extended only when a real chart needs another series), derived from the same cool-neutral hue as the rest of the token file, never a status colour or `--primary`.
 
@@ -29,6 +29,10 @@ IBM Plex Sans (Latin and Latin Extended subsets) for all interface text in both 
 Officer queue: list-first, dense, scannable - an officer works many files; the whole row opens the file. MSME upload/review: single-file focus, one document's findings at a time, generous spacing - an MSME owner sees one file, not a queue. Both share the same component primitives from `web/components/ui/`.
 
 File review (both roles) is answer first (D-023, D-024): a result banner states the proposed code, the missing facts and the number of rules applied before any detail. The main column holds the cited findings, then the extracted text; once a file is validated, the TEJ declaration form leads the officer's main column. A side rail holds the officer's decision, the export result and progress as a vertical step list. Below the `lg` breakpoint the rail follows the main column.
+
+Signed-in spaces (D-058): a navigation column lists the screens the role may use, then the account and the theme switch; below the `lg` breakpoint it becomes a top bar whose menu opens on demand. Each space opens on its dashboard: four key figures, the charts, then a list of files. Every screen starts with its title, then a numbered "Mode d’emploi" guide, closed by default on the file reviews and the passage reader so the answer stays first.
+
+Home page: a brochure open to everyone, a header with section anchors, a lead band, then services, method with the texts covered, steps, audiences, a closing band and the footer. It states what the product does and texts marked `verified` in `docs/facts.md`, never a figure, a client count or a testimonial.
 
 ## 5. Motion
 
@@ -61,11 +65,17 @@ Specified against the demo moments in `docs/plan.md` section 6. First implementa
 |---|---|
 | Sign-in, one centered card on a muted ground (shadcn `login-03`) | `/connexion` |
 | Business sign-up: organisation name, matricule fiscal, email, password (same layout) | `/inscription` |
-| MSME upload | `/entreprise` |
+| Home page brochure: services, method, steps, audiences | `/` |
+| MSME dashboard: key figures, filings per day, decided against abstained, missing facts, latest files | `/entreprise` |
+| MSME upload | `/entreprise/deposer` |
 | MSME extraction review, findings with citation, abstention with named missing fact | `/entreprise/dossiers/[id]` |
-| Officer queue (list) | `/agent` |
+| Officer dashboard: waiting files, decisions, declarations, filings per day, what blocks files | `/agent` |
+| Officer queue (list) | `/agent/dossiers` |
 | Officer file review (validate/flag) and export confirmation (TEJ XML produced, XSD-validated) | `/agent/dossiers/[id]` |
-| Admin rule registry (read-only) and corpus verification queue | `/admin` |
+| Officer measures and benefit calculation | `/agent/mesures` |
+| Admin dashboard: registry size, sources, verified passages | `/admin` |
+| Admin rule registry (read-only) | `/admin/regles` |
+| Admin corpus verification queue | `/admin/corpus` |
 | Legal search, verified passages only (J10) | `/textes` |
 | Verified passage reader: full text, neighbours, article outline, official source (J2) | `/textes/[chunkId]` |
 
@@ -84,3 +94,4 @@ Every screen above must be legible and usable with the reduced-motion preference
 | 2026-09-13 | team | Section 7: added the legal search and passage reader screens, admin now also hosts the corpus verification queue (D-052) |
 | 2026-09-13 | team | Section 2: recorded the neutral chart ramp rule (D-053) |
 | 2026-09-13 | team | Section 7: added the sign-in and sign-up screens (D-054) |
+| 2026-09-13 | team | Sections 2, 4, 7: Chahed navy and brick, inverse ground, navigation column, dashboards, page guides, brochure home page, moved routes (D-058) |

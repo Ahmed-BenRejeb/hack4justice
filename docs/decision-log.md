@@ -1003,6 +1003,22 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 
 **Result:** Migration `8a4c2f6e1d39` adds `capture_link`. `app/auth/capture.py` makes and looks up links; `app/auth/deps.py` gates the two phone routes by link instead of session. `web/.env` needs `PUBLIC_WEB_URL`; when it is missing, the laptop names it when asked for a code, and uploading still works. New web dependency: `uqr` 0.1.3. Not built: purging expired links, rate limiting on the token routes (the 256-bit token is not guessable, but requests are not throttled), and a limit on polling an expired link left open. The token is in the phone page's URL, so it can appear in a server access log during its 10 minutes of life.
 
+## D-058 - Chahed colours, a navigation column with a dashboard per space, a brochure home page
+
+**Date:** 2026-09-13
+
+**Decision:** Apply the Chahed navy as `--primary` (interaction: buttons, links, focus) and the Chahed brick as a new `--brand` token reserved for brand marks (the active navigation marker, section eyebrows and the step rule on the home page), never a status, a destructive action or a chart. A navy `--inverse` ground carries the navigation column of every signed-in space and the home page's lead and closing bands. Every space opens on a dashboard beside a navigation column: `/entreprise` (upload moved to `/entreprise/deposer`), `/agent` (queue moved to `/agent/dossiers`, measures unchanged), `/admin` (registry at `/admin/regles`, corpus verification at `/admin/corpus`). The dashboards read a new `GET /impact/activity` (files by status, files per day over 14 days in Tunisian time, files with a schema-valid export, the 8 latest files) behind the `GET /impact` gate, plus the existing queue, impact, rules and corpus endpoints. Every screen carries a "Mode d’emploi" guide under its title, closed by default on the file reviews and the passage reader so the answer stays first. The home page becomes a brochure of services, method, steps and audiences. The logo is a placeholder, `web/public/logo.svg`, whose path is set once in `web/components/shared/logo.tsx`.
+
+**Options considered:**
+- The brick as a brand accent only (chosen), as shadcn's `--secondary` (every secondary button and badge turns brick, which reads as `--destructive`, whose hue is almost identical, or as the flagged status), or on the home page only.
+- Dashboards from the existing endpoints only, or a new backend endpoint for per-day counts and the latest files (chosen by the team).
+- A navigation column with the dashboard first (chosen), or the existing top header with a row of tabs per space.
+- Page guidance on screen (chosen), a written specification per page in this repository, or both.
+
+**Why:** The team asked for the Chahed palette, a statistics view in every space, a public presentation of the product and easier screens. The design law is kept: colour still carries status only, no animation plays on its own (the queue arrival stays the one orchestrated moment; the officer dashboard lists waiting files without it), and the brochure states only what the product does and texts marked `verified` in `docs/facts.md`, with no figure, client count or testimonial.
+
+**Result:** `web/components/shared/app-shell.tsx` replaces `app-header.tsx`; the root layout draws no frame and each screen family renders its own `<main id="contenu">`. `web/components/msme/organisation-impact.tsx` is folded into `msme-dashboard.tsx`. `app/impact/activity.py` counts days in the database's time zone rules (`timezone('Africa/Tunis', ...)`), so the container needs no tzdata. The web image now copies `public/`. The upload screen's data note was corrected: field extraction does send masked text to the language model (D-042). Not built: the real logo, and a label for a source other than its id on the admin chart.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1049,3 +1065,4 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 | 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |
 | 2026-09-13 | team | Added D-056: phone capture (G3) built ahead of phase 8, several photos filed as one PDF, local OCR |
 | 2026-09-13 | team | Added D-057: phone capture from a laptop's QR code through a single-use link, photos reduced before upload |
+| 2026-09-13 | team | Added D-058: Chahed navy and brick tokens, navigation column with a dashboard per space, `GET /impact/activity`, page guides, brochure home page |
