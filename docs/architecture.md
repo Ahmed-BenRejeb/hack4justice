@@ -127,7 +127,7 @@ REST, versioned under `/api/v1`:
 - `POST /documents/{id}/counterparty-check` - RNE lookup (not built: the RNE is unreachable, see `docs/facts.md`)
 - `GET /officer/queue` - extracted files awaiting a decision, with filename, organisation name, finding counts and the distinct missing facts their abstentions name
 - `POST /officer/decisions` - validate or flag a document (`officer_id`, `action`, `note`)
-- `POST /documents/{id}/export` - build and validate the TEJ export from caller-supplied declaration fields (only after validation)
+- `POST /documents/{id}/export` - build and validate the TEJ export from caller-supplied declaration fields, VAT included (only after validation); a refusal answers 422 with every schema and arithmetic error placed on its request field, as `{loc, msg, type}`
 - `GET /export/operation-codes` - the withholding codes the TEJ schema accepts, read from `schemas/tej/`
 - `GET /rules` - registry read; rules are written by the loader in `api/app/rules`, not over HTTP
 - `GET /corpus/search?q=&top_k=` - verified passages only, hybrid retrieval, each with a marked excerpt and how it matched (`texte`, `sens`, `les deux`)
@@ -169,3 +169,4 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-13 | team | API surface: corpus search, passage, sources, verification queue and related-text endpoints; `text_search` generated with an accent-folding configuration (D-036) |
 | 2026-09-13 | team | Data model and API: `finding.trace`, the decision trace (D-039) |
 | 2026-09-13 | team | API: queue rows name their missing facts (D-040) |
+| 2026-09-13 | team | API: export takes VAT and places refused values on request fields (D-041) |
