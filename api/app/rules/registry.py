@@ -23,6 +23,11 @@ REQUIRED_FIELDS = (
     "logic_ref",
 )
 
+# Declared by the rule's author, not required: which of the rule's decided codes
+# report a problem found, so the impact panel can count errors intercepted without
+# inferring meaning from code names (J9). A rule that declares none counts none.
+OPTIONAL_FIELDS = ("error_codes",)
+
 
 class InvalidRuleDefinition(ValueError):
     pass
@@ -36,6 +41,7 @@ class RuleDefinition:
     verbatim_text: str
     url: str
     logic_ref: str
+    error_codes: tuple[str, ...] = ()
 
 
 def parse_rule_definition(raw: dict) -> RuleDefinition:
@@ -45,7 +51,19 @@ def parse_rule_definition(raw: dict) -> RuleDefinition:
         raise InvalidRuleDefinition(
             f"rule definition rejected, missing or empty field(s): {', '.join(missing)}"
         )
-    return RuleDefinition(**{field: raw[field] for field in REQUIRED_FIELDS})
+
+    error_codes = raw.get("error_codes", [])
+    if not isinstance(error_codes, list) or not all(
+        isinstance(code, str) and code for code in error_codes
+    ):
+        raise InvalidRuleDefinition(
+            "rule definition rejected, error_codes must be a list of non-empty strings"
+        )
+
+    return RuleDefinition(
+        **{field: raw[field] for field in REQUIRED_FIELDS},
+        error_codes=tuple(error_codes),
+    )
 
 
 def load_rule_file(path: Path) -> RuleDefinition:
@@ -59,13 +77,16 @@ def load_rule_file(path: Path) -> RuleDefinition:
 
 def upsert_rule(db: Session, definition: RuleDefinition) -> Rule:
     """Insert a rule by code, or update it in place if the code already exists."""
+    fields = {field: getattr(definition, field) for field in REQUIRED_FIELDS}
+    fields["error_codes"] = list(definition.error_codes)
+
     existing = db.query(Rule).filter_by(code=definition.code).one_or_none()
     if existing is None:
-        rule = Rule(**definition.__dict__)
+        rule = Rule(**fields)
         db.add(rule)
     else:
-        for field in REQUIRED_FIELDS:
-            setattr(existing, field, getattr(definition, field))
+        for field, value in fields.items():
+            setattr(existing, field, value)
         rule = existing
     db.flush()
     return rule

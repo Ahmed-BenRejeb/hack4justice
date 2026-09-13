@@ -4,5 +4,8 @@
   "article_ref": "Article 55, paragraphe I",
   "verbatim_text": "I. Les débiteurs de sommes soumises à la retenue à la source en application des dispositions de l’article 52 et des dispositions du paragraphe II bis de l’article 53 du présent code sont tenus de délivrer, à l’occasion de chaque paiement, aux bénéficiaires des sommes en question un certificat de retenue. Ce certificat comporte : - l’identité et adresse du bénéficiaire ; - le montant brut qui lui est payé ; - le montant de la retenue à la source ; - le montant net qui lui est payé.",
   "url": "https://jibaya.tn/wp-content/uploads/2026/03/11.pdf",
-  "logic_ref": "app.rules.cirppis_art55_certificat.decide_net_amount_consistency"
+  "logic_ref": "app.rules.cirppis_art55_certificat.decide_net_amount_consistency",
+  "error_codes": [
+    "ART55_NET_INCOHERENT"
+  ]
 }
