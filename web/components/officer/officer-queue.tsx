@@ -2,7 +2,8 @@
 
 /** The officer's work list: polls the queue, filters it, and announces newly arrived files. */
 import { useRef, useState, type JSX } from "react";
-import { InboxIcon, RefreshCwIcon } from "lucide-react";
+import Link from "next/link";
+import { ActivityIcon, InboxIcon, RefreshCwIcon } from "lucide-react";
 import { EmptyState, ErrorNotice, LoadingBlock, StaleNotice } from "@/components/shared/api-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,12 @@ export function OfficerQueue(): JSX.Element {
             <Button variant="outline" size="sm" onClick={reload}>
               <RefreshCwIcon aria-hidden />
               Actualiser
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/agent/mesures">
+                <ActivityIcon aria-hidden />
+                Mesures
+              </Link>
             </Button>
           </>
         }
