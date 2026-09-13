@@ -20,7 +20,7 @@ The palette is deliberately tight: a white ground, one green brand accent, a war
 
 The token file is `web/app/globals.css`. It holds a light and a dark set, the three status tokens, and the green brand accent (`--primary`, `#5EA832`) reserved for interaction: links, primary buttons, focus rings, checkmarks. `--accent-light` is that accent at tint strength, for badge and checklist backgrounds. System errors (a backend that cannot be reached) use `--destructive`, which is not a status colour. No component sets a colour value directly, and no raw hex appears outside this file.
 
-A chart reporting decided, abstained or flagged uses the matching status token. **Every other chart uses the warm yellow ramp (`--chart-1`, `--chart-2`), which is independent of the brand accent on purpose: the accent green never appears in a data visualisation.**
+A chart reporting decided, abstained or flagged uses the matching status token. **Every other chart uses the warm yellow ramp (`--chart-1`), which is independent of the brand accent on purpose: the accent green never appears in a data visualisation.** The ramp stays one step, gaining another only when a real chart needs a second series, which is D-053's rule and is unchanged.
 
 ## 3. Typography
 

@@ -39,7 +39,6 @@
   --color-status-flagged: var(--status-flagged);
 
   --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
   --color-accent-light: var(--accent-light);
 
   /* Diagonal crosshatch, used on at most two sections of a screen (DESIGN.md). */
@@ -62,8 +61,6 @@
 @theme {
   /* Soft, diffused elevation only; no hard drop shadows (DESIGN.md). */
   --shadow-card: 0 1px 3px var(--shadow-ink-weak);
-  --shadow-raised: 0 4px 16px var(--shadow-ink), 0 2px 4px var(--shadow-ink-weak);
-  --shadow-float: 0 20px 60px var(--shadow-ink-strong);
 
   /* A file arriving in the officer queue: still the one animation nothing else gets. */
   --animate-queue-arrive: queue-arrive 1.8s ease-out;
@@ -137,14 +134,10 @@
 
   /* Warm yellow chart ramp, independent of the brand accent (DESIGN.md): charts never use green. */
   --chart-1: oklch(0.876 0.107 100);
-  --chart-2: oklch(0.78 0.09 78);
 
-  --border-dashed: oklch(0.185 0 0 / 18%);
   --bg-pattern: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l20 20M20 0L0 20' stroke='%23E0E0E0' stroke-width='0.5'/%3E%3C/svg%3E");
 
   --shadow-ink-weak: oklch(0 0 0 / 6%);
-  --shadow-ink: oklch(0 0 0 / 8%);
-  --shadow-ink-strong: oklch(0 0 0 / 12%);
 
   --arrival: color-mix(in oklch, var(--primary) 12%, transparent);
 }
@@ -176,14 +169,10 @@
   --status-flagged: oklch(0.75 0.14 355);
 
   --chart-1: oklch(0.82 0.1 100);
-  --chart-2: oklch(0.7 0.085 78);
 
-  --border-dashed: oklch(1 0 0 / 20%);
   --bg-pattern: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l20 20M20 0L0 20' stroke='%23FFFFFF' stroke-opacity='0.07' stroke-width='0.5'/%3E%3C/svg%3E");
 
   --shadow-ink-weak: oklch(0 0 0 / 30%);
-  --shadow-ink: oklch(0 0 0 / 40%);
-  --shadow-ink-strong: oklch(0 0 0 / 55%);
 
   --arrival: color-mix(in oklch, var(--primary) 16%, transparent);
 }
