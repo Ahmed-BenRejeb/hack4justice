@@ -14,12 +14,13 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -117,6 +118,7 @@ class CorpusChunk(Base):
             "char_start",
             name="uq_corpus_chunk_position",
         ),
+        Index("ix_corpus_chunk_text_search", "text_search", postgresql_using="gin"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
@@ -132,6 +134,9 @@ class CorpusChunk(Base):
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    # French full-text index of unaccent(text), computed by the loader's insert:
+    # unaccent() is not immutable, so this cannot be a generated column.
+    text_search: Mapped[str] = mapped_column(TSVECTOR, nullable=False)
     # Set from corpus/verified-passages.json on every load; never shown when unverified (D-029).
     verification_status: Mapped[str] = mapped_column(
         Enum("unverified", "verified", name="verification_status", native_enum=False),
