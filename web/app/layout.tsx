@@ -1,18 +1,25 @@
 /** Root layout: fonts, theme, toasts, skip link, and the shared header on every screen. */
 import type { JSX } from "react";
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Inter, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { AppHeader } from "@/components/shared/app-header";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 // Latin Extended covers every accented character in the French interface (docs/design.md section 3).
-const plexSans = IBM_Plex_Sans({
+// Headings are the serif; everything else is the sans. The two are never mixed within a role.
+const playfair = Playfair_Display({
+  subsets: ["latin", "latin-ext"],
+  weight: ["700", "800"],
+  variable: "--font-playfair",
+});
+const inter = Inter({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600"],
-  variable: "--font-plex-sans",
+  variable: "--font-inter",
 });
+// Withholding codes, identifiers and file references stay monospaced.
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500"],
@@ -28,7 +35,11 @@ export const metadata: Metadata = {
 /** Wraps every route in the providers and the application header. */
 export default function RootLayout({ children }: LayoutProps<"/">): JSX.Element {
   return (
-    <html lang="fr" suppressHydrationWarning className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html
+      lang="fr"
+      suppressHydrationWarning
+      className={`${playfair.variable} ${inter.variable} ${plexMono.variable}`}
+    >
       <body className="min-h-dvh antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <a
