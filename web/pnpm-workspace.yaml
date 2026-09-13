@@ -1,3 +1,9 @@
+# pnpm requires `packages` whenever this file exists, on both v9 and v11; without it every pnpm
+# command fails with "packages field missing or empty", which also breaks `next build` because
+# Next shells out to the package manager to resolve the registry for its SWC download.
+packages:
+  - .
+
 allowBuilds:
   sharp: false
   unrs-resolver: false
