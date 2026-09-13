@@ -1,10 +1,18 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import Document, Export, OfficerDecision, Organisation
 from app.main import app
+from tests.conftest import AuthHeaders
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_as_officer(auth_headers: AuthHeaders) -> None:
+    client.headers.update(auth_headers("officer"))
+
 
 VALID_PAYLOAD = {
     "declarant_matricule_fiscal": "1234567A",

@@ -20,7 +20,7 @@ Local rules for the Next.js app. Repo-wide rules live in the root CLAUDE.md and 
 
 - The browser never calls the backend directly. `lib/api-client.ts` calls `/api/v1/*`; `app/api/v1/[...path]/route.ts` forwards it to `API_BASE_URL` and holds no logic.
 - Wire types live only in `lib/api-types.ts` and mirror the Pydantic models in `api/app/api/v1/` (D-024). A contract change touches both sides in the same commit.
-- `OFFICER_ID` is read by the officer review page on the server (`lib/env.ts`) and passed down as a prop; client components never read configuration.
+- Sign-in (D-054): `lib/auth-actions.ts` server actions call `/auth/*` and keep the session token in the HttpOnly `chahed_session` cookie; the proxy forwards it as `Authorization: Bearer`, and browser code never sees it. `lib/session.ts` (`getCurrentUser`, memoised per request, and `requireRole`) is server-only. Each route-group layout calls `requireRole` to send a role to its own space; layouts do not re-run on navigation within a group, so they are a convenience, and the backend's 401/403 remain the enforcement. Identity is never sent from the client: the backend records the signed-in user as filer, deciding officer and confirming person. Client components never read configuration.
 - Tokens live only in `app/globals.css`. Status colours are applied through `STATUS_TONE` (`components/shared/status-badge.tsx`) or the `status-*` utilities, and only to report that status.
 - One keyframe animation exists: `animate-queue-arrive`, the orchestrated moment. Everything else is a transition answering a user action. No looping animation anywhere, so no pulsing skeletons and no spinners.
 - Interface copy uses the typographic apostrophe (’).
@@ -41,4 +41,5 @@ Local rules for the Next.js app. Repo-wide rules live in the root CLAUDE.md and 
 | 2026-09-13 | team | Abstentions answered in place with the person named in the trace (D-047); impact panel at /agent/mesures (D-048) |
 | 2026-09-13 | team | Legal source surface: search, passage reader, related passages, corpus verification queue (D-052) |
 | 2026-09-13 | team | KPI charts on recharts directly, neutral chart ramp; MSME "Mes chiffres" section (D-053) |
+| 2026-09-13 | team | Sign-in: session cookie via server actions, role-gated layouts, OFFICER_ID removed, shadcn login-03 screens (D-054) |
 | 2026-09-13 | team | Document viewer with field outlines on the page (J3, D-055) |

@@ -1,11 +1,18 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import Citation, Document, Extraction, Finding, Organisation, Rule
 from app.export.derive import derive_export_draft
 from app.main import app
+from tests.conftest import AuthHeaders
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_as_officer(auth_headers: AuthHeaders) -> None:
+    client.headers.update(auth_headers("officer"))
 
 
 def _make_organisation(db: Session) -> Organisation:

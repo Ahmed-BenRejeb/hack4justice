@@ -1,7 +1,7 @@
-"""Read access to the rule registry. Rules are written by the loader in
-app/rules, not over HTTP: there is no admin auth yet to gate a write route,
-so rule management stays a seed/migration-time operation, per the cut list
-in docs/plan.md section 9.
+"""Read access to the rule registry, for admins. Rules are written by the
+loader in app/rules, not over HTTP: an admin write route is cut list item 1
+in docs/plan.md section 9, so rule management stays a seed/migration-time
+operation.
 """
 
 import uuid
@@ -10,10 +10,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth.deps import require_admin
 from app.db.models import Rule
 from app.db.session import get_db
 
-router = APIRouter(prefix="/rules", tags=["rules"])
+router = APIRouter(
+    prefix="/rules", tags=["rules"], dependencies=[Depends(require_admin)]
+)
 
 
 class RuleOut(BaseModel):

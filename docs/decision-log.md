@@ -937,6 +937,24 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Result:** `recharts` added as a real dependency (`pnpm add recharts`, lockfile updated). `lib/charts.ts` holds the only data shaping (aggregation by article, field labelling), unit-tested per `docs/frontend-plan.md` section 4; the chart components themselves are eye-verified against light and dark mode, screenshotted against live data. `docs/design.md` section 2 records the ramp rule. This is a correction to D-050's literal instruction, not a reversal of its reasoning; if a future screen genuinely needs Tremor's fuller feature set (multi-series legends, clickable filtering), that is a fresh decision, not an extension of this one.
 
+## D-054 - Sign-in: database sessions, four roles, organisation-scoped files
+
+**Date:** 2026-09-13
+
+**Decision:** Build A3's first step on both processes. Accounts carry one role (`msme`, `accountant`, `officer`, `admin`); sessions are opaque random tokens whose SHA-256 is stored in `user_session`, passwords are hashed with the standard library's scrypt. Every route except health, sign-up and sign-in requires a session and is gated by role; a document is read only by an officer or a member of its organisation (404 otherwise, like a missing one); `uploaded_by`, `officer_id` and `confirmed_by` are taken from the session, no longer from the request. MSME owners sign up themselves, which creates their organisation; officer, admin and accountant accounts are created with `python -m app.auth.create_user`, an accountant granted each organisation by matricule fiscal. The web app signs in through server actions that keep the token in an HttpOnly cookie, the proxy forwards it as a bearer token, and route-group layouts send each role to its own space. The sign-in and sign-up screens are the shadcn `login-03` block (shadcn's own registry, not a third-party block library, so D-050 holds).
+
+**Options considered:**
+- Database sessions with stdlib scrypt (chosen), stateless JWT (a new secret and dependency, and a token cannot be revoked before it expires), or auth in Next.js only (the backend would stay open to anyone calling it directly).
+- MSME self sign-up (chosen) or seeded accounts only.
+- An accountant role with per-organisation membership now (chosen), or deferring it to A4.
+- The `login-03` block (chosen), `login-01`, or composing Card and Field primitives.
+
+**Why:** The backend is the trust boundary: identity fields were typed by the client and the demo deploy is reachable from the internet (D-051). Database sessions make sign-out real and need no new dependency. Self sign-up replaces the organisation picker's create path, which existed only because there was no sign-in (D-024).
+
+**Result:** Migration `e6b1c9d4a7f2` adds `app_user`, `organisation_member` and `user_session`; `/auth/signup`, `/auth/login`, `/auth/logout` and `/auth/me` are added and `/organisations` is removed. `OFFICER_ID` leaves `web/.env`. `seed/seed_demo_data.py` signs every call in: it needs `CHAHED_DEMO_PASSWORD` and an officer account created first. Verified end to end against a running stack: role redirects, the proxy's 401/403, sign-in, sign-up and sign-out through the server actions, and uploads and decisions recording the signed-in user. Not built: a delegation the MSME grants and revokes itself (A4), DigiGo and Mobile ID, password reset, login rate limiting, purging expired sessions. Sign-up does not prove the person runs the organisation they name; that needs a verified identity.
+
+Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` and `GET /impact` without sign-in: that section now takes the signed-in user's organisations, and `GET /impact` admits a filer who names one of their own organisations, while the deployment-wide figures stay officer-only.
+
 ## D-055 - Evidence outlined on the document page (J3): word positions, no new PDF viewer library
 
 **Date:** 2026-09-13
@@ -950,7 +968,7 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 
 **Why:** The user asked for it built, not cut, once the gap was found. Server-rendered page images (already a dependency, `pdf2image`/Poppler, used for the OCR path) avoid adding a PDF.js dependency and avoid a second coordinate system: the same raster the browser displays is the same raster Tesseract's own boxes are already in, and `pdfplumber`'s point-space boxes need only one scalar conversion (`RASTER_DPI / 72`) to agree with it. Matching on the field's `raw_value` (as written on the document) rather than its normalised `value` (a canonical decimal, e.g. `"1000.500"`) is required: the normalised form does not appear anywhere on the page to search for. An exact substring match, not a fuzzy one, keeps the same "never guess" law this codebase applies to a compliance finding: a field whose value cannot be found verbatim among the document's own words gets no outline, not an approximate one. This is pure display evidence: `app/rules/service.py` still reads only `Extraction.value`; no rule reads `page` or `bbox`, so the citation and abstention machinery is unchanged.
 
-**Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Verified end to end against the live Docker stack: a real hero invoice upload produces a page image and an outlined field.
+**Result:** Migration `a1c4f7e29d05` adds `document_page` and the two `extraction` columns. `pdfplumber` added as a dependency (no new system package: it works on the PDF's own bytes, unlike `pdf2image`/Tesseract which need Poppler/Tesseract binaries already required). `tests/test_positions.py` covers the matching logic directly; `tests/test_ocr.py` and `tests/test_documents.py` extended to assert real page images and, for a value that appears verbatim in a born-digital fixture, a real located bounding box. Merged after D-054 (sign-in): the new pages endpoints are gated the same way as the sibling document endpoints (`readable_document`), and the browser's plain `<img>` still works unauthenticated-looking, since the Next.js proxy attaches the session's bearer token server-side before forwarding, the same as every other call.
 
 ## Change log
 
@@ -994,4 +1012,5 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-051: one-day demo deploy on a single EC2 instance via Terraform, Caddy + sslip.io for HTTPS |
 | 2026-09-13 | team | Added D-052: legal source surface built (search, passage reader, related passages, verification queue) |
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
+| 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
 | 2026-09-13 | team | Added D-055: evidence outlined on the document page (J3), word positions, document viewer |

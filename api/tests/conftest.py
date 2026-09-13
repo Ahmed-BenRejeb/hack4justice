@@ -1,6 +1,8 @@
 """Shared test fixtures. Requires the docker-compose Postgres instance running."""
 
 import io
+import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -9,8 +11,15 @@ from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.auth.passwords import hash_password
+from app.auth.service import open_session
 from app.db.base import Base
+from app.db.models import Organisation, User
 from app.db.session import engine
+
+TEST_PASSWORD = "correct horse battery"
+# Hashed once: scrypt at its real cost is too slow to repeat for every test user.
+TEST_PASSWORD_HASH = hash_password(TEST_PASSWORD)
 
 # The font path is distribution-specific: Arch first, then Debian/Ubuntu.
 LIBERATION_SANS_PATHS = (
@@ -54,6 +63,33 @@ def db() -> Session:
         yield session
     finally:
         session.close()
+
+
+AuthHeaders = Callable[..., dict[str, str]]
+
+
+@pytest.fixture
+def auth_headers(db: Session) -> AuthHeaders:
+    """Signs in a new user with `role`, filing for `organisations`, and returns request headers.
+
+    The user is inserted directly, bypassing create_user's per-role checks, so a
+    test can build exactly the account it needs.
+    """
+
+    def sign_in(role: str, *organisations: Organisation) -> dict[str, str]:
+        user = User(
+            email=f"{role}-{uuid.uuid4().hex[:8]}@example.tn",
+            password_hash=TEST_PASSWORD_HASH,
+            role=role,
+            organisations=list(organisations),
+        )
+        db.add(user)
+        db.flush()
+        token, _ = open_session(db, user)
+        db.commit()
+        return {"Authorization": f"Bearer {token}"}
+
+    return sign_in
 
 
 def make_born_digital_pdf(text_content: str) -> bytes:

@@ -23,8 +23,6 @@ interface AnswerAbstentionProps {
   missingFact: string;
   /** What this document allows: the identified supplier, and the facts with their accepted values. */
   answerable: AnswerableFacts;
-  /** Who is answering; recorded with the fact and shown in the trace. */
-  answeredBy: string;
   /** Reloads the file so the finding re-renders as the rule's new outcome. */
   onAnswered: () => void;
 }
@@ -37,7 +35,6 @@ export function AnswerAbstention({
   documentId,
   missingFact,
   answerable,
-  answeredBy,
   onAnswered,
 }: AnswerAbstentionProps): JSX.Element | null {
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -64,11 +61,8 @@ export function AnswerAbstention({
     setSubmitting(value);
     setError(null);
     try {
-      await api.confirmSupplierFact(documentId, {
-        fact_name: missingFact,
-        value,
-        confirmed_by: answeredBy,
-      });
+      // The backend records the signed-in user as the person who confirmed the fact.
+      await api.confirmSupplierFact(documentId, { fact_name: missingFact, value });
       toast.success("Réponse enregistrée, la règle a été réappliquée");
       onAnswered();
     } catch (caught) {
