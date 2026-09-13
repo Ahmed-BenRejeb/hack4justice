@@ -1,5 +1,6 @@
-"""Seeds the demo dataset through the real pipeline: organisations, the five
-hero uploads, one abstention answered, the officer decisions, and one export.
+"""Seeds the demo dataset through the real pipeline: two MSME accounts with
+their organisations, the five hero uploads, one abstention answered, the
+officer decisions, and one export.
 
 Nothing here inserts a Finding or an Extraction directly. Every document goes
 through POST /documents exactly as the web app's upload screen would, so OCR,
@@ -17,9 +18,19 @@ or `uv run uvicorn app.main:app` after `alembic upgrade head` and
 model reads each invoice's fiscal fields, exactly as it would for a real
 upload.
 
+Every call is signed in, as in the web app (A3). The MSME owners sign up here;
+the officer account cannot be created over HTTP, so create it first with the
+same password (from api/, or `docker compose exec -T api` for the container):
+
+    uv run python -m app.auth.create_user officer@dgi.tn officer
+
+CHAHED_DEMO_PASSWORD, required and without a default, is the password of all
+three demo accounts. It is never written in this repository: the demo deploy
+is reachable from the internet (D-051).
+
 Run from the repository root:
 
-    api/.venv/bin/python seed/seed_demo_data.py
+    CHAHED_DEMO_PASSWORD=... api/.venv/bin/python seed/seed_demo_data.py
 
 Running `api/tests` (`uv run pytest`) against this same database wipes it:
 `api/tests/conftest.py` drops and recreates every table before each test, by
@@ -36,12 +47,18 @@ import httpx
 API_BASE_URL = os.environ.get("CHAHED_API_BASE_URL", "http://localhost:8000/api/v1")
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "hero"
 
-UPLOADED_BY = "contact@nexsol-consulting.tn"
-CONFIRMED_BY = "contact@nexsol-consulting.tn"
-
+# Each organisation's owner signs up with this email, then uploads and answers for it.
 ORGANISATIONS = {
-    "nexsol": {"name": "Nexsol Consulting SARL", "tax_id": "1122334M"},
-    "fedaa": {"name": "Atelier Menuiserie Fedaa", "tax_id": "2233445N"},
+    "nexsol": {
+        "name": "Nexsol Consulting SARL",
+        "tax_id": "1122334M",
+        "email": "contact@nexsol-consulting.tn",
+    },
+    "fedaa": {
+        "name": "Atelier Menuiserie Fedaa",
+        "tax_id": "2233445N",
+        "email": "contact@menuiserie-fedaa.tn",
+    },
 }
 
 # Each hero file, which organisation uploads it, and what happens to it once
@@ -85,7 +102,7 @@ DOCUMENTS = [
     },
 ]
 
-OFFICER_ID = "officer@dgi.tn"
+OFFICER_EMAIL = "officer@dgi.tn"
 
 # The full export for hero-01, in the officer's own words: the officer types
 # the beneficiary's contact details and the invoice year themselves (D-008,
@@ -131,31 +148,67 @@ def _fail(message: str) -> None:
     sys.exit(1)
 
 
-def _get_or_create_organisation(client: httpx.Client, name: str, tax_id: str) -> str:
-    response = client.post("/organisations", json={"name": name, "tax_id": tax_id})
-    if response.status_code == 201:
-        return response.json()["id"]
+def _bearer(session: dict) -> dict[str, str]:
+    return {"Authorization": f"Bearer {session['token']}"}
+
+
+def _sign_up_or_in(
+    client: httpx.Client, password: str, name: str, tax_id: str, email: str
+) -> tuple[str, dict[str, str]]:
+    """The owner's organisation id and auth headers, signing up on the first run and in after."""
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": email,
+            "password": password,
+            "organisation": {"name": name, "tax_id": tax_id},
+        },
+    )
     if response.status_code == 409:
-        existing = client.get("/organisations").raise_for_status().json()
-        match = next(org for org in existing if org["tax_id"] == tax_id)
-        return match["id"]
-    response.raise_for_status()
-    raise AssertionError("unreachable")
+        response = client.post(
+            "/auth/login", json={"email": email, "password": password}
+        )
+    if response.status_code not in (200, 201):
+        # A database seeded before sign-in existed holds the organisation without an account.
+        _fail(
+            f"{email}: sign-up and sign-in both refused: {response.text}. If the "
+            f"organisation already exists without an account, create one from api/: "
+            f"uv run python -m app.auth.create_user {email} msme --organisation {tax_id}"
+        )
+    session = response.json()
+    return session["user"]["organisations"][0]["id"], _bearer(session)
 
 
-def _upload(client: httpx.Client, path: Path, organisation_id: str) -> dict:
+def _sign_in_officer(client: httpx.Client, password: str) -> dict[str, str]:
+    response = client.post(
+        "/auth/login", json={"email": OFFICER_EMAIL, "password": password}
+    )
+    if response.status_code != 200:
+        _fail(
+            f"cannot sign in as {OFFICER_EMAIL}; create the account first, from api/: "
+            f"uv run python -m app.auth.create_user {OFFICER_EMAIL} officer"
+        )
+    return _bearer(response.json())
+
+
+def _upload(
+    client: httpx.Client, path: Path, organisation_id: str, headers: dict[str, str]
+) -> dict:
     with path.open("rb") as handle:
         response = client.post(
             "/documents",
-            params={"organisation_id": organisation_id, "uploaded_by": UPLOADED_BY},
+            params={"organisation_id": organisation_id},
             files={"file": (path.name, handle, "application/pdf")},
+            headers=headers,
         )
     response.raise_for_status()
     return response.json()
 
 
-def _findings(client: httpx.Client, document_id: str) -> list[dict]:
-    response = client.get(f"/documents/{document_id}/findings")
+def _findings(
+    client: httpx.Client, document_id: str, headers: dict[str, str]
+) -> list[dict]:
+    response = client.get(f"/documents/{document_id}/findings", headers=headers)
     response.raise_for_status()
     return response.json()
 
@@ -172,63 +225,73 @@ def _summarise(findings: list[dict]) -> str:
 
 def main() -> None:
     if not FIXTURES_DIR.exists():
-        _fail(
-            f"{FIXTURES_DIR} does not exist; run seed/generate_fixtures.py first"
-        )
+        _fail(f"{FIXTURES_DIR} does not exist; run seed/generate_fixtures.py first")
+
+    password = os.environ.get("CHAHED_DEMO_PASSWORD")
+    if not password:
+        _fail("CHAHED_DEMO_PASSWORD is not set; it is the demo accounts' password")
 
     with httpx.Client(base_url=API_BASE_URL, timeout=60.0) as client:
-        organisation_ids = {
-            key: _get_or_create_organisation(client, **fields)
+        officer = _sign_in_officer(client, password)
+        owners = {
+            key: _sign_up_or_in(client, password, **fields)
             for key, fields in ORGANISATIONS.items()
         }
-        print(f"organisations: {organisation_ids}")
+        print(
+            f"organisations: { {key: org_id for key, (org_id, _) in owners.items()} }"
+        )
 
         for entry in DOCUMENTS:
             path = FIXTURES_DIR / entry["file"]
             if not path.exists():
                 _fail(f"missing fixture: {path}")
+            organisation_id, owner = owners[entry["org"]]
 
-            document = _upload(client, path, organisation_ids[entry["org"]])
+            document = _upload(client, path, organisation_id, owner)
             document_id = document["id"]
             print(f"{entry['file']}: uploaded as {document_id}")
 
-            findings = _findings(client, document_id)
+            findings = _findings(client, document_id, owner)
             print(f"  before answer: {_summarise(findings)}")
 
             if entry["answer"] is not None:
-                answerable = client.get(
-                    f"/documents/{document_id}/answerable-facts"
-                ).raise_for_status().json()
+                answerable = (
+                    client.get(
+                        f"/documents/{document_id}/answerable-facts", headers=owner
+                    )
+                    .raise_for_status()
+                    .json()
+                )
                 if answerable["supplier_tax_id"] is None:
                     _fail(f"{entry['file']}: supplier not identified, cannot answer")
                 response = client.post(
                     f"/documents/{document_id}/supplier-facts",
-                    json={**entry["answer"], "confirmed_by": CONFIRMED_BY},
+                    json=entry["answer"],
+                    headers=owner,
                 )
                 response.raise_for_status()
-                findings = _findings(client, document_id)
+                findings = _findings(client, document_id, owner)
                 print(f"  after answer: {_summarise(findings)}")
 
             decision = client.post(
                 "/officer/decisions",
-                json={
-                    "document_id": document_id,
-                    "officer_id": OFFICER_ID,
-                    "action": entry["decision"],
-                },
+                json={"document_id": document_id, "action": entry["decision"]},
+                headers=officer,
             )
             decision.raise_for_status()
             print(f"  officer decision: {entry['decision']}")
 
             if entry["export"]:
                 export = client.post(
-                    f"/documents/{document_id}/export", json=HERO_01_EXPORT
+                    f"/documents/{document_id}/export",
+                    json=HERO_01_EXPORT,
+                    headers=officer,
                 )
                 if export.status_code != 201:
                     _fail(f"{entry['file']}: export failed: {export.text}")
                 print(f"  exported: {export.json()['xml_ref']}")
 
-        impact = client.get("/impact").raise_for_status().json()
+        impact = client.get("/impact", headers=officer).raise_for_status().json()
         print(f"impact: {impact}")
 
 

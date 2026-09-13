@@ -74,6 +74,8 @@ Specified against the demo moments in `docs/plan.md` section 6. First implementa
 
 | Screen | Route |
 |---|---|
+| Sign-in, one centered card on a muted ground (shadcn `login-03`) | `/connexion` |
+| Business sign-up: organisation name, matricule fiscal, email, password (same layout) | `/inscription` |
 | MSME upload | `/entreprise` |
 | MSME extraction review, findings with citation, abstention with named missing fact | `/entreprise/dossiers/[id]` |
 | Officer queue (list) | `/agent` |
@@ -96,4 +98,5 @@ Every screen above must be legible and usable with the reduced-motion preference
 | 2026-09-12 | team | Section 4: review adapted to the real backend, RNE removed, TEJ form placement (D-024) |
 | 2026-09-13 | team | Section 7: added the legal search and passage reader screens, admin now also hosts the corpus verification queue (D-052) |
 | 2026-09-13 | team | Section 2: recorded the neutral chart ramp rule (D-053) |
+| 2026-09-13 | team | Section 7: added the sign-in and sign-up screens (D-054) |
 | 2026-09-13 | team | Sections 2, 3 and 5 rewritten for the modern-SaaS direction: green brand accent, warm yellow chart ramp, serif headings, ambient motion confined to the entry screen (D-055) |

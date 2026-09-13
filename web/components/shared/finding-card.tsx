@@ -21,7 +21,6 @@ interface FindingCardProps {
   answering?: {
     documentId: string;
     answerable: AnswerableFacts;
-    answeredBy: string;
     onAnswered: () => void;
   };
 }
@@ -73,7 +72,6 @@ export function FindingCard({ group, answering }: FindingCardProps): JSX.Element
                 documentId={answering.documentId}
                 missingFact={first.missing_fact}
                 answerable={answering.answerable}
-                answeredBy={answering.answeredBy}
                 onAnswered={answering.onAnswered}
               />
             </div>

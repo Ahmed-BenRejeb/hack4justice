@@ -25,14 +25,9 @@ export function DocumentReview({ documentId }: { documentId: string }): JSX.Elem
   if (!data) return <ErrorNotice error={error} onRetry={reload} />;
 
   const { document: detail, findings } = data;
-  // The person who filed the document answers questions about their own supplier (J4).
+  // The filer answers questions about their own supplier (J4); the backend records who answered.
   const answering = answerable.data
-    ? {
-        documentId,
-        answerable: answerable.data,
-        answeredBy: detail.uploaded_by,
-        onAnswered: reload,
-      }
+    ? { documentId, answerable: answerable.data, onAnswered: reload }
     : undefined;
 
   return (

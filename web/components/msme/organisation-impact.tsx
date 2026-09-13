@@ -13,10 +13,9 @@ import { Section } from "@/components/shared/section";
 import { SimpleBarChart } from "@/components/shared/simple-bar-chart";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { api } from "@/lib/api-client";
+import type { Organisation } from "@/lib/api-types";
 import { missingFactChart } from "@/lib/charts";
 import { useOrganisationImpact } from "@/lib/use-impact";
-import { useResource } from "@/lib/use-resource";
 
 function Tile({ label, value, hint }: { label: string; value: number; hint?: string }): JSX.Element {
   return (
@@ -28,13 +27,15 @@ function Tile({ label, value, hint }: { label: string; value: number; hint?: str
   );
 }
 
-/** Organisation picker, then that organisation's own counts and missing-fact chart. */
-export function OrganisationImpact(): JSX.Element {
+/**
+ * A picker when the signed-in user files for several organisations (an accountant), then the
+ * chosen organisation's own counts and missing-fact chart. The backend refuses any other organisation.
+ */
+export function OrganisationImpact({ organisations }: { organisations: Organisation[] }): JSX.Element {
   const selectId = useId();
-  const [organisationId, setOrganisationId] = useState("");
-  const organisations = useResource("organisations", (signal) => api.listOrganisations(signal));
+  // An MSME user files for exactly one organisation, so there is nothing to choose.
+  const [organisationId, setOrganisationId] = useState(organisations.length === 1 ? organisations[0].id : "");
   const impact = useOrganisationImpact(organisationId);
-  const list = organisations.data ?? [];
 
   return (
     <Section
@@ -42,12 +43,12 @@ export function OrganisationImpact(): JSX.Element {
       title="Mes chiffres"
       description="Ce que Chahed a relevé sur les dossiers déposés pour une organisation."
     >
-      {list.length > 0 && (
+      {organisations.length > 1 && (
         <div className="max-w-sm space-y-2">
           <Label htmlFor={selectId}>Organisation</Label>
           <NativeSelect id={selectId} value={organisationId} onChange={(event) => setOrganisationId(event.target.value)}>
             <option value="">Choisissez une organisation</option>
-            {list.map((organisation) => (
+            {organisations.map((organisation) => (
               <option key={organisation.id} value={organisation.id}>
                 {organisation.name} ({organisation.tax_id})
               </option>

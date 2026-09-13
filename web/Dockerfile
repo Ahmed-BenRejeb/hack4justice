@@ -1,5 +1,5 @@
 # Next.js production image: install with the locked pnpm version, build, then run the
-# standalone server alone. API_BASE_URL and OFFICER_ID are read at runtime (lib/env.ts),
+# standalone server alone. API_BASE_URL is read at runtime (lib/env.ts),
 # so one image serves any environment.
 FROM node:24-alpine AS build
 WORKDIR /app

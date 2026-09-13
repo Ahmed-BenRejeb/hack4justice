@@ -9,9 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.api.v1.auth import OrganisationOut
 from app.api.v1.export import ExportOut
 from app.api.v1.officer import DecisionOut
-from app.api.v1.organisations import OrganisationOut
+from app.auth.deps import member_of, readable_document, require_filer
 from app.db.models import (
     Citation,
     Document,
@@ -19,8 +20,8 @@ from app.db.models import (
     Extraction,
     Finding,
     OfficerDecision,
-    Organisation,
     Rule,
+    User,
 )
 from app.db.session import get_db
 from app.extraction.service import run_extraction
@@ -65,12 +66,11 @@ class DocumentDetailOut(DocumentOut):
 async def upload_document(
     file: UploadFile,
     organisation_id: uuid.UUID,
-    uploaded_by: str,
+    user: User = Depends(require_filer),
     db: Session = Depends(get_db),
 ) -> Document:
-    """Store an uploaded file, record it, and run OCR/text extraction on it."""
-    organisation = db.get(Organisation, organisation_id)
-    if organisation is None:
+    """Store a file the signed-in user files for one of their organisations, and run extraction on it."""
+    if not member_of(user, organisation_id):
         raise HTTPException(status_code=404, detail="organisation not found")
 
     content = await file.read()
@@ -80,7 +80,7 @@ async def upload_document(
 
     document = Document(
         organisation_id=organisation_id,
-        uploaded_by=uploaded_by,
+        uploaded_by=user.email,
         filename=filename,
         storage_ref=storage_ref,
         status="uploaded",
@@ -99,12 +99,11 @@ async def upload_document(
 
 @router.get("/{document_id}", response_model=DocumentDetailOut)
 def get_document(
-    document_id: uuid.UUID, db: Session = Depends(get_db)
+    document_id: uuid.UUID,
+    document: Document = Depends(readable_document),
+    db: Session = Depends(get_db),
 ) -> DocumentDetailOut:
     """A document with its organisation, extraction results, officer decision and export."""
-    document = db.get(Document, document_id)
-    if document is None:
-        raise HTTPException(status_code=404, detail="document not found")
     extractions = (
         db.query(Extraction)
         .filter_by(document_id=document_id)
@@ -168,12 +167,11 @@ class FindingOut(BaseModel):
 
 @router.get("/{document_id}/findings", response_model=list[FindingOut])
 def get_document_findings(
-    document_id: uuid.UUID, db: Session = Depends(get_db)
+    document_id: uuid.UUID,
+    _: Document = Depends(readable_document),
+    db: Session = Depends(get_db),
 ) -> list[FindingOut]:
     """Findings for a document, each with its rule's code and citation resolved."""
-    if db.get(Document, document_id) is None:
-        raise HTTPException(status_code=404, detail="document not found")
-
     rows = (
         db.query(Finding, Rule)
         .join(Citation, Citation.finding_id == Finding.id)

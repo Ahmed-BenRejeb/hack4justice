@@ -25,7 +25,7 @@ export function getApiBaseUrl(): string {
   return raw.replace(/\/+$/, "");
 }
 
-/** Identifier recorded as `officer_id` on every decision, until officer sign-in exists. */
-export function getOfficerId(): string {
-  return requireEnv("OFFICER_ID");
+/** Whether this is a production build, set by Next.js itself; not an identity value. */
+export function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
 }

@@ -18,14 +18,8 @@ import { useDocumentFile } from "@/lib/use-document-file";
 import { DecisionPanel } from "./decision-panel";
 import { ExportForm } from "./export-form";
 
-interface OfficerReviewProps {
-  documentId: string;
-  /** Recorded on the decision; comes from server configuration until officer sign-in exists. */
-  officerId: string;
-}
-
 /** Loads the file by id; the decision panel gives way to the recorded decision once one exists. */
-export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JSX.Element {
+export function OfficerReview({ documentId }: { documentId: string }): JSX.Element {
   const { data, error, isLoading, reload } = useDocumentFile(documentId);
   const answerable = useAnswerableFacts(documentId);
 
@@ -38,7 +32,7 @@ export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JS
   // An officer resolves what is missing before validating; once decided, the file is settled.
   const answering =
     answerable.data && !decision
-      ? { documentId, answerable: answerable.data, answeredBy: officerId, onAnswered: reload }
+      ? { documentId, answerable: answerable.data, onAnswered: reload }
       : undefined;
 
   return (
@@ -60,7 +54,7 @@ export function OfficerReview({ documentId, officerId }: OfficerReviewProps): JS
           {decision ? (
             <DecisionSummary decision={decision} />
           ) : (
-            <DecisionPanel documentId={detail.id} officerId={officerId} onDecided={reload} />
+            <DecisionPanel documentId={detail.id} onDecided={reload} />
           )}
           {detail.export && <ExportResult result={detail.export} />}
           <PipelineProgress stages={pipelineProgress(detail)} />

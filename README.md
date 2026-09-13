@@ -40,8 +40,9 @@ api/          Python backend (FastAPI): extraction, corpus retrieval, rules, cou
 The whole stack runs with Docker Compose: PostgreSQL with pgvector, the FastAPI backend (`api/`) and the Next.js front end (`web/`).
 
 1. `cp api/.env.example api/.env` and fill `OPENROUTER_API_KEY` and `OPENROUTER_MODEL_ID`. `DATABASE_URL` is set by `docker-compose.yml`.
-2. `cp web/.env.example web/.env` and fill `OFFICER_ID`. `API_BASE_URL` is set by `docker-compose.yml`.
+2. `cp web/.env.example web/.env`. `API_BASE_URL` is set by `docker-compose.yml`.
 3. `docker compose up --build`, then open http://localhost:3000.
+4. Businesses sign up at `/inscription`. Officer, admin and accountant accounts are created from the command line, the password prompted for: `docker compose exec api uv run python -m app.auth.create_user agent@example.tn officer` (an accountant also takes `--organisation <matricule fiscal>`, once per organisation).
 
 To work on one side without Docker, follow the local setup in `api/CLAUDE.md` or `web/CLAUDE.md`.
 

@@ -5,6 +5,7 @@ import { IBM_Plex_Mono, Inter, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { AppHeader } from "@/components/shared/app-header";
 import { Toaster } from "@/components/ui/sonner";
+import { getCurrentUser } from "@/lib/session";
 import "./globals.css";
 
 // Latin Extended covers every accented character in the French interface (docs/design.md section 3).
@@ -32,8 +33,9 @@ export const metadata: Metadata = {
     "Conformité de la retenue à la source pour les entreprises tunisiennes, chaque conclusion adossée à l’article qui la fonde.",
 };
 
-/** Wraps every route in the providers and the application header. */
-export default function RootLayout({ children }: LayoutProps<"/">): JSX.Element {
+/** Wraps every route in the providers and the application header, which shows the signed-in user. */
+export default async function RootLayout({ children }: LayoutProps<"/">): Promise<JSX.Element> {
+  const user = await getCurrentUser();
   return (
     <html
       lang="fr"
@@ -48,7 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">): JSX.Element 
           >
             Aller au contenu
           </a>
-          <AppHeader />
+          <AppHeader user={user} />
           <main id="contenu" tabIndex={-1} className="outline-none">
             {children}
           </main>

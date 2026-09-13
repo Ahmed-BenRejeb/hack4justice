@@ -16,13 +16,19 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.auth.deps import current_user, require_admin
 from app.corpus.related import related_passages, related_query
 from app.corpus.retrieval import DEFAULT_TOP_K, Hit, excerpts, search
 from app.db.models import CorpusChunk, CorpusSource, Finding, Rule
 from app.db.session import get_db
 
-router = APIRouter(prefix="/corpus", tags=["corpus"])
-findings_router = APIRouter(prefix="/findings", tags=["corpus"])
+# Verified legal text is for every signed-in role; the verification queue is the admin's.
+router = APIRouter(
+    prefix="/corpus", tags=["corpus"], dependencies=[Depends(current_user)]
+)
+findings_router = APIRouter(
+    prefix="/findings", tags=["corpus"], dependencies=[Depends(current_user)]
+)
 
 VERIFIED = "verified"
 MatchType = Literal["texte", "sens", "les deux"]
@@ -202,7 +208,11 @@ def list_sources(db: Session = Depends(get_db)) -> list[SourceSummaryOut]:
     ]
 
 
-@router.get("/verification-queue", response_model=list[QueueEntryOut])
+@router.get(
+    "/verification-queue",
+    response_model=list[QueueEntryOut],
+    dependencies=[Depends(require_admin)],
+)
 def verification_queue(db: Session = Depends(get_db)) -> list[QueueEntryOut]:
     """Unverified chunks in document order, by reference and official page only, never text."""
     rows = (
