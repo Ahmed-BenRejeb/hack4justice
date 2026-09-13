@@ -483,6 +483,52 @@ Two real articles in the same code do match the narrative:
 
 **Result:** `app/rules/withholding_code_proposal.py` and its tests (tested live against the real model). Not yet a registered rule: needs a human-verified citation before entering `rules/`, same as D-026 provided for Article 52(I)(a).
 
+## D-029 - Structured fiscal extraction and a derived TEJ export, no new tables
+
+**Date:** 2026-09-13
+
+**Decision:** Extend extraction to structured fiscal facts (supplier and client identity, amounts, withholding rate) instead of only `full_text`, derive the TEJ export draft from those facts to pre-fill the officer's form, and add deterministic Article 55(I) and TEJ-schema rules against them. All of it stays projected from `Extraction` rows at request time: no new database table.
+
+**Options considered:**
+- No change: keep `full_text` as the only extracted field, the export form fully hand-typed.
+- A new `withholding_certificate` table (or a fuller `tiers`/`facture`/`retenue_source` set, modeled on a prior team project's NestJS treasury dashboard), populated from extraction and read by both rules and the export.
+- Structured `Extraction` rows only, with the export draft a pure projection computed at request time.
+
+**Why:** `app/rules/service.py:evaluate_all_rules()` reads only `Extraction` rows; a certificate table would be invisible to every rule and could only ever serve the export draft, which runs once per document over a handful of short strings, cheap to project on request. `counterparty_check` and `audit_entry` are already tables nothing reads, and the root and api CLAUDE.md rule against placeholder modules applies equally to placeholder tables. "Centralizing the fiscal flow" is delivered by one module owning the projection (`app/export/derive.py`), not by storage; today that logic lives in a React form, which is the actual gap.
+
+A prior team project (`Backend-Dashboard-RH-Treso-24-25`, a NestJS/TypeORM treasury dashboard) supplied the domain model (a `RetenueSource` entity: beneficiary identity and address, rate, montant brut/retenue/net) and the field vocabulary, not code: different language, different ORM, and this repo's design law (extraction and derivation only, judgement stays deterministic and cited) does not match that project's manual-entry treasury CRUD.
+
+**Result:** `app/extraction/fields.py` (field schema, confidence threshold, amount normaliser), `app/providers/openrouter.py:extract_fields()` (one multi-field call per upload, replacing what would otherwise be several sequential `extract_fact()` calls), `app/export/derive.py` and `GET /documents/{id}/export-draft`. No migration. Standing boundary, to avoid re-litigating this: a certificate table becomes correct the moment "which certificates did this org issue in period X" is a real question, which is the monthly declaration roll-up, explicitly out of scope per `docs/plan.md` section 2.
+
+## D-030 - Article 55(I) certificate rules and a schema-grounded matricule rule
+
+**Date:** 2026-09-13
+
+**Decision:** Register `CIRPPIS-ART55-I-CONTENU` (the certificate must state the required elements) and `CIRPPIS-ART55-I-NET` (montant net = montant brut - montant retenue), both citing Article 55(I) per the `docs/facts.md` promotion in the same session. Register `TEJ-MATRICULE-FISCAL`, citing the TEJ XSD's `TypeMatriculeFiscal` pattern rather than a legal article.
+
+**Options considered:**
+- Also write a rule that `montant_rs == montant_ht * taux_rs` (the rate applied to a base amount).
+- Ship only the rules whose citation is settled; leave the rate-application question explicitly blocked.
+
+**Why:** Article 55(I) enumerates required certificate contents verbatim; that supports a completeness rule with no inference. The net/brut/retenue relationship is one inference step from that enumeration (three amounts that must appear together on one certificate), not a verbatim formula, and the `docs/facts.md` note says so explicitly so the reviewer signs the inference, not just the text. The rate-application rule is different in kind: nothing in Article 52 or 55 states whether the withholding base is HT or TTC, and the TEJ schema carries both side by side, so asserting one is taking a legal position with no citation behind it. `TEJ-MATRICULE-FISCAL` is grounded in a schema type, not a legal article, which is a real citation by the root CLAUDE.md standard (source, verbatim text, url) but a different kind of ground than the other rules in the registry; flagged as a judgement call rather than presented as equivalent to a legal citation.
+
+**Result:** Two Article 55(I) rules registered. The rate-application rule is not written in any form, including as a client-side warning: an unsourced warning is a finding by another name. The source to resolve it is the arrete du ministre des finances named in Article 55's own footnote, or a DGI TEJ filing guide; neither is in `corpus/sources/` yet.
+
+## D-031 - Fiscal ledger reframed as the rule engine's fact base, not a declaration product
+
+**Date:** 2026-09-13
+
+**Decision:** D-029 and D-030 extend the extraction and rule layer with structured fiscal facts, drawing on a prior team project's treasury domain model. This is scoped as feeding the existing citation-and-abstention pipeline, not as a monthly declaration engine, an invoicing feature, or a treasury dashboard.
+
+**Options considered:**
+- Reverse D-003 and `docs/plan.md` section 2's rejection of the monthly declaration, add a declaration screen and demo moment.
+- Build the fuller treasury surface (encaissement, decaissement, flux, agios, registre RAS) as a second product surface.
+- Extend only the fact base the existing pipeline already argues for: structured extraction feeding the same rules, findings, and citations, with the TEJ export derived instead of hand-typed.
+
+**Why:** `docs/plan.md` section 2 rejects the monthly declaration by name ("every accounting package already covers it") and D-003 scopes the product to erroné and confus, not a general ledger. A declaration or treasury surface would be a second product, competing for the same three-minute pitch with demo moments 1, 2 and 5 rather than deepening them. The chosen scope does not reverse either decision: it makes the extraction step (currently one `full_text` blob) do what Phase 2's own gate in `docs/plan.md` section 8 already calls for, and it makes the export step (currently fully hand-typed) reflect what was actually read off the document, which is the citation argument the product already makes for findings.
+
+**Result:** No change to `docs/plan.md` sections 2, 6, or 8's scope; section 2 gains a short paragraph noting the structured fiscal facts are the rule engine's fact base, not a filing feature. `docs/facts.md` and the registry gain only what D-029 and D-030 describe.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -501,3 +547,6 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-026: first registered rule, Article 52(I)(a) cited from the DGI 2026 edition |
 | 2026-09-13 | team | Added D-027: Article 62 does not match the anchor case; found real candidates |
 | 2026-09-13 | team | Added D-028: withholding-code proposal engine (RS2 family) |
+| 2026-09-13 | team | Added D-029: structured fiscal extraction and a derived TEJ export, no new tables |
+| 2026-09-13 | team | Added D-030: Article 55(I) certificate rules and a schema-grounded matricule rule |
+| 2026-09-13 | team | Added D-031: fiscal ledger reframed as the rule engine's fact base, not a declaration product |
