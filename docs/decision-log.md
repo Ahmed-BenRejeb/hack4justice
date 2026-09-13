@@ -875,6 +875,23 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 **Result:** `web/lib/findings.ts:groupFindings()` groups by `(status, missing_fact, decided_code, citation.article_ref, citation.verbatim_text)`; `FindingCard` takes a group and lists every contributing `rule_code`, rendering each finding's own `DecisionTrace` underneath one shared citation. The "Règles appliquées" tally in the result banner still counts every finding, ungrouped.
 
 
+## D-050 - Front end stays on shadcn, adds Tremor for charts only, adopts no block library
+
+**Date:** 2026-09-13
+
+**Decision:** The web app keeps shadcn/ui over Radix primitives as its only component base. Tremor is adopted for chart components only, because it is free, copy-paste, and built on the same Tailwind and Radix primitives, so the existing tokens carry over. No block or template library is adopted. `docs/frontend-plan.md` holds the resulting work plan.
+
+**Options considered:**
+- Keep shadcn, add Tremor for charts, adopt nothing else (chosen).
+- Adopt Beste UI (`ui.beste.co`), a freemium block library, as the design direction.
+- Buy Tailwind Plus or Catalyst (roughly 299 or 149 USD, one-time) and rebuild the visual layer on it.
+- Adopt an animated collection such as Aceternity UI or Magic UI for visual impact.
+- Mine Origin UI or ReUI for individual components without adopting anything.
+
+**Why:** Asked whether to adopt Beste UI for a better-looking, higher-impact interface. The component layer is not where this product's visual gap is: 44 components already exist, the tokens are applied, and `docs/design.md` is binding rather than advisory. What the screens lack is data behind them and one missing surface, the corpus API, which is built and tested with no interface at all. Block libraries are oriented to marketing pages (hero sections, pricing, ecommerce, price tickers), which this product has no screens for, and their premium tiers buy more of the same. Animated collections are rejected on a rule already written down: `docs/design.md` section 5 allows one orchestrated moment and otherwise only transitions that answer a user action. Tailwind Plus is genuinely the strongest application UI kit for dense administrative screens and conflicts with nothing here, so it stays open as a budget decision, not a technical one. Tremor is adopted narrowly because charts are the one component family the stack does not have and writing them from scratch would be work without argument. Because every option in this list ships copy-paste code with no runtime dependency, none of this is a lock-in decision and a single component can be lifted from any of them later without revisiting it.
+
+**Result:** `docs/frontend-plan.md` records the direction and the ordered work: the legal source surface (J2, J6, J10), KPI charts for both roles from the existing `GET /impact`, chart tokens added as a neutral ramp so the status colours stay reserved for status, and a polish pass against the quality floor.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -914,3 +931,4 @@ Only supplier properties are answerable, currently `beneficiary_fiscal_regime`. 
 | 2026-09-13 | team | Added D-047: abstentions answered against the supplier, rules re-decide, person source in the trace (J4, B3, B4, J11) |
 | 2026-09-13 | team | Added D-048: rules declare their error codes; impact panel counts them with the labelled benefit calculation (J9) |
 | 2026-09-13 | team | Renumbered the constats grouping decision to D-049: it and the abstention loop were both merged as D-047 |
+| 2026-09-13 | team | Added D-050: front end stays on shadcn, Tremor for charts only, no block library; front-end plan added |
