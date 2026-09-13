@@ -44,10 +44,14 @@
   /* Diagonal crosshatch, used on at most two sections of a screen (DESIGN.md). */
   --background-image-pattern: var(--bg-pattern);
 
-  /* Editorial serif for headings, sans for everything else; mono stays for codes and identifiers. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-playfair), Georgia, "Times New Roman", serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /*
+   * Editorial serif for headings, sans for everything else; mono stays for codes and identifiers.
+   * The families are declared by the @fontsource packages imported in app/layout.tsx (D-056), so
+   * these names must match the `font-family` those packages register.
+   */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Playfair Display Variable", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
