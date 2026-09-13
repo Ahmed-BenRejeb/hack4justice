@@ -571,6 +571,40 @@ Two real articles in the same code do match the narrative:
 
 **Result:** No question set exists yet, so the phase 1 recall gate is not met. The harness is tested on a fictitious source. The team can change the target in `app/config.py` by recording a new decision.
 
+---
+
+## D-034 - Embedding model kept until the comparison can be measured
+
+**Date:** 2026-09-13
+
+**Decision:** RAG step 5 (compare embedding options, switch to `multilingual-e5-small` if it wins) is deferred until `corpus/eval/questions.json` exists. `paraphrase-multilingual-MiniLM-L12-v2` stays (D-018). Steps 6 and 7 go ahead on it.
+
+**Options considered:**
+- Switch to e5-small now on truncation evidence and run the ranking comparison later.
+- Keep MiniLM until measured (chosen).
+- Pause the whole RAG build until the question set is written.
+
+**Why:** Chosen by the user. The plan makes the switch conditional on e5-small winning on the evaluation set, and without the set there is no honest way to say which wins. Measured meanwhile: MiniLM reads 128 tokens, and 31 of the 78 real chunks are longer (median 91, max 427), so their ends are not embedded. The full-text search added in D-035 still indexes their whole text.
+
+**Result:** No model download, no image rebuild. When the question set exists, run the comparison from `docs/feature-research.md` section 5.8 (paragraph chunks with MiniLM, then e5-small, each with and without full-text fusion), record the result here, and switch only if e5-small wins.
+
+---
+
+## D-035 - Hybrid retrieval: full-text and vector search fused by reciprocal rank
+
+**Date:** 2026-09-13
+
+**Decision:** RAG step 6. `corpus_chunk.text_search` holds `to_tsvector('french', unaccent(text))` with a GIN index. A search runs a cosine search (top 20, similarity at least 0.4) and a full-text search (top 20, query terms ORed, ranked by `ts_rank_cd`), then fuses both by reciprocal rank with k = 60. Each hit says which search found it, so the UI can label "mot exact" or "sens proche".
+
+**Options considered:**
+- Full-text query: every term required (`plainto_tsquery`); any term, ranked by how many match (chosen).
+- Floor: none, so an unrelated query still returns its nearest passages; a similarity floor on the vector side (chosen); a floor on the fused score, which rank fusion makes meaningless.
+- Floor value: 0.4, measured (chosen), to recalibrate on the evaluation set.
+
+**Why:** Legal queries turn on exact terms that vectors blur. Measured on the real corpus with MiniLM, "loyers d'hotels" (typed without the accent) has a top vector similarity of 0.41 and a second of 0.21, while full text finds exactly the 2 passages naming hotel rents. Requiring every term fails on questions: a question rarely shares every word with its answer. The 0.4 floor comes from 12 calibration queries, not from the evaluation set. Relevant queries scored a top-1 similarity of 0.41 to 0.64. Unrelated ones scored 0.14 to 0.36, except "congés payés des salariés" (0.69), which Article 53 does cover. Full-text matches are not floored: a match on a word is a fact the UI states as "mot exact". A query can therefore return a passage sharing one ordinary word (for example "Tunis").
+
+**Result:** `app/corpus/retrieval.py`, migration `9e4b6f2c8d13` (creates `unaccent`, backfills existing chunks). The recall target stays unmeasured until the question set exists (D-033). Floor and fusion constants are documented defaults in `app/config.py`.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -594,3 +628,5 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-031: corpus chunked by paragraph from the official PDF, with page provenance |
 | 2026-09-13 | team | Added D-032: verified passage register applied on every corpus load |
 | 2026-09-13 | team | Added D-033: retrieval evaluation harness, recall target 0.9 until the team fixes one |
+| 2026-09-13 | team | Added D-034: embedding model kept until the comparison can be measured |
+| 2026-09-13 | team | Added D-035: hybrid retrieval, full-text and vector search fused by reciprocal rank |

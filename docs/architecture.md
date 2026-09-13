@@ -105,7 +105,7 @@ Entities (PostgreSQL, SQLAlchemy models in `api/app/db/`):
 | `document` | id, organisation_id, uploaded_by, filename, storage_ref, status, created_at | The raw uploaded file; `filename` is the name as uploaded, `storage_ref` where the bytes live |
 | `extraction` | id, document_id, field_name, value, confidence, source ("extracted"/"assisted"), extracted_at | One row per structured field pulled from the document |
 | `corpus_source` | id (the manifest source id), title, edition, publisher, url, sha256, language, page_count, loaded_at | An official document the corpus is indexed from; provenance shown next to its text (D-031) |
-| `corpus_chunk` | id, source_id, article_ref, paragraph_ref, heading_path, page, char_start, char_end, token_count, text, text_sha256, embedding (pgvector), url, verification_status ("unverified"/"verified"), verified_by, verified_on | Paragraph- or item-level legal text, embedded; unique on (source_id, article_ref, paragraph_ref, char_start) so re-indexing updates in place (D-031). Verification comes from `corpus/verified-passages.json` on every load; unverified text never leaves the API (D-029, D-032) |
+| `corpus_chunk` | id, source_id, article_ref, paragraph_ref, heading_path, page, char_start, char_end, token_count, text, text_sha256, text_search (tsvector, GIN index), embedding (pgvector), url, verification_status ("unverified"/"verified"), verified_by, verified_on | Paragraph- or item-level legal text, embedded; unique on (source_id, article_ref, paragraph_ref, char_start) so re-indexing updates in place (D-031). Verification comes from `corpus/verified-passages.json` on every load; unverified text never leaves the API (D-029, D-032) |
 | `rule` | id, code, citation_source, article_ref, verbatim_text, url, logic_ref | The rule registry entry; `logic_ref` points to the deterministic code that evaluates it |
 | `finding` | id, document_id, rule_id, status ("decided"/"abstained"), decided_code, missing_fact (nullable), created_at | One evaluation outcome per rule per document |
 | `citation` | id, finding_id, rule_id | Join surface so a finding's citation is always resolvable in one query |
@@ -158,3 +158,4 @@ Both follow the same policy: identity values (URLs, tokens, API keys, provider n
 | 2026-09-12 | team | Initial architecture document for the web/api split and the withholding-code pipeline |
 | 2026-09-13 | team | Data model: `corpus_source` added, `corpus_chunk` at paragraph level with provenance (D-031) |
 | 2026-09-13 | team | Data model: `corpus_chunk` verification fields from the passage register (D-032) |
+| 2026-09-13 | team | Data model: `corpus_chunk.text_search` for hybrid retrieval (D-035) |
