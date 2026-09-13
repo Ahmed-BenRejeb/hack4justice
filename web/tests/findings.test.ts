@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Finding, FindingStatus } from "../lib/api-types.ts";
-import { summarizeFindings } from "../lib/findings.ts";
+import { groupFindings, summarizeFindings } from "../lib/findings.ts";
 
 const citation = {
   citation_source: "Source",
@@ -11,7 +11,14 @@ const citation = {
   url: "https://example.org",
 };
 
-function finding(id: string, status: FindingStatus, code: string | null): Finding {
+const otherCitation = { ...citation, article_ref: "Autre article", verbatim_text: "Autre texte" };
+
+function finding(
+  id: string,
+  status: FindingStatus,
+  code: string | null,
+  overrides: Partial<Finding> = {},
+): Finding {
   return {
     id,
     rule_code: "R1",
@@ -21,6 +28,7 @@ function finding(id: string, status: FindingStatus, code: string | null): Findin
     trace: [],
     created_at: "2026-09-12T10:00:00Z",
     citation,
+    ...overrides,
   };
 }
 
@@ -40,4 +48,32 @@ test("summarizeFindings reports no code when every rule abstained", () => {
     decided: 0,
     abstained: 1,
   });
+});
+
+test("groupFindings merges rules that abstain on the same fact from the same citation", () => {
+  const groups = groupFindings([
+    finding("f1", "abstained", null, { rule_code: "RULE-A" }),
+    finding("f2", "abstained", null, { rule_code: "RULE-B" }),
+  ]);
+  assert.equal(groups.length, 1);
+  assert.deepEqual(
+    groups[0].findings.map((f) => f.id),
+    ["f1", "f2"],
+  );
+});
+
+test("groupFindings keeps findings separate when the citation differs", () => {
+  const groups = groupFindings([
+    finding("f1", "abstained", null, { rule_code: "RULE-A" }),
+    finding("f2", "abstained", null, { rule_code: "RULE-B", citation: otherCitation }),
+  ]);
+  assert.equal(groups.length, 2);
+});
+
+test("groupFindings keeps findings separate when the decided code differs", () => {
+  const groups = groupFindings([
+    finding("f1", "decided", "A", { rule_code: "RULE-A" }),
+    finding("f2", "decided", "B", { rule_code: "RULE-B" }),
+  ]);
+  assert.equal(groups.length, 2);
 });

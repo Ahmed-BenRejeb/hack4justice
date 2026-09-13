@@ -1,6 +1,12 @@
-/** One rule outcome: the proposed code with its citation, or an abstention naming the missing fact. */
+/**
+ * One outcome shared by one or more rules: the proposed code or the missing fact, with its
+ * citation. Several rules can reach the identical outcome from the same citation (a shared
+ * precondition); `group` carries all of them so that case renders once, not once per rule, while
+ * every rule keeps its own trace.
+ */
 import type { JSX } from "react";
 import { cn } from "cn";
+import type { FindingGroup } from "@/lib/findings";
 import type { AnswerableFacts, Finding } from "@/lib/api-types";
 import { fieldLabel } from "@/lib/labels";
 import { AnswerAbstention } from "./answer-abstention";
@@ -8,6 +14,12 @@ import { Citation } from "./citation";
 import { DecisionTrace } from "./decision-trace";
 import { FindingStatusBadge } from "./status-badge";
 
+export function FindingCard({ group }: { group: FindingGroup }): JSX.Element {
+  const [first, ...rest] = group.findings;
+  const decided = first.status === "decided";
+  const titleId = `finding-${first.id}`;
+  const ruleLabel = rest.length === 0 ? "Règle" : "Règles";
+  const ruleCodes = group.findings.map((finding) => finding.rule_code).join(", ");
 interface FindingCardProps {
   finding: Finding;
   /** Set where a person may answer an abstention on the spot (J4); omitted elsewhere. */
@@ -33,9 +45,9 @@ export function FindingCard({ finding, answering }: FindingCardProps): JSX.Eleme
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <FindingStatusBadge status={finding.status} />
+        <FindingStatusBadge status={first.status} />
         <span className="text-xs text-muted-foreground">
-          Règle <span className="font-mono">{finding.rule_code}</span>
+          {ruleLabel} <span className="font-mono">{ruleCodes}</span>
         </span>
       </div>
 
@@ -45,7 +57,7 @@ export function FindingCard({ finding, answering }: FindingCardProps): JSX.Eleme
             Code de retenue proposé
           </h3>
           <p className="mt-1 font-mono text-2xl font-medium tracking-tight break-words">
-            {finding.decided_code}
+            {first.decided_code}
           </p>
         </div>
       ) : (
@@ -53,7 +65,7 @@ export function FindingCard({ finding, answering }: FindingCardProps): JSX.Eleme
           <h3 id={titleId} className="text-sm text-muted-foreground">
             Information manquante
           </h3>
-          <p className="mt-1 text-base font-medium">{fieldLabel(finding.missing_fact ?? "")}</p>
+          <p className="mt-1 text-base font-medium">{fieldLabel(first.missing_fact ?? "")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Aucun code n’est proposé tant que ce fait n’est pas établi.
           </p>
@@ -72,8 +84,10 @@ export function FindingCard({ finding, answering }: FindingCardProps): JSX.Eleme
       )}
 
       <div className="mt-4 space-y-2">
-        <DecisionTrace finding={finding} />
-        <Citation citation={finding.citation} />
+        {group.findings.map((finding) => (
+          <DecisionTrace key={finding.id} finding={finding} />
+        ))}
+        <Citation citation={first.citation} />
       </div>
     </article>
   );
