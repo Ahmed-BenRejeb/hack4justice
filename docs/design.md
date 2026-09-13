@@ -30,7 +30,7 @@ Two families, never mixed within a role (D-055):
 - **Everything else is the sans.** Inter, weight 400 to 600, through `font-sans`. Navigation, body copy, cards, buttons, labels, table cells.
 - **Codes stay monospaced.** IBM Plex Mono, through `font-mono`, for withholding codes, identifiers and file references. This is functional, not stylistic: those strings are compared character by character.
 
-All three are self-hosted at build time through `next/font` with the Latin and Latin Extended subsets, so every accented character in the French interface is covered and no font request leaves the workstation at runtime. Components use the shadcn type scale (`text-sm` body in dense views, `text-2xl` page titles) rather than ad hoc sizes.
+All three ship as `@fontsource` npm packages imported in `web/app/layout.tsx`, not through `next/font/google` (D-056). They are therefore vendored with the dependencies: the build never contacts `fonts.gstatic.com`, which a container build cannot reach, and no font request leaves the workstation at runtime either. The Latin Extended range covers every accented character in the French interface. Components use the shadcn type scale (`text-sm` body in dense views, `text-2xl` page titles) rather than ad hoc sizes.
 
 ## 4. Layout
 

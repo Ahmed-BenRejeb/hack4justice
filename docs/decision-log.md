@@ -982,6 +982,23 @@ Two consequences worth recording. `--status-decided` moves from green to teal, b
 
 Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` and `GET /impact` without sign-in: that section now takes the signed-in user's organisations, and `GET /impact` admits a filer who names one of their own organisations, while the deployment-wide figures stay officer-only.
 
+## D-056 - Fonts ship as npm packages, so the image build never contacts Google
+
+**Date:** 2026-09-13
+
+**Decision:** Replace `next/font/google` with `@fontsource` packages (`@fontsource-variable/inter`, `@fontsource-variable/playfair-display`, `@fontsource/ibm-plex-mono`), imported as CSS in `web/app/layout.tsx`. The font families are named directly in `web/app/globals.css` instead of through the `--font-*` variables `next/font` used to generate.
+
+**Options considered:**
+- Keep `next/font/google` and fix the network path so the container can reach `fonts.gstatic.com`.
+- Vendor the `.woff2` files into the repository and use `next/font/local`.
+- Serve the fonts from npm with `@fontsource` (chosen).
+
+**Why:** `docker compose build web` failed: `next/font/google` downloads the actual `.woff2` files during `pnpm build`, every request to `fonts.gstatic.com` timed out inside the container, and Turbopack then could not resolve the generated font module, which collapsed into a wall of "Module not found" errors. Measured rather than assumed: the same URL times out under both `docker run` and `docker build`, with an explicit `--dns 8.8.8.8` and with `--network=host`, while `registry.npmjs.org` succeeds and the Windows host downloads the same file fine. So it is not DNS, not IPv6, and not BuildKit; something on this network blocks Google's font CDN from the Docker VM specifically. IBM Plex Mono timed out too, so the failure predates the D-055 typeface change and would have hit the old build as well.
+
+Fixing the network was rejected because it is machine-specific and would leave the build broken for any teammate or CI runner behind the same block. Vendoring `.woff2` files was rejected because Google splits each family into separate `latin` and `latin-ext` files with complementary unicode ranges, and `next/font/local` has no per-file `unicode-range`, so the two subsets of one weight collide. `@fontsource` resolves it through the one network path the container demonstrably has, adds no binaries to git, and makes the image build reproducible offline, which also protects the EC2 deploy in D-051.
+
+**Result:** Three dependencies added to `web/package.json`. `app/layout.tsx` no longer imports `next/font/google` and no longer sets font variables on `<html>`; `app/globals.css` names `Inter Variable`, `Playfair Display Variable` and `IBM Plex Mono` directly, verified against the `font-family` each installed package registers. One side effect worth recording: the `packages:` key added to `web/pnpm-workspace.yaml` makes `web/` a pnpm workspace root, so `pnpm add` now requires `-w`.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -1027,3 +1044,4 @@ Merged after D-053, whose MSME "Mes chiffres" section read `GET /organisations` 
 | 2026-09-13 | team | Added D-053: KPI charts on recharts directly (not vendored Tremor), neutral chart ramp added |
 | 2026-09-13 | team | Added D-054: sign-in with database sessions, four roles, organisation-scoped files; filers may measure their own organisation |
 | 2026-09-13 | team | Added D-055: modern-SaaS visual direction adopted wholesale, charts extended to every route with real data |
+| 2026-09-13 | team | Added D-056: fonts ship as @fontsource npm packages so the image build never contacts fonts.gstatic.com |
