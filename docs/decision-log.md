@@ -483,6 +483,42 @@ Two real articles in the same code do match the narrative:
 
 **Result:** `app/rules/withholding_code_proposal.py` and its tests (tested live against the real model). Not yet a registered rule: needs a human-verified citation before entering `rules/`, same as D-026 provided for Article 52(I)(a).
 
+---
+
+## D-029 - Only verified legal text reaches a screen; explanations need a person's approval
+
+**Date:** 2026-09-13
+
+**Decision:** No legal passage appears on any screen unless a person has verified it against the official source. A passage retrieved from an official source but not checked by a person is not shown, not even with a "non vérifié" label. Model-drafted plain-language explanations appear only after a person has approved them.
+
+**Options considered:**
+- Show unverified official passages with a visible "non vérifié" label, to give context.
+- Show only passages a person has verified (chosen).
+- For explanations: show them automatically once code confirms every sentence quotes a passage verbatim, or require a person's approval as well (chosen).
+
+**Why:** Chosen by the user. It extends D-015 and the root `CLAUDE.md` rule ("no fact on screen that is not verified") to retrieved text. An official PDF is not the same as a checked passage: the extraction keeps page numbers, footnotes and stray spaces inline (`corpus/sources/SOURCE.md`), and articles carry amended rates. A label would still put unverified rates in front of a reader. Explanations are per rule and per source version, so approving each once is affordable.
+
+**Result:** `docs/feature-research.md` section 5 revised. Retrieval ranks over the whole corpus but the API returns verified passages only. Verifications are recorded in a tracked register. Unverified chunks reach the admin only as references (article, paragraph, link to the official page), never as text. Explanations are drafted into a file, approved by a person in review, and loaded only once approved.
+
+---
+
+## D-030 - The plan's scope includes every researched feature
+
+**Date:** 2026-09-13
+
+**Decision:** `docs/plan.md` takes in every feature in `docs/feature-research.md` sections 4 to 6; section 7 of that document (not recommended) stays out.
+- Phases 0 to 5 keep the pitch as their goal, with the demo features added to their scope and gates.
+- Phases 6 to 9 are added: pilot prerequisites, real coverage, structured inputs, partnerships.
+- The build rule in the root `CLAUDE.md` and in `docs/plan.md` becomes: everything built serves a demo moment or a feature listed in `docs/plan.md`.
+
+**Options considered:**
+- Phases: keep demo phases and add roadmap phases (chosen); put everything before the pitch; replace the phases with one roadmap where the pitch is a milestone.
+- Build rule: reword it to include plan features (chosen); leave the root `CLAUDE.md` unchanged.
+
+**Why:** Chosen by the user. Separate roadmap phases keep the gate discipline for the pitch while making the roadmap binding. Items that depend on an external party (RNE, TunTrust) cannot be promised by the pitch date, so they sit in the last phase.
+
+**Result:** `docs/plan.md` gains a demo moment 6, phases 6 to 9, an extended cut list and a feature scope section (section 12). The root `CLAUDE.md` build rule and source-of-truth list are updated. `docs/architecture.md` is updated as each feature lands, not in advance. The anchor article question (D-027) and the incidental findings in `docs/feature-research.md` section 3 are not features: they stay checks for a person before presenting. B2 builds on the RS2 proposal engine (D-028).
+
 ## Change log
 
 | Date | Author | What changed |
@@ -501,3 +537,5 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-026: first registered rule, Article 52(I)(a) cited from the DGI 2026 edition |
 | 2026-09-13 | team | Added D-027: Article 62 does not match the anchor case; found real candidates |
 | 2026-09-13 | team | Added D-028: withholding-code proposal engine (RS2 family) |
+| 2026-09-13 | team | Added D-029: only verified legal text on screen, explanations approved by a person |
+| 2026-09-13 | team | Added D-030: plan scope includes every researched feature, phases 6 to 9 added |
