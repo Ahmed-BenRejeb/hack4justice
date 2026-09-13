@@ -10,6 +10,7 @@ import { ThemeToggle } from "./theme-toggle";
 const SPACES = [
   { href: "/entreprise", label: "Entreprise", shortLabel: "Entreprise" },
   { href: "/agent", label: "Agent", shortLabel: "Agent" },
+  { href: "/textes", label: "Textes", shortLabel: "Textes" },
   { href: "/admin", label: "Administration", shortLabel: "Admin" },
 ] as const;
 
