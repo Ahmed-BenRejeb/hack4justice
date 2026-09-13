@@ -605,6 +605,36 @@ Two real articles in the same code do match the narrative:
 
 **Result:** `app/corpus/retrieval.py`, migration `9e4b6f2c8d13` (creates `unaccent`, backfills existing chunks). The recall target stays unmeasured until the question set exists (D-033). Floor and fusion constants are documented defaults in `app/config.py`.
 
+---
+
+## D-036 - Corpus endpoints serve verified passages only
+
+**Date:** 2026-09-13
+
+**Decision:** RAG step 7, from `docs/feature-research.md` section 5.5. It adds `GET /corpus/search`, `/corpus/chunks/{id}`, `/corpus/sources`, `/corpus/verification-queue` and `GET /findings/{id}/related`.
+- Passage models require the verifier and date, so an unverified chunk cannot serialize.
+- An unverified chunk id answers 404 exactly like a missing one.
+- The queue carries references and official page links, never text.
+- Excerpts mark matched terms with the control characters U+0002 and U+0003, which tests show never occur in the corpus.
+
+Three departures from the plan:
+1. The full-text column uses a text search configuration, `chahed_french` (unaccent, then French stemming), generated from `text`. This replaces D-035's `to_tsvector('french', unaccent(text))` computed by the loader.
+2. Related texts leave out the citation by comparing text: a passage whose text, or whose opening sentence of at least 40 characters, appears verbatim in the rule's citation. Rule files do not gain `paragraph_ref`.
+3. The queue is in document order, and search has no `source_id` filter.
+
+**Options considered:**
+- Accent folding: `unaccent()` around the text at insert, as in D-035; folding inside a text search configuration (chosen).
+- Leaving out the citation: a `paragraph_ref` added to every rule file and the `rule` table; comparing chunk text with the verbatim citation (chosen).
+- Queue order: ranked by retrieval and evaluation hits; document order (chosen).
+
+**Why:**
+- Folding: with `unaccent()` outside, `ts_headline` stems the stored "hôtels" differently from the query "hotels" and marks nothing. With folding inside the configuration, the stored text keeps its accents and the highlight lands on "hôtels" (measured). `to_tsvector` with an explicit configuration is immutable, so the column becomes a generated column and the loader no longer computes it.
+- Citation: the verbatim citation is already the verified reference, so comparing text needs no schema change and no new field in person-verified rule files. On the real corpus it leaves out exactly `Article 52, I` and `Article 52, I, a)` for `CIRPPIS-ART52-I-A` (tested). A dashed item inside a) that the citation does not quote, such as the reduced rate, stays a related text.
+- Queue order: there is no search log and no question set to rank by yet.
+- Source filter: there is one source. Add the filter when a second source is loaded.
+
+**Result:** migration `b5d8e2a4c617`, `app/api/v1/corpus.py`, `app/corpus/related.py`, wire types in `web/lib/api-types.ts`. With one verified passage today, search and related texts return almost nothing until people verify more (D-032). The UI steps (RAG steps 8 to 11) stay behind the phase 1 gate: no question set, recall unmeasured (D-033).
+
 ## Change log
 
 | Date | Author | What changed |
@@ -630,3 +660,4 @@ Two real articles in the same code do match the narrative:
 | 2026-09-13 | team | Added D-033: retrieval evaluation harness, recall target 0.9 until the team fixes one |
 | 2026-09-13 | team | Added D-034: embedding model kept until the comparison can be measured |
 | 2026-09-13 | team | Added D-035: hybrid retrieval, full-text and vector search fused by reciprocal rank |
+| 2026-09-13 | team | Added D-036: corpus endpoints serve verified passages only; accent-folding configuration, citation left out by text |
