@@ -19,7 +19,7 @@ export interface Extraction {
   source: ExtractionSource;
 }
 
-/** An organisation documents are filed for (GET /organisations). */
+/** An organisation documents are filed for. */
 export interface Organisation {
   id: string;
   name: string;
@@ -27,10 +27,22 @@ export interface Organisation {
   kind: string;
 }
 
-/** POST /organisations body. */
-export interface OrganisationInput {
-  name: string;
-  tax_id: string;
+/** What a signed-in user does: file for their organisations, review as an officer, or administer (A3). */
+export type Role = "msme" | "accountant" | "officer" | "admin";
+
+/** GET /auth/me: the signed-in user and the organisations they file for (none for an officer or admin). */
+export interface User {
+  id: string;
+  email: string;
+  role: Role;
+  organisations: Organisation[];
+}
+
+/** POST /auth/login and /auth/signup: a new session. Its token lives in an HttpOnly cookie, never in browser code. */
+export interface AuthSession {
+  token: string;
+  expires_at: string;
+  user: User;
 }
 
 /** The verbatim legal text that grounds a rule. */
@@ -81,7 +93,6 @@ export interface AnswerableFacts {
 export interface ConfirmFactInput {
   fact_name: string;
   value: string;
-  confirmed_by: string;
   /** ISO date, when the answer rests on an attestation that expires. */
   valid_until?: string | null;
 }
@@ -203,7 +214,6 @@ export interface QueueItem {
 /** POST /officer/decisions body. */
 export interface OfficerDecisionInput {
   document_id: string;
-  officer_id: string;
   action: OfficerAction;
   note: string | null;
 }

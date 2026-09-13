@@ -35,6 +35,11 @@ TEXT_QUERY_MIN_LEXEME_CHARS = 3
 RETRIEVAL_EVAL_TOP_K = 5
 RETRIEVAL_RECALL_TARGET = 0.9
 EVAL_QUESTIONS_PATH = "../corpus/eval/questions.json"
+# Sign-in (A3). A session stops being accepted this long after it was opened.
+# Password bounds follow NIST SP 800-63B: at least 8 characters, long passphrases allowed.
+SESSION_TTL_HOURS = 12
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 256
 
 
 def _require(name: str) -> str:

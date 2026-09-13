@@ -12,10 +12,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth.deps import require_officer
 from app.db.session import get_db
 from app.impact.measurement import measure
 
-router = APIRouter(prefix="/impact", tags=["impact"])
+router = APIRouter(
+    prefix="/impact", tags=["impact"], dependencies=[Depends(require_officer)]
+)
 
 
 class RuleCountOut(BaseModel):

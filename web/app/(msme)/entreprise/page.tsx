@@ -4,11 +4,14 @@ import type { Metadata } from "next";
 import { HowItWorks } from "@/components/msme/how-it-works";
 import { UploadForm } from "@/components/msme/upload-form";
 import { PageHeader } from "@/components/shared/page-header";
+import { requireRole } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Déposer un dossier" };
 
-/** Upload form followed by what happens next. */
-export default function UploadPage(): JSX.Element {
+/** Upload form for the signed-in user's organisations, followed by what happens next. */
+export default async function UploadPage(): Promise<JSX.Element> {
+  // The same memoised lookup the layout made, so this costs no second backend call.
+  const user = await requireRole("msme", "accountant");
   return (
     <div className="mx-auto max-w-3xl space-y-12">
       <div className="space-y-8">
@@ -17,7 +20,7 @@ export default function UploadPage(): JSX.Element {
           title="Déposer un dossier de paiement"
           description="Chahed propose le code de retenue à la source applicable et cite l’article qui le fonde. S’il manque une information, il le dit au lieu de deviner."
         />
-        <UploadForm />
+        <UploadForm organisations={user.organisations} />
       </div>
       <HowItWorks />
     </div>

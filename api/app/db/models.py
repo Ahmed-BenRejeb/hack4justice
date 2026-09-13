@@ -48,6 +48,64 @@ class Organisation(Base):
     )
 
 
+class User(Base):
+    """A person who signs in, with one role (A3)."""
+
+    # "user" is a reserved word in PostgreSQL.
+    __tablename__ = "app_user"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(
+        Enum(
+            "msme", "accountant", "officer", "admin", name="user_role", native_enum=False
+        ),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # One for an MSME user, several for an accountant (A4), none for an officer or admin.
+    organisations: Mapped[list["Organisation"]] = relationship(
+        secondary="organisation_member", order_by="Organisation.name"
+    )
+
+
+class OrganisationMember(Base):
+    """Lets a user file for one organisation and read that organisation's files."""
+
+    __tablename__ = "organisation_member"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id"), primary_key=True
+    )
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organisation.id"), primary_key=True
+    )
+
+
+class UserSession(Base):
+    """A signed-in session. Only the token's SHA-256 is stored, never the token."""
+
+    __tablename__ = "user_session"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id"), nullable=False
+    )
+    token_sha256: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    user: Mapped["User"] = relationship()
+
+
 class Document(Base):
     """The raw uploaded file."""
 

@@ -3,11 +3,14 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Rule
 from app.main import app
+from tests.conftest import AuthHeaders
 
 client = TestClient(app)
 
 
-def test_list_rules_returns_full_citation(db: Session) -> None:
+def test_list_rules_returns_full_citation(
+    db: Session, auth_headers: AuthHeaders
+) -> None:
     rule = Rule(
         code="TEST-001",
         citation_source="Fixture Code, not a real legal text",
@@ -19,7 +22,7 @@ def test_list_rules_returns_full_citation(db: Session) -> None:
     db.add(rule)
     db.commit()
 
-    response = client.get("/api/v1/rules")
+    response = client.get("/api/v1/rules", headers=auth_headers("admin"))
 
     assert response.status_code == 200
     body = response.json()
