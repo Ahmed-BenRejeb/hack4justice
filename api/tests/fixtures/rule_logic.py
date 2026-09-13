@@ -1,13 +1,14 @@
 """Fixture rule logic for testing the evaluation engine. Not a real rule."""
 
-from app.rules.engine import Abstention, Decision, RuleOutcome
+from app.rules.engine import Abstention, Decision, RuleOutcome, TraceStep
 
 
 def decide_by_status(facts: dict[str, str]) -> RuleOutcome:
     """Decide code TEST-A if status is 'known', else abstain naming the fact."""
+    trace = (TraceStep(fact="status", source="document", value=facts.get("status")),)
     if facts.get("status") == "known":
-        return Decision(code="TEST-A")
-    return Abstention(missing_fact="status")
+        return Decision(code="TEST-A", trace=trace)
+    return Abstention(missing_fact="status", trace=trace)
 
 
 def always_wrong_return_type(facts: dict[str, str]) -> str:

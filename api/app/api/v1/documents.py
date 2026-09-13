@@ -3,6 +3,7 @@
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -138,12 +139,23 @@ class CitationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TraceStepOut(BaseModel):
+    """One fact a rule used: read in the document, or supplied by the model with a confidence."""
+
+    fact: str
+    source: Literal["document", "model"]
+    value: str | bool | None
+    confidence: float | None
+    threshold: float | None
+
+
 class FindingOut(BaseModel):
     id: uuid.UUID
     rule_code: str
     status: str
     decided_code: str | None
     missing_fact: str | None
+    trace: list[TraceStepOut]
     created_at: datetime
     citation: CitationOut
 
@@ -173,6 +185,7 @@ def get_document_findings(
             status=finding.status,
             decided_code=finding.decided_code,
             missing_fact=finding.missing_fact,
+            trace=finding.trace,
             created_at=finding.created_at,
             citation=CitationOut.model_validate(rule),
         )

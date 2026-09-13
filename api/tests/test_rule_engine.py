@@ -48,6 +48,38 @@ def test_evaluate_decides_when_facts_are_sufficient(db: Session) -> None:
     assert citation.rule_id == rule.id
 
 
+def test_evaluate_records_the_trace_the_rule_returned(db: Session) -> None:
+    document = _make_document(db)
+    rule = _make_rule(db, "tests.fixtures.rule_logic.decide_by_status")
+
+    finding = evaluate(db, document.id, rule, {"status": "known"})
+    db.commit()
+    db.refresh(finding)
+
+    assert finding.trace == [
+        {
+            "fact": "status",
+            "source": "document",
+            "value": "known",
+            "confidence": None,
+            "threshold": None,
+        }
+    ]
+
+
+def test_evaluate_records_an_empty_trace_when_the_rule_returns_none(
+    db: Session,
+) -> None:
+    document = _make_document(db)
+    rule = _make_rule(db, "tests.fixtures.rule_logic.decide_if_mentions_article_62")
+
+    finding = evaluate(db, document.id, rule, {"full_text": "article 62"})
+    db.commit()
+    db.refresh(finding)
+
+    assert finding.trace == []
+
+
 def test_evaluate_abstains_and_names_the_missing_fact(db: Session) -> None:
     document = _make_document(db)
     rule = _make_rule(db, "tests.fixtures.rule_logic.decide_by_status")
@@ -57,6 +89,7 @@ def test_evaluate_abstains_and_names_the_missing_fact(db: Session) -> None:
     assert finding.status == "abstained"
     assert finding.missing_fact == "status"
     assert finding.decided_code is None
+    assert finding.trace[0]["value"] is None
 
 
 def test_evaluate_rejects_a_rule_that_returns_the_wrong_type(db: Session) -> None:

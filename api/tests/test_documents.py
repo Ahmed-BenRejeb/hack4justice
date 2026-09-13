@@ -168,6 +168,15 @@ def test_upload_evaluates_registered_rules_and_abstains_when_fact_missing(
     assert findings[0]["status"] == "abstained"
     assert findings[0]["rule_code"] == "TEST-ABSTAIN"
     assert findings[0]["missing_fact"] == "status"
+    assert findings[0]["trace"] == [
+        {
+            "fact": "status",
+            "source": "document",
+            "value": None,
+            "confidence": None,
+            "threshold": None,
+        }
+    ]
     assert findings[0]["citation"]["article_ref"] == "Art. 0"
 
 
