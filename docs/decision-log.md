@@ -635,6 +635,27 @@ Three departures from the plan:
 
 **Result:** migration `b5d8e2a4c617`, `app/api/v1/corpus.py`, `app/corpus/related.py`, wire types in `web/lib/api-types.ts`. With one verified passage today, search and related texts return almost nothing until people verify more (D-032). The UI steps (RAG steps 8 to 11) stay behind the phase 1 gate: no question set, recall unmeasured (D-033).
 
+---
+
+## D-037 - Verified-only search ranks verified passages; short query terms dropped
+
+**Date:** 2026-09-13
+
+**Decision:** Two corrections to D-035 and D-036, found by running the endpoints on the real corpus and register.
+- With `verified_only`, both candidate searches rank verified chunks only. Before, both searches ranked the whole corpus and unverified chunks were removed after fusion.
+- Full-text queries OR only the stemmed terms of at least 3 characters (`TEXT_QUERY_MIN_LEXEME_CHARS`).
+
+**Options considered:**
+- Verified filter: after fusion over the whole corpus, as `docs/feature-research.md` section 5.3 draws it; inside each candidate search (chosen). Evaluation still ranks the whole corpus.
+- Short terms: keep them; a stop-word dictionary file installed on the database server; a length cut on query terms (chosen).
+
+**Why:**
+- The plan's order drops a verified passage that a search ranks below 20 unverified chunks, so the API answered that nothing verified matched when something did. With 1 verified passage out of 78, that was the common case: the query "impot sur les societes retenue" returned `Article 52, I` labelled "sens" although it contains the words.
+- The database's French stop-word list keeps "les" (stemmed `le`), and folding accents before stemming turns "à" into `a`. ORed, `le` matched 46 of 78 chunks and was highlighted in excerpts. A stop-word file would need access to the database server's file system, which neither compose nor a managed database guarantees.
+- The length cut also drops `is`, `rs` and one- and two-digit numbers. In this corpus those come almost only from amendment notes (`lf` appears in 54 chunks). It is marked as a known ceiling in the code.
+
+**Result:** `app/corpus/retrieval.py`. Tests cover a verified paragraph outranked by 25 unverified items, and the terms of a sample query.
+
 ## Change log
 
 | Date | Author | What changed |
@@ -661,3 +682,4 @@ Three departures from the plan:
 | 2026-09-13 | team | Added D-034: embedding model kept until the comparison can be measured |
 | 2026-09-13 | team | Added D-035: hybrid retrieval, full-text and vector search fused by reciprocal rank |
 | 2026-09-13 | team | Added D-036: corpus endpoints serve verified passages only; accent-folding configuration, citation left out by text |
+| 2026-09-13 | team | Added D-037: verified-only search ranks verified passages; short full-text query terms dropped |
