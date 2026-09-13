@@ -12,6 +12,7 @@ EMBEDDING_DIMENSIONS_DEFAULT = 384
 SCHEMAS_DIR_DEFAULT = "../schemas"
 RULES_DIR_DEFAULT = "../rules"
 CORPUS_SOURCES_DIR_DEFAULT = "../corpus/sources"
+VERIFIED_PASSAGES_PATH_DEFAULT = "../corpus/verified-passages.json"
 # Size guard for corpus chunks, in embedding-model tokens: a paragraph above it
 # is split by sentence, leaving room for its heading path under a 512-token
 # model limit (docs/feature-research.md section 5.3).
@@ -38,6 +39,7 @@ class Settings:
     schemas_dir: str
     rules_dir: str
     corpus_sources_dir: str
+    verified_passages_path: str
     openrouter_api_key: str
     openrouter_model_id: str
 
@@ -56,6 +58,9 @@ def load_settings() -> Settings:
         rules_dir=os.environ.get("RULES_DIR", RULES_DIR_DEFAULT),
         corpus_sources_dir=os.environ.get(
             "CORPUS_SOURCES_DIR", CORPUS_SOURCES_DIR_DEFAULT
+        ),
+        verified_passages_path=os.environ.get(
+            "VERIFIED_PASSAGES_PATH", VERIFIED_PASSAGES_PATH_DEFAULT
         ),
         openrouter_api_key=_require("OPENROUTER_API_KEY"),
         openrouter_model_id=_require("OPENROUTER_MODEL_ID"),

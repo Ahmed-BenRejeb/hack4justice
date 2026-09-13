@@ -17,6 +17,7 @@ import pypdf
 from app.config import settings
 from app.corpus.chunking import Page
 from app.corpus.service import index_source
+from app.corpus.verification import apply_register, load_register
 from app.db.models import CorpusSource
 from app.db.session import SessionLocal
 
@@ -59,9 +60,17 @@ def main(sources_dir: Path = DEFAULT_SOURCES_DIR) -> int:
             chunk_count = index_source(db, source, read_pages(reader, first, last))
             total_chunks += chunk_count
             print(f"indexed: {entry['source_id']} ({chunk_count} chunks)")
+        register = load_register(Path(settings.verified_passages_path))
+        unmatched = apply_register(db, register)
+        for passage in unmatched:
+            print(
+                "register entry matches no chunk, left unverified: "
+                f"{passage.article_ref} {passage.paragraph_ref} (page {passage.page})"
+            )
         db.commit()
 
     print(f"{len(entries)} source(s), {total_chunks} chunk(s) indexed")
+    print(f"{len(register) - len(unmatched)} verified passage(s) matched")
     return 0
 
 
