@@ -6,13 +6,14 @@ It replaces the 2024 copy previously held here, downloaded from `alliance-tunisi
 
 ## Files
 
-- `code-irpp-is-2026.pdf` - the source PDF, byte-for-byte as downloaded. Kept for audit; never read by application code.
-- `cirppis-retenues-a-la-source.txt` - Articles 52 through 55 ("2. RETENUES A LA SOURCE", PDF pages 84 to 99, cut before "ARTICLE 56"), extracted with `pypdf` (the same extraction path `app/extraction/ocr.py` uses for born-digital PDFs). This is what `app/corpus/load_corpus.py` indexes.
-- `manifest.json` - lists each source file with its `source_id` and source `url`, consumed by `load_corpus.py`.
+- `code-irpp-is-2026.pdf` - the source PDF, byte-for-byte as downloaded. `app/corpus/load_corpus.py` reads Articles 52 through 55 from it directly ("2. RETENUES A LA SOURCE", PDF pages 84 to 98; page 99 starts "ARTICLE 56"), page by page with `pypdf`, so every chunk carries the PDF page it starts on (D-031). Its sha256 is stored with the source row.
+- `manifest.json` - lists each source with its `source_id`, PDF `file`, `pages` range, `title`, `edition`, `publisher`, `language` and source `url`, consumed by `load_corpus.py`.
+
+The plain-text extract previously kept here (`cirppis-retenues-a-la-source.txt`) was removed on 2026-09-13: it could not carry page numbers, and the loader now reads the PDF.
 
 ## Known extraction artifacts
 
-`pypdf` keeps page numbers and footnotes inline at page breaks, inserts stray spaces inside amendment references (for example "Art 69 -1 LF 2004 -90"), and keeps curly apostrophes. These are left as extracted, not cleaned, the same way OCR output elsewhere in this pipeline is not silently rewritten. They change literal-text fidelity for retrieval, not legal content. Rule citations do not come from this file: each `rules/*.json` carries its own verbatim text, checked against the PDF.
+`pypdf` keeps footnotes inline at page breaks, inserts stray spaces inside words and amendment references (for example "Art 69 -1 LF 2004 -90", "vigueu r"), and keeps curly apostrophes. These are left as extracted, not cleaned, the same way OCR output elsewhere in this pipeline is not silently rewritten. They change literal-text fidelity for retrieval, not legal content. The chunker does two things only: it drops the printed page number that opens each PDF page, and it collapses PDF line wrapping inside a paragraph (blank-line paragraph breaks are kept). Rule citations do not come from the corpus: each `rules/*.json` carries its own verbatim text, checked against the PDF.
 
 ## Verification status
 
