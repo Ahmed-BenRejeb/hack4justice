@@ -4,11 +4,13 @@ from collections.abc import Mapping
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, Extraction
+from app.db.models import Document, DocumentPage, Extraction
 from app.extraction.fields import extract_document_fields
 from app.extraction.masking import mask_with_originals
-from app.extraction.ocr import UnsupportedDocumentType, extract_text
+from app.extraction.ocr import OcrResult, UnsupportedDocumentType, extract_text
+from app.extraction.positions import locate_field
 from app.providers.openrouter import OpenRouterError
+from app.storage import save_page_image
 
 
 def run_extraction(
@@ -38,14 +40,34 @@ def run_extraction(
                 source="extracted",
             )
         )
+    _store_pages(db, document, result)
     document.status = "extracted"
     db.flush()
 
-    _run_field_extraction(db, document, masked_text, originals)
+    _run_field_extraction(db, document, masked_text, originals, result)
+
+
+def _store_pages(db: Session, document: Document, result: OcrResult) -> None:
+    """One DocumentPage per rendered page (J3), the pixel space every field's bbox is expressed in."""
+    for page in result.pages:
+        image_ref = save_page_image(document.id, page.page, page.content)
+        db.add(
+            DocumentPage(
+                document_id=document.id,
+                page=page.page,
+                image_ref=image_ref,
+                width=page.width,
+                height=page.height,
+            )
+        )
 
 
 def _run_field_extraction(
-    db: Session, document: Document, masked_text: str, originals: Mapping[str, str]
+    db: Session,
+    document: Document,
+    masked_text: str,
+    originals: Mapping[str, str],
+    result: OcrResult,
 ) -> None:
     """Add one Extraction row per structured fiscal field the model could read.
 
@@ -60,6 +82,7 @@ def _run_field_extraction(
         return
 
     for field_name, field in fields.items():
+        location = locate_field(field.raw_value, result.words)
         db.add(
             Extraction(
                 document_id=document.id,
@@ -67,6 +90,17 @@ def _run_field_extraction(
                 value=field.value,
                 confidence=field.confidence,
                 source="assisted",
+                page=location.page if location else None,
+                bbox=(
+                    {
+                        "x0": location.x0,
+                        "y0": location.y0,
+                        "x1": location.x1,
+                        "y1": location.y1,
+                    }
+                    if location
+                    else None
+                ),
             )
         )
     if fields:

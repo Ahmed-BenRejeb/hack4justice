@@ -130,6 +130,34 @@ def test_upload_extracts_structured_fiscal_fields_from_the_masked_text(
     assert not any(PLACEHOLDER.search(e["value"]) for e in structured)
     supplier_tax_id = [e for e in structured if e["field_name"] == "supplier_tax_id"]
     assert all(e["value"] == "7654321B" for e in supplier_tax_id)
+    # It appears verbatim in the born-digital text, so it must be locatable on the page (J3).
+    assert supplier_tax_id[0]["page"] == 1
+    assert supplier_tax_id[0]["bbox"] is not None
+
+
+def test_document_pages_are_rendered_and_served(db: Session) -> None:
+    organisation = _make_organisation(db)
+    pdf_bytes = make_born_digital_pdf("Facture pour verifier le rendu de page.")
+
+    upload = client.post(
+        "/api/v1/documents",
+        params={
+            "organisation_id": str(organisation.id),
+            "uploaded_by": "accountant@example.tn",
+        },
+        files={"file": ("facture.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+    )
+    document_id = upload.json()["id"]
+
+    pages = client.get(f"/api/v1/documents/{document_id}/pages").json()
+    assert len(pages) == 1
+    assert pages[0]["page"] == 1
+    assert pages[0]["width"] > 0 and pages[0]["height"] > 0
+
+    image = client.get(pages[0]["image_url"])
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.content.startswith(b"\x89PNG")
 
 
 def test_document_detail_includes_decision_and_export(db: Session) -> None:

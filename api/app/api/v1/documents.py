@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,7 @@ from app.api.v1.organisations import OrganisationOut
 from app.db.models import (
     Citation,
     Document,
+    DocumentPage,
     Export,
     Extraction,
     Finding,
@@ -25,7 +27,7 @@ from app.db.models import (
 from app.db.session import get_db
 from app.extraction.service import run_extraction
 from app.rules.service import evaluate_all_rules
-from app.storage import save_upload
+from app.storage import read_file, save_upload
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -42,14 +44,36 @@ class DocumentOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BBoxOut(BaseModel):
+    """A field's outline on its page (J3), in that page's own pixel space (see PageOut)."""
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+
 class ExtractionOut(BaseModel):
     id: uuid.UUID
     field_name: str
     value: str
     confidence: float
     source: str
+    # Where this field was found on the document; null for full_text/masked_text
+    # and for a field app/extraction/positions.py could not locate exactly.
+    page: int | None = None
+    bbox: BBoxOut | None = None
 
     model_config = {"from_attributes": True}
+
+
+class PageOut(BaseModel):
+    """One rendered page, and the pixel size every Extraction.bbox on it is expressed in."""
+
+    page: int
+    width: int
+    height: int
+    image_url: str
 
 
 class DocumentDetailOut(DocumentOut):
@@ -195,3 +219,42 @@ def get_document_findings(
         )
         for finding, rule in rows
     ]
+
+
+@router.get("/{document_id}/pages", response_model=list[PageOut])
+def get_document_pages(
+    document_id: uuid.UUID, db: Session = Depends(get_db)
+) -> list[PageOut]:
+    """The document's rendered pages, in order, for the source viewer (J3)."""
+    if db.get(Document, document_id) is None:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    pages = (
+        db.query(DocumentPage)
+        .filter_by(document_id=document_id)
+        .order_by(DocumentPage.page)
+        .all()
+    )
+    return [
+        PageOut(
+            page=page.page,
+            width=page.width,
+            height=page.height,
+            image_url=f"/api/v1/documents/{document_id}/pages/{page.page}/image",
+        )
+        for page in pages
+    ]
+
+
+@router.get("/{document_id}/pages/{page}/image")
+def get_document_page_image(
+    document_id: uuid.UUID, page: int, db: Session = Depends(get_db)
+) -> Response:
+    """The page's rendered PNG, at the pixel size its PageOut and every
+    Extraction.bbox on it agree on."""
+    document_page = (
+        db.query(DocumentPage).filter_by(document_id=document_id, page=page).one_or_none()
+    )
+    if document_page is None:
+        raise HTTPException(status_code=404, detail="page not found")
+    return Response(content=read_file(document_page.image_ref), media_type="image/png")

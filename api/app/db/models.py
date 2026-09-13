@@ -84,9 +84,35 @@ class Extraction(Base):
         Enum("extracted", "assisted", name="extraction_source", native_enum=False),
         nullable=False,
     )
+    # Where on the document this field's value was found (J3): the page it is
+    # on, and its bounding box on that page's DocumentPage image, in the same
+    # pixel space. Null for full_text/masked_text (no single location applies)
+    # and for any structured field app/extraction/positions.py could not
+    # locate exactly: an approximate outline is not evidence, so none is drawn.
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bbox: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     extracted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class DocumentPage(Base):
+    """One page of a document, rendered once at a fixed DPI (J3).
+
+    The pixel space every Extraction.bbox on this page is expressed in.
+    """
+
+    __tablename__ = "document_page"
+    __table_args__ = (UniqueConstraint("document_id", "page", name="uq_document_page"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document.id"), nullable=False
+    )
+    page: Mapped[int] = mapped_column(Integer, nullable=False)
+    image_ref: Mapped[str] = mapped_column(String(500), nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class CorpusSource(Base):
